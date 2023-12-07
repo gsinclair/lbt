@@ -1,0 +1,14 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{lbt}
+
+\begin{document}
+  Document.
+
+  \directlua{lbt.log("Hello from lbt.log!")}
+  \directlua{}
+  \begin{luacode*}
+    lbt.api.set_debug_mode(true)
+    lbt.dbg("Draft: %s", lbt.api.get_draft_mode())
+  \end{luacode*}
+\end{document}

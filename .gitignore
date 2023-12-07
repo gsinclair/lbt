@@ -1,0 +1,8 @@
+tmp
+*.pdf
+*.toc
+*.out
+*.log
+*.aux
+*.dbg
+_minted*
