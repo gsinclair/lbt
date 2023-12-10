@@ -3,12 +3,20 @@
 \usepackage{lbt}
 
 \begin{document}
+  \lbtDebugModeOn{}
+
   Document.
 
   \directlua{lbt.log("Hello from lbt.log!")}
-  \directlua{}
   \begin{luacode*}
-    lbt.api.set_debug_mode(true)
     lbt.dbg("Draft: %s", lbt.api.get_draft_mode())
   \end{luacode*}
+
+  \begin{lbt}
+    Inside lbt environment 1
+    Inside lbt environment 2
+    Inside lbt environment 3
+      » and 4
+    » and 5
+  \end{lbt}
 \end{document}

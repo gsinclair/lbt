@@ -9,20 +9,22 @@ lbt.system = {
   templates = {},              -- templates that are loaded and ready to use
                                --     (dictionary: name -> table)
   templates_loaded = false,    -- flag
+  draft_mode       = false,
+  debug_mode       = false,
 }
 
 -- lbt.const contains constant data used by a single expansion.
 -- It is reset using lbt.init.reset_const() every time a new expansion begins 
 lbt.const = {
-  pragmas   = {},     -- affect operation: draft, ignore, debug
-  draft_mode = false, -- flag
-  debug_mode = false, -- flag
+  pragmas   = pl.Set() -- affect operation: draft, ignore, debug
 }
 
 -- lbt.var contains variable data used by a single expansion.
 -- It is reset using lbt.init.reset_var() every time a new expansion begins.
 lbt.var = {
-  content   = {},     -- parsed content is placed in here for emit_tex() to work on
+  author_content = pl.List(), -- raw strings go into this list for processing
+  parsed_content = pl.List(), -- parsed content for emit_tex() to work on
+  latex_content  = pl.List(), -- resulting Latex content
   counters  = {},     -- like a Latex counter: question number, item number, ...
   data      = {},     -- generalised counter: current heading, ...
   append_mode = nil,  -- implementation detail for parsing content
@@ -56,6 +58,9 @@ lbt.init = {
   end,
   reset_var = function()
     lbt.var = {
+      author_content = pl.List(),
+      parsed_content = pl.List(),
+      latex_content  = pl.List(),
       content   = {},
       counters  = {},
       data      = {},

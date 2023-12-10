@@ -28,6 +28,8 @@ lbt.log = function (text, level)
 end
 
 lbt.dbg = function (format, ...)
+  -- TODO make this sensitive to both system debug and per-instance debug
+  --      (or something)
   if lbt.api.get_debug_mode() then
     line = string.format(format, ...)
     dbgfile:write(line.."\n")

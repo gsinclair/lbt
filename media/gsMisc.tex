@@ -1,0 +1,15 @@
+%
+% Create a graph.
+% Implementation is in lib/gsMisc.lua.
+%
+\newcommand{\graph}[1]{
+  \lua{ tex.print( gsMisc.graph('#1') ) }
+}
+
+%
+% Create a graph with an integral.
+% Implementation is in lib/gsMisc.lua.
+%
+\newcommand{\graphWithIntegral}[1]{
+  \lua{ tex.print( gsMisc.graphWithIntegral('#1') ) }
+}

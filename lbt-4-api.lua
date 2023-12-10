@@ -2,57 +2,68 @@
 -- We act on the global table `lbt` and populate its subtable `lbt.api`.
 --
 
--- The Latex environment `lbt` has three parts: beginning, middle, end.
---  * At the beginning, the current "content" needs to be cleared to make
---    way for new content.
---  * In the middle, the author's text needs to be processed into structured
---    content.
---  * At the end, the structured content needs to be turned into Latex and
---    emitted into the stream.
--- These three stages have API support in the functions below.
---  * clear_content    * process    * emit_tex
-
 local assert_string = pl.utils.assert_string
 local assert_bool = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
 local assert_table = function(n,x) pl.utils.assert_arg(n,x,'table') end
 
-lbt.api.reset_state_for_new_expansion = function()
-  lbt.init.reset_const()
-  lbt.init.reset_var()
+--------------------------------------------------------------------------------
+-- The Latex environment `lbt` calls the following API funtions:
+--
+--  * start_lbt, which clears the decks for a new bit of processing and sets
+--    up a callback to handle all lines itself (thus avoiding any TeX funny
+--    business). Lines are appended to the list `lbt.var.author_content`. This
+--    stops when the line `\end{lbt}` is seen.
+--
+--  * stop_lbt, which parses the author content into an intermediate format,
+--    then emits Latex code based on this.
+--
+--------------------------------------------------------------------------------
+
+lbt.api.start_lbt = function()
+  -- Reset constants and variables ready for a new lbt expansion.
+  lbt.fn.author_content_clear()
+  -- Define function to handle every line in the `lbt` environment.
+  local f = function(line)
+    if line:strip() == [[\end{lbt}]] then
+      luatexbase.remove_from_callback('process_input_buffer', 'process_line')
+      return line
+    else
+      lbt.fn.author_content_append(line)
+      return ""
+    end
+  end
+  -- Register that function. It will be unregistered when the environment ends.
+  luatexbase.add_to_callback('process_input_buffer', f, 'process_line')
 end
 
-lbt.api.populate_content = function(text)
-  assert_string(1,text)
-  lbt.fn.populate_content_and_pragmas(text)
+lbt.api.stop_lbt = function()
+  -- We have collected all the lines in the buffer, so we can now process them!
+  lbt.fn.author_content_process()
 end
 
-lbt.api.emit_tex = function()
-  lbt.fn.emit_tex()
-end
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
--- Called directly in a Lua block from Latex code.
---   TODO consider making draft mode a package option.
 -- If true, populate_content will short-circuit to (nearly) a no-op unless the
--- first line of content is DRAFT.
--- This will speed up compilation.
+-- content contains a `!DRAFT` pragma. This will speed up compilation.
 lbt.api.set_draft_mode = function(x)
   assert_bool(1,x)
-  lbt.const.draft_mode = x
+  lbt.system.draft_mode = x
 end
 
 lbt.api.get_draft_mode = function()
-  return lbt.const.draft_mode
+  return lbt.system.draft_mode
 end
 
 -- Debug mode allows for extra debug information to be generated only
 -- where it is needed.
 lbt.api.set_debug_mode = function(x)
   assert_bool(1,x)
-  lbt.const.debug_mode = x
+  lbt.system.debug_mode = x
 end
 
 lbt.api.get_debug_mode = function()
-  return lbt.const.debug_mode
+  return lbt.system.debug_mode
 end
 
 -- Counters are auto-created, so this will always return a value. The initial will be zero.
