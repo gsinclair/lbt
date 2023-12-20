@@ -41,6 +41,9 @@ lbt.fn = {}
 -- lbt.util will contain functions that assist in implementation.
 lbt.util = {}
 
+-- lbt.err will contain functions that assist in error handling.
+lbt.err = {}
+
 -- lbt.test will contain functions that assist in testing.
 lbt.test = {}
 

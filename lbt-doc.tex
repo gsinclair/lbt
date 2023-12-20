@@ -285,9 +285,25 @@ The \textbf{key takeaways from this code} are:
   \item Other functionality on display here includes draft/debug mode, counters, and ``data'' (a generalisation of counters).
 \end{itemize}
 
-% ## lbt-5-builtin-templates.lua -------------------------------------------------
+% ## lbt-5-err.lua ---------------------------------------------------------------
 
-\subsubsection{\texttt{lbt-5-builtin-templates.lua}}
+\subsubsection{\texttt{lbt-5-err.lua}}
+
+In order to give good error messages when a user makes mistakes implementing or using a template, all error handling is centralised in this module.
+
+\textbf{NOTE:} the implementation shown below is incredibly juvenile and will be refined both in the real code and in this documentation as time goes on.
+
+\inputminted{lua}{media/impl-lbt-5-err.lua}
+
+The \textbf{key takeaways from this code} are:
+\begin{itemize}
+  \item xxx
+  \item xxx
+\end{itemize}
+
+% ## lbt-6-builtin-templates.lua -------------------------------------------------
+
+\subsubsection{\texttt{lbt-6-builtin-templates.lua}}
 
 There are some templates that are built into \lbtlabel{}. We show the code for the most fundamental of them here.
 
@@ -343,7 +359,7 @@ The code below shows how these features are implemented (except the line continu
 
 At the bottom of the file, the actual template is created using \texttt{lua.api.make\_template}. The \texttt{Basic} template has no need for initialisation or expanding, so this declaration is very simple.
 
-\inputminted{lua}{media/impl-lbt-5-builtin-templates.lua}
+\inputminted{lua}{media/impl-lbt-6-builtin-templates.lua}
 
 The \textbf{key takeaways from this code} are:
 \begin{itemize}
@@ -354,6 +370,12 @@ The \textbf{key takeaways from this code} are:
 \end{itemize}
 
 Another important fact to emphasise here is that most templates involve holistic formatting. A business letter has several details: to, from, address, date, salutation, letterhead graphic. An educational worksheet could have a title, course, optional date, teacher's notes (on a separate page), questions, answers. See \textcolor{red}{todo!} for examples of these.
+
+% ## lbt-7-test.lua ---------------------------------------------------------------
+
+\subsubsection{\texttt{lbt-7-test.lua}}
+
+\textbf{NOTE:} This section is yet to be written.
 
 % --------------------------------------------------------------------------------
 % ## A vertical look -------------------------------------------------------------

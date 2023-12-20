@@ -11,15 +11,16 @@
   -- pl.tablex.import()
 
   -- Load lbt module into global variable lbt.
-  print("*** Hello from lbt package ***")
   lbt = {}                           -- todo check it doesn't exist already
   require('lbt-0-meta')
   require('lbt-1-init')
   require('lbt-2-util')
   require('lbt-3-fn')
   require('lbt-4-api')
-  require('lbt-5-builtin-templates')
-  lbt.log("lbt-{0,1,2,3,4,5}.lua files have been loaded")
+  require('lbt-5-err')
+  require('lbt-6-builtin-templates')
+  require('lbt-7-test')
+  lbt.log("lbt-{0,1,2,3,4,5,6,7}.lua files have been loaded")
 \end{luacode*}
 
 \newenvironment{lbt}{\directlua{lbt.api.start_lbt()}}{\directlua{lbt.api.stop_lbt()}}
