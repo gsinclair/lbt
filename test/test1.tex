@@ -13,10 +13,15 @@
   \end{luacode*}
 
   \begin{lbt}
-    Inside lbt environment 1
-    Inside lbt environment 2
-    Inside lbt environment 3
-      » and 4
-    » and 5
+    !DRAFT
+    @META
+      TEMPLATE Basic
+      Foo      Bar
+    +BODY
+      BEGIN multicols :: 2
+      TEXT Hello there
+      END multicols
+      VSPACE 30pt
+      TEXT Hello again
   \end{lbt}
 \end{document}

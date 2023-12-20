@@ -7,8 +7,7 @@
   -- Load penlight libraries from vendor directory.
   package.path = package.path .. ';./vendor/?.lua;./vendor/?/init.lua'
   pl = require("pl.import_into")()
-  -- pl.stringx.import()
-  -- pl.tablex.import()
+  pl.stringx.import()
 
   -- Load lbt module into global variable lbt.
   lbt = {}                           -- todo check it doesn't exist already
@@ -23,7 +22,9 @@
   lbt.log("lbt-{0,1,2,3,4,5,6,7}.lua files have been loaded")
 \end{luacode*}
 
-\newenvironment{lbt}{\directlua{lbt.api.start_lbt()}}{\directlua{lbt.api.stop_lbt()}}
+\newenvironment{lbt}%
+{\directlua{lbt.api.author_content_collect()}}%
+{\directlua{lbt.api.author_content_emit_latex()}}
 
 \newcommand{\lbtDraftModeOn}{\directlua{lbt.api.set_draft_mode(true)}} 
 \newcommand{\lbtDraftModeOff}{\directlua{lbt.api.set_draft_mode(false)}} 

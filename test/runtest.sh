@@ -1,1 +1,1 @@
-(cd ..; make install) && lualatex test1.tex
+(cd ..; make install) && lualatex -halt-on-error test1.tex

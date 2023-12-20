@@ -9,17 +9,17 @@ local assert_table = function(n,x) pl.utils.assert_arg(n,x,'table') end
 --------------------------------------------------------------------------------
 -- The Latex environment `lbt` calls the following API funtions:
 --
---  * start_lbt, which clears the decks for a new bit of processing and sets
---    up a callback to handle all lines itself (thus avoiding any TeX funny
---    business). Lines are appended to the list `lbt.var.author_content`. This
---    stops when the line `\end{lbt}` is seen.
+--  * author_content_collect, which clears the decks for a new bit of
+--    processing and sets up a callback to handle all lines itself (thus
+--    avoiding any TeX funny business). Lines are appended to the list
+--    `lbt.var.author_content`. This stops when the line `\end{lbt}` is seen.
 --
---  * stop_lbt, which parses the author content into an intermediate format,
---    then emits Latex code based on this.
+--  * author_content_emit_latex, which parses the author content into an
+--    intermediate format, then emits Latex code based on this.
 --
 --------------------------------------------------------------------------------
 
-lbt.api.start_lbt = function()
+lbt.api.author_content_collect = function()
   -- Reset constants and variables ready for a new lbt expansion.
   lbt.fn.author_content_clear()
   -- Define function to handle every line in the `lbt` environment.
@@ -36,9 +36,19 @@ lbt.api.start_lbt = function()
   luatexbase.add_to_callback('process_input_buffer', f, 'process_line')
 end
 
-lbt.api.stop_lbt = function()
-  -- We have collected all the lines in the buffer, so we can now process them!
-  lbt.fn.author_content_process()
+lbt.api.author_content_emit_latex = function()
+  lbt.dbg("lbt.api.author_content_emit_latex()")
+  lbt.dbg("  Current contents of lbt.const.author_content pasted below")
+  lbt.dbg("")
+  lbt.dbg("<<<")
+  lbt.dbg(pl.pretty.write(lbt.const.author_content))
+  lbt.dbg(">>>")
+  lbt.dbg("")
+  local c  = lbt.const.author_content
+  local pc = lbt.fn.parsed_content(c)
+  lbt.fn.validate_parsed_content(pc)
+  local l  = lbt.fn.latex_expansion(pc)
+  tex.print(l)
 end
 
 --------------------------------------------------------------------------------
