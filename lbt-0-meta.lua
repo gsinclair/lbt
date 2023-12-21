@@ -22,7 +22,7 @@ local logfile = io.open("lbt.log", "w")
 local dbgfile = io.open("lbt.dbg", "w")
 
 lbt.log = function (text, level)
-  level = level or 1
+  local level = level or 1
   logfile:write(string.format([[L%d » %s]].."\n", level, text))
   logfile:flush()
 end
@@ -30,10 +30,27 @@ end
 lbt.dbg = function (format, ...)
   -- TODO make this sensitive to both system debug and per-instance debug
   --      (or something)
-  if lbt.api.get_debug_mode() then
-    line = string.format(format, ...)
-    dbgfile:write(line.."\n")
-    dbgfile:flush()
+  if not lbt.api.get_debug_mode() then
+    return
   end
+  local line = nil
+  if type(format) == 'string' then
+    line = string.format(format, ...)
+  else
+    line = pl.pretty.write(format)
+  end
+  dbgfile:write(line.."\n")
+  dbgfile:flush()
+end
+
+local pp = pl.pretty.write
+
+-- A useful function during periods of active development.
+-- Comment out when not in use, to avoid polluting the global namespace.
+DEBUG = function(text)
+  print("\n\n\n\n\n\n - - - - DEBUG")
+  print(pp(text))
+  print("\n\n - - - - EXITING NOW")
+  os.exit()
 end
 
