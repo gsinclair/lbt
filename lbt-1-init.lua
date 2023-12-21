@@ -8,7 +8,6 @@
 lbt.system = {
   templates = {},              -- templates that are loaded and ready to use
                                --     (dictionary: name -> table)
-  templates_loaded = false,    -- flag
   draft_mode       = false,
   debug_mode       = false,
 }

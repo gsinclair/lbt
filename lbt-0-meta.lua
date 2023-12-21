@@ -47,10 +47,26 @@ local pp = pl.pretty.write
 
 -- A useful function during periods of active development.
 -- Comment out when not in use, to avoid polluting the global namespace.
-DEBUG = function(text)
-  print("\n\n\n\n\n\n - - - - DEBUG")
-  print(pp(text))
+--
+-- Usage: INSPECT("Template name", tn)     [optional pre-text]
+-- Usage: INSPECT(tn)
+--
+-- Use INSPECTX instead to exit the program afterwards.
+local INSPECT_impl = function(text1, text2)
+  if text2 then
+    print("\n\n\n\n\n\n - - - - INSPECT   " .. text1 .. "\n\n")
+    print(pp(text2))
+  else
+    print("\n\n\n\n\n\n - - - - INSPECT\n\n")
+    print(pp(text1))
+  end
+end
+INSPECT = function(text1, text2)
+  INSPECT_impl(text1, text2)
+  print("\n\n - - - - </INSPECT>\n\n")
+end
+INSPECTX = function(text1, text2)
+  INSPECT_impl(text1, text2)
   print("\n\n - - - - EXITING NOW")
   os.exit()
 end
-

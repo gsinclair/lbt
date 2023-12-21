@@ -2,7 +2,13 @@
 -- We act on the global table `lbt` and populate its subtable `lbt.fn`.
 --
 
+local assert_string = pl.utils.assert_string
+local assert_bool = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
+local assert_table = function(n,x) pl.utils.assert_arg(n,x,'table') end
+
 local P = lbt.util.tex_print_formatted
+
+local F = string.format
 
 -- alias for pretty-printing a table
 local pp = pl.pretty.write
@@ -59,6 +65,7 @@ end
 --   {token:'BEGIN' nargs:2, args:List('multicols','2') raw:'multicols 2'}
 --
 lbt.fn.parsed_content = function (content_lines)
+  assert_table(1, content_lines)
   -- Obtain pragmas (set) and non-pragma lines (list), and set up result table.
   local pragmas, lines = lbt.fn.impl.pragmas_and_other_lines(content_lines)
   local result = { pragmas = pragmas }
@@ -89,17 +96,18 @@ lbt.fn.parsed_content = function (content_lines)
       -- We have a valid token, possibly with some text afterwards.
       if token == nil then lbt.err.E100_invalid_token(line) end
       if append_mode == nil or current_key == nil then lbt.err.E101_line_out_of_place(line) end
-      -- The text needs to be split into arguments.
-      local args = text:split("%s+::%s+")
-      local parsedline = {
-        token = token,
-        nargs = #args,
-        args  = pl.List.new(args),
-        raw   = text
-      }
       if append_mode == 'dict' then
-        result[current_key][token] = parsedline
+        if text == nil then lbt.err.E105_dictionary_key_without_value(line) end
+        result[current_key][token] = text
       elseif append_mode == 'list' then
+        -- The text needs to be split into arguments.
+        local args = pl.utils.split(text, "%s+::%s+")
+        local parsedline = {
+          token = token,
+          nargs = #args,
+          args  = pl.List.new(args),
+          raw   = text
+        }
         result[current_key]:append(parsedline)
       else
         lbt.err.E000_internal_logic_error("append_mode: %s", append_mode)
@@ -126,6 +134,7 @@ lbt.fn.latex_expansion = function (parsed_content)
   local pc = parsed_content
   local tn = lbt.fn.pc.template_name(pc)
   local t = lbt.fn.template(tn)
+  INSPECTX("Template object", t)
   local src = lbt.fn.impl.consolidated_sources(pc)
   local sty = lbt.fn.impl.consolidated_styles(pc)
   -- Allow the template to initialise counters, etc.
@@ -168,6 +177,62 @@ end
 
 lbt.fn.pc.extra_sources = function (pc)
   ENI()
+end
+
+--------------------------------------------------------------------------------
+-- Functions to do with loading templates
+--  * initialise_template_register
+--  * load_template_into_register(name)
+--  * template(name)
+--------------------------------------------------------------------------------
+
+-- TODO make this fn.impl ?
+local function validate_template_object(name, path, t)
+  if type(t) ~= 'table' then
+    lbt.err.E401_invalid_template_object(name, path, "not a table")
+  end
+  if t.name == nil or t.sources == nil or t.init == nil or t.expand == nil or t.functions == nil then
+    lbt.err.E401_invalid_template_object(name, path, "missing one or more pieces of information")
+  end
+end
+
+-- TODO make this fn.impl ?
+-- Result: lbt.system.templates has new entry `name` -> { path = path, template = nil }
+local function template_register_add_path (name, path)
+  if pl.path.exists(path) == false then
+    lib.err.E403_template_path_doesnt_exist(name, path)
+  end
+  validate_template_object(name, path, template)
+  lbt.system.templates[name] = { path = path, template = nil }
+  lbt.log(F("Template register: name <%s> --> path <%s>", name, path))
+end
+
+-- TODO make this fn.impl ?
+-- Result: lbt.system.templates has updated entry `name` -> { path = path, template = (object) }
+local function template_register_realise_object (name)
+  local entry = lbt.system.templates[name]
+  if entry == nil then
+    lbt.err.E404_template_name_not_registered(name)
+  end
+  local path = entry.path
+  local ok, template = pcall(dofile(path))
+  if ok == false then
+    lbt.err.E400_cant_load_template(name, path)
+  end
+  validate_template_object(name, path, template)
+  lbt.system.templates[name] = { path = path, template = template }
+  lbt.log(F("Template register: realised template with name <%s>", name))
+end
+
+-- Result: lbt.system.templates has an entry for every possible template the user
+--         can access, whether built-in, contrib, or user-side.
+lbt.fn.initialise_template_register = function ()
+  local templates = lbt.system.tempates
+  if pl.tablex.size(tempates) > 0 then
+    return templates
+  end
+  template_register_add_path("Basic", "templates/Basic.lua")
+  template_register_realise_object("Basic")
 end
 
 --------------------------------------------------------------------------------
