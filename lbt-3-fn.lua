@@ -133,10 +133,10 @@ end
 lbt.fn.latex_expansion = function (parsed_content)
   local pc = parsed_content
   local tn = lbt.fn.pc.template_name(pc)
-  local t = lbt.fn.template(tn)
-  INSPECTX("Template object", t)
-  local src = lbt.fn.impl.consolidated_sources(pc)
-  local sty = lbt.fn.impl.consolidated_styles(pc)
+  local t = lbt.fn.template_by_name(tn)
+  local src = lbt.fn.impl.consolidated_sources(pc, t)
+  INSPECTX("Consolidated sources", src)
+  local sty = lbt.fn.impl.consolidated_styles(pc, t)
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
@@ -176,7 +176,7 @@ lbt.fn.pc.content_list = function (pc, key)
 end
 
 lbt.fn.pc.extra_sources = function (pc)
-  ENI()
+  return pc.META.SOURCES     -- sources specific to this expansion (optional)
 end
 
 --------------------------------------------------------------------------------
@@ -233,6 +233,8 @@ lbt.fn.initialise_template_register = function ()
   end
   template_register_add_path("Basic", "templates/Basic.lua")
   template_register_realise_object("Basic")
+  -- TODO complete this function with reference to the filesystem
+  --      We will need to implement \lbtTemplateDirectory{...}
 end
 
 --------------------------------------------------------------------------------
@@ -281,8 +283,7 @@ lbt.fn.string = function()
   return table.concat(result, "\n")
 end
 
-lbt.fn.template = function(name)
-  -- TODO consider a different name, like template_by_name.
+lbt.fn.template_by_name = function(name)
   local tt = lbt.fn.template_table()
   local t  = tt[name]
   if t == nil then
@@ -344,4 +345,50 @@ lbt.fn.impl.validate_content_key = function(line, dictionary)
     lbt.err.E103_invalid_content_key(line, "name can only be upper-case letters")
   end
   return name
+end
+
+-- lbt.fn.impl.consolidated_sources(pc,t)
+-- 
+-- A template itself has sources. For example, Exam might rely on Questions and Figures.
+-- A specific expansion optionally has extra sources defined in @META.SOURCES.
+-- The specific ones take precedence.
+--
+-- Return: a List of source template _objects_ in the order they should be referenced.
+-- Error: if any template name cannot be resolved into a template object.
+--
+lbt.fn.impl.consolidated_sources = function (pc, t)
+  local src1 = lbt.fn.pc.extra_sources(pc) or ""  -- optional specific source names, comma-separated
+  local src2 = t.sources                          -- source names baked in to the template (table-list)
+  local result = pl.List()
+  for name in src1:split(","):iter() do
+    local ok, t = pcall(fn.template_by_name, name)
+    if ok then
+      result:append(t)
+    else
+      lbt.err.E206_cant_form_list_of_sources(name)
+      -- TODO learn how pcall works in more detail. Can I pass on the error message?
+    end
+  end
+  for _, name in ipairs(src2) do
+    local ok, t = pcall(fn.template_by_name, name)
+    if ok then
+      result:append(t)
+    else
+      lbt.err.E206_cant_form_list_of_sources(name)
+      -- TODO learn how pcall works in more detail. Can I pass on the error message?
+    end
+  end
+  return result
+end
+
+-- lbt.fn.impl.consolidated_styles(pc,t)
+-- 
+-- Like sources, a template has styles (not yet implemented) and these can be overridden
+-- in a number of ways (not yet fully defined).
+--
+-- Return: a dictionary of style mappings like "Q.space -> 6pt"
+-- Error: ...
+--
+lbt.fn.impl.consolidated_styles = function (pc, t)
+  return { placeholder = "hello" }
 end
