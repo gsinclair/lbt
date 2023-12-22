@@ -210,20 +210,20 @@ local function validate_template_object(name, path, t)
 end
 
 -- TODO make this fn.impl ?
--- Result: lbt.system.templates has new entry `name` -> { path = path, template = nil }
+-- Result: lbt.system.template_register has new entry `name` -> { path = path, template = nil }
 local function template_register_add_path (name, path)
   if pl.path.exists(path) == false then
     lib.err.E403_template_path_doesnt_exist(name, path)
   end
   validate_template_object(name, path, template)
-  lbt.system.templates[name] = { path = path, template = nil }
+  lbt.system.template_register[name] = { path = path, template = nil }
   lbt.log(F("Template register: name <%s> --> path <%s>", name, path))
 end
 
 -- TODO make this fn.impl ?
--- Result: lbt.system.templates has updated entry `name` -> { path = path, template = (object) }
+-- Result: lbt.system.template_register has updated entry `name` -> { path = path, template = (object) }
 local function template_register_realise_object (name)
-  local entry = lbt.system.templates[name]
+  local entry = lbt.system.template_register[name]
   if entry == nil then
     lbt.err.E404_template_name_not_registered(name)
   end
@@ -233,48 +233,48 @@ local function template_register_realise_object (name)
     lbt.err.E400_cant_load_template(name, path)
   end
   validate_template_object(name, path, template)
-  lbt.system.templates[name] = { path = path, template = template }
+  lbt.system.template_register[name] = { path = path, template = template }
   lbt.log(F("Template register: realised template with name <%s>", name))
 end
 
--- Result: lbt.system.templates has an entry for every possible template the user
---         can access, whether built-in, contrib, or user-side.
-lbt.fn.initialise_template_register = function ()
-  local templates = lbt.system.tempates
-  if pl.tablex.size(tempates) > 0 then
-    return templates
-  end
-  template_register_add_path("Basic", "templates/Basic.lua")
-  template_register_realise_object("Basic")
-  -- TODO complete this function with reference to the filesystem
-  --      We will need to implement \lbtTemplateDirectory{...}
-end
--- }}}
+-- -- Result: lbt.system.template_register has an entry for every possible template the user
+-- --         can access, whether built-in, contrib, or user-side.
+-- lbt.fn.initialise_template_register = function ()
+--   local templates = lbt.system.template_register
+--   if pl.tablex.size(tempates) > 0 then
+--     return templates
+--   end
+--   template_register_add_path("Basic", "templates/Basic.lua")
+--   template_register_realise_object("Basic")
+--   -- TODO complete this function with reference to the filesystem
+--   --      We will need to implement \lbtTemplateDirectory{...}
+-- end
+-- -- }}}
 
 --------------------------------------------------------------------------------
 -- {{{ Miscellaneous old code to be integrated or reconsidered
 --------------------------------------------------------------------------------
 
--- Load all templates defined in lib/templates/*.lua
--- Result is cached, so this function may be called freely.
-lbt.fn.template_table = function()
-  if lbt.system.templates_loaded == false then
-    local filenames = io.popen([[ls lib/templates/*.lua]])
-    for filename in filenames:lines() do
-      local _, _, template_name = string.find(filename, "/([A-z0-9_-]+)%.lua$")
-      local template_object = dofile(filename)
-      assert(template_name, "Unable to find template file: "..filename)
-      assert(template_object, "Unable to load template object")
-      lbt.system.templates[template_name] = template_object
-      lbt.dbg("Template table: %s --> %s", template_name, filename)
-    end
-    lbt.dbg("Loaded templates table for the first time:")
-    lbt.dbg(pp(lbt.system.templates))
-  else
-    lbt.system.templates_loaded = true
-    return lbt.system.templates
-  end
-end
+-- -- Load all templates defined in lib/templates/*.lua
+-- -- Result is cached, so this function may be called freely.
+-- lbt.fn.template_table = function()
+--   if lbt.system.templates_loaded == false then
+--     local filenames = io.popen([[ls lib/templates/*.lua]])
+--     for filename in filenames:lines() do
+--       local _, _, template_name = string.find(filename, "/([A-z0-9_-]+)%.lua$")
+--       local template_object = dofile(filename)
+--       assert(template_name, "Unable to find template file: "..filename)
+--       assert(template_object, "Unable to load template object")
+--       lbt.system.templates[template_name] = template_object
+--       lbt.dbg("Template table: %s --> %s", template_name, filename)
+--     end
+--     lbt.dbg("Loaded templates table for the first time:")
+--     lbt.dbg(pp(lbt.system.templates))
+--   else
+--     lbt.system.templates_loaded = true
+--     return lbt.system.templates
+--   end
+-- end
 
 -- TODO rename (or remove), and maybe reimplement
 lbt.fn.string = function()

@@ -106,6 +106,4 @@ local function RUN_TESTS(exit_on_completion)
   if exit_on_completion then os.exit() end
 end
 
-RUN_TESTS(1)
-
-
+-- RUN_TESTS(1)

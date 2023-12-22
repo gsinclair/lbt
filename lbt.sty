@@ -20,6 +20,9 @@
   require('lbt-6-builtin-templates')
   require('lbt-7-test')
   lbt.log("lbt-{0,1,2,3,4,5,6,7}.lua files have been loaded")
+  
+  INSPECT(os.getenv("PWD"))
+  lbt.api.add_template_directory('.')
 \end{luacode*}
 
 \newenvironment{lbt}%

@@ -54,20 +54,20 @@ local pp = pl.pretty.write
 -- Use INSPECTX instead to exit the program afterwards.
 local INSPECT_impl = function(text1, text2)
   if text2 then
-    print("\n\n\n\n\n\n - - - - INSPECT   " .. text1 .. "\n\n")
+    print("\n\n\n\n ↓ ↓ ↓ ↓ <INSPECT>   " .. text1 .. "\n\n")
     print(pp(text2))
   else
-    print("\n\n\n\n\n\n - - - - INSPECT\n\n")
+    print("\n\n\n\n ↓ ↓ ↓ ↓ <INSPECT>\n\n")
     print(pp(text1))
   end
 end
 INSPECT = function(text1, text2)
   INSPECT_impl(text1, text2)
-  print("\n\n - - - - </INSPECT>\n\n")
+  print("\n\n ↑ ↑ ↑ ↑ </INSPECT>\n\n")
 end
 INSPECTX = function(text1, text2)
   INSPECT_impl(text1, text2)
-  print("\n\n - - - - EXITING NOW")
+  print("\n\n ↑ ↑ ↑ ↑ </INSPECT>     EXITING NOW")
   os.exit()
 end
 

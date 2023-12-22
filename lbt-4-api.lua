@@ -6,6 +6,56 @@ local assert_string = pl.utils.assert_string
 local assert_bool = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
 local assert_table = function(n,x) pl.utils.assert_arg(n,x,'table') end
 
+
+-- Result: lbt.system.templates has an entry for every possible template the user
+--         can access, whether built-in, contrib, or user-side.
+lbt.fn.initialise_template_register = function ()
+  local templates = lbt.system.templates
+  if pl.tablex.size(tempates) > 0 then
+    return templates
+  end
+  template_register_add_path("Basic", "templates/Basic.lua")
+  template_register_realise_object("Basic")
+  -- TODO complete this function with reference to the filesystem
+  --      We will need to implement \lbtTemplateDirectory{...}
+end
+
+-- When starting up, we need to survey the filesystem to see what templates
+-- are available. We make a shallow register like
+--   { "Basic"       = { path = ..., template = ... },
+--     "Questions"   = { path = ..., template = nil },
+--     "Tables"      = { path = ..., template = nil },
+--     "contrib.WS0" = { path = ..., template = nil },
+--     ... }
+-- It contains paths only at this point. The actual template objects will be
+-- filled in when they are needed. The exception is Basic, which is always
+-- available.
+--
+-- The templates can be built-in (Basic), contrib (WS0), or user-supplied
+-- (Questions). These come from different paths.
+--
+-- Built-in and contrib templates live in the lbt distribution directory.
+-- User-supplied templates live on the user's computer. The user needs to
+-- call \lbtTemplateDirectory{...} one or more times so that we know where
+-- to look.
+--
+-- FIXME this means we can't call initialise_template_register in the .sty
+-- file, because the user has not built the path yet.
+lbt.api.initialise_template_register = function ()
+  local templates = lbt.system.templates
+  if pl.tablex.size(tempates) > 0 then
+    lbt.log("WARN: Attempt to re-initialise template register ignored")
+    return
+  end
+end
+
+-- Put each lua file in the directory into the template register,
+-- just with the path for now.
+lbt.api.add_template_directory = function (dir)
+  local filenames = pl.dir.getfiles(dir, "*.*")
+  IX(filenames)
+end
+
 --------------------------------------------------------------------------------
 -- The Latex environment `lbt` calls the following API funtions:
 --
@@ -145,10 +195,10 @@ lbt.api.default_template_expand = function()
   -- TODO implement!
 end
 
-lbt.api.make_template = function(tbl)
+lbt.api.register_template = function(tbl)
   assert_table(1,tbl)
   assert_string(1,tbl.name)
   -- ...
-  lbt.system.templates[tbl.name] = tbl
+  lbt.system.template_register[tbl.name] = tbl
   -- TODO complete verifications, and check we are not overwriting another template
 end

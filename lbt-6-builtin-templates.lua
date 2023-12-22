@@ -194,7 +194,7 @@ end
 -- | Then we call `lbt.api.make_template`. |
 -- +---------------------------------------+
 
-lbt.api.make_template {
+lbt.api.register_template {
   name      = 'Basic',
   sources   = {},
   init      = lbt.api.default_template_init(),

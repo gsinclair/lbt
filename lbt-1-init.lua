@@ -6,7 +6,7 @@
 -- lbt.system contains data shared for the whole Latex document.
 -- It is initialised here because it only needs to happen once.
 lbt.system = {
-  templates = {},              -- templates that are loaded and ready to use
+  template_register = {},      -- templates that are loaded and ready to use
                                --     (dictionary: name -> table)
   draft_mode       = false,
   debug_mode       = false,

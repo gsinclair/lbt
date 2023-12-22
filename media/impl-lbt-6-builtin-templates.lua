@@ -97,11 +97,11 @@ f.ENUMERATE = function(text)
   return result
 end
 
--- +---------------------------------------+
--- | Then we call `lbt.api.make_template`. |
--- +---------------------------------------+
+-- +-------------------------------------------+
+-- | Then we call `lbt.api.register_template`. |
+-- +-------------------------------------------+
 
-lbt.api.make_template {
+lbt.api.register_template {
   name      = 'Basic',
   sources   = {},
   init      = lbt.api.default_template_init(),
