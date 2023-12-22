@@ -2,6 +2,7 @@
 -- We act on the global table `lbt` and populate its subtable `lbt.fn`.
 --
 
+-- {{{ Preamble: local conveniences
 local assert_string = pl.utils.assert_string
 local assert_bool = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
 local assert_table = function(n,x) pl.utils.assert_arg(n,x,'table') end
@@ -16,9 +17,10 @@ local pp = pl.pretty.write
 local ENI = function()
   error("Not implemented", 3)
 end
+-- }}}
 
 --------------------------------------------------------------------------------
--- Author content:
+-- {{{ Author content:
 --  * author_content_clear      (reset lbt.const and lbt.var data)
 --  * author_content_append     (append stripped line to lbt.const.author_content,
 --                               handling » continuations)
@@ -45,9 +47,10 @@ lbt.fn.author_content_append = function(line)
   end
   lbt.const.author_content:append(line)
 end
+-- }}}
 
 --------------------------------------------------------------------------------
--- Processing author content and emitting Latex code
+-- {{{ Processing author content and emitting Latex code
 --  * parsed_content(c)        (internal representation of the author's content)
 --  * latex_expansion(pc)      (Latex representation based on the parsed content)
 --------------------------------------------------------------------------------
@@ -142,9 +145,10 @@ lbt.fn.latex_expansion = function (parsed_content)
   -- And...go!
   return t.expand(pc, src, sty)
 end
+-- }}}
 
 --------------------------------------------------------------------------------
--- Functions associated with parsed content
+-- {{{ Functions associated with parsed content
 --  * meta(pc)
 --  * title(pc)
 --  * dictionary(pc, "META")
@@ -175,12 +179,21 @@ lbt.fn.pc.content_list = function (pc, key)
   ENI()
 end
 
+-- Return a List of template names given in META.SOURCES.
+-- May be empty.
 lbt.fn.pc.extra_sources = function (pc)
-  return pc.META.SOURCES     -- sources specific to this expansion (optional)
+  local sources = pc.META.SOURCES
+  if sources then
+    local bits = sources:split(",")
+    return pl.List(bits):map(pl.stringx.strip)
+  else
+    return pl.List()
+  end
 end
+-- }}}
 
 --------------------------------------------------------------------------------
--- Functions to do with loading templates
+-- {{{ Functions to do with loading templates
 --  * initialise_template_register
 --  * load_template_into_register(name)
 --  * template(name)
@@ -236,8 +249,10 @@ lbt.fn.initialise_template_register = function ()
   -- TODO complete this function with reference to the filesystem
   --      We will need to implement \lbtTemplateDirectory{...}
 end
+-- }}}
 
 --------------------------------------------------------------------------------
+-- {{{ Miscellaneous old code to be integrated or reconsidered
 --------------------------------------------------------------------------------
 
 -- Load all templates defined in lib/templates/*.lua
@@ -291,10 +306,12 @@ lbt.fn.template_by_name = function(name)
   end
   return t
 end
+-- }}}
 
 --------------------------------------------------------------------------------
--- Functions assisting the implementation. These are lower-level in nature and
--- just do one thing with the argument(s) they are given.
+-- {{{ Functions assisting the implementation.
+-- These are lower-level in nature and just do one thing with the argument(s)
+-- they are given.
 --  * xxx
 --  * xxx
 --  * xxx
@@ -357,19 +374,10 @@ end
 -- Error: if any template name cannot be resolved into a template object.
 --
 lbt.fn.impl.consolidated_sources = function (pc, t)
-  local src1 = lbt.fn.pc.extra_sources(pc) or ""  -- optional specific source names, comma-separated
-  local src2 = t.sources                          -- source names baked in to the template (table-list)
+  local src1 = lbt.fn.pc.extra_sources(pc)  -- optional specific source names (List)
+  local src2 = pl.List(t.sources)           -- source names baked in to the template (List)
   local result = pl.List()
-  for name in src1:split(","):iter() do
-    local ok, t = pcall(fn.template_by_name, name)
-    if ok then
-      result:append(t)
-    else
-      lbt.err.E206_cant_form_list_of_sources(name)
-      -- TODO learn how pcall works in more detail. Can I pass on the error message?
-    end
-  end
-  for _, name in ipairs(src2) do
+  for name in src1..src2 do
     local ok, t = pcall(fn.template_by_name, name)
     if ok then
       result:append(t)
@@ -392,3 +400,4 @@ end
 lbt.fn.impl.consolidated_styles = function (pc, t)
   return { placeholder = "hello" }
 end
+-- }}}

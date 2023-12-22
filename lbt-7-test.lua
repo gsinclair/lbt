@@ -18,7 +18,7 @@ end
 
 --------------------------------------------------------------------------------
 
-local good_input = content_lines([[
+local good_input_1 = content_lines([[
   !DRAFT
   @META
     TEMPLATE Basic
@@ -29,6 +29,21 @@ local good_input = content_lines([[
     END multicols
     VSPACE 30pt
     VFILL
+    TEXT Hello again]])
+
+-- For testing SOURCES
+local good_input_2 = content_lines([[
+  @META
+    TEMPLATE Basic
+    SOURCES  Questions, Figures, Tables
+  +BODY
+    TEXT Hello again]])
+
+-- For testing lack of SOURCES
+local good_input_3 = content_lines([[
+  @META
+    TEMPLATE Basic
+  +BODY
     TEXT Hello again]])
 
 --------------------------------------------------------------------------------
@@ -44,7 +59,7 @@ end
 
 local function T_parsed_content_1()
   -- DEBUG(pp(input))
-  local pc = lbt.fn.parsed_content(good_input)
+  local pc = lbt.fn.parsed_content(good_input_1)
   lbt.dbg(pc)
   local exp_pragmas = { draft = true, debug = false, ignore = false }
   EQ(pc.pragmas, exp_pragmas)
@@ -70,14 +85,27 @@ local function T_parsed_content_1()
   EQ(pc.BODY, exp_body)
 end
 
+local function T_extra_sources()
+  -- We assume parsed_content works for these inputs.
+  local pc2 = lbt.fn.parsed_content(good_input_2)
+  local pc3 = lbt.fn.parsed_content(good_input_3)
+  local s2  = lbt.fn.pc.extra_sources(pc2)
+  local s3  = lbt.fn.pc.extra_sources(pc3)
+  assert(s2 == pl.List{"Questions", "Figures", "Tables"})
+  assert(s3 == pl.List{})
+end
+
+
 --------------------------------------------------------------------------------
 
-local function RUN_TESTS()
+local function RUN_TESTS(exit_on_completion)
   lbt.api.set_debug_mode(true)
   T_pragrams_and_other_lines()
   T_parsed_content_1()
+  T_extra_sources()
+  if exit_on_completion then os.exit() end
 end
 
-RUN_TESTS()
+RUN_TESTS(1)
 
 

@@ -70,3 +70,6 @@ INSPECTX = function(text1, text2)
   print("\n\n - - - - EXITING NOW")
   os.exit()
 end
+
+I = INSPECT
+IX = INSPECTX
