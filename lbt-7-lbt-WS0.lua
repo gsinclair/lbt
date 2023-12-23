@@ -13,11 +13,12 @@ local F = string.format
 local f = {}
 
 local expand = function(pc)
-  return "\emph{WS0}"
+  return [[\emph{WS0}]]
 end
 
 lbt.api.register_template {
   name      = 'lbt.WS0',
+  desc      = 'A worksheet with title, course, teacher notes',
   sources   = {"lbt.Questions"},
   init      = lbt.api.default_template_init,
   expand    = expand,

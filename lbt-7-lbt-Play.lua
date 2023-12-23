@@ -19,6 +19,7 @@ end
 
 lbt.api.register_template {
   name      = 'lbt.Play',
+  desc      = 'Actor lines, stage directions, etc.',
   sources   = {},
   init      = lbt.api.default_template_init,
   expand    = lbt.api.default_template_expand,

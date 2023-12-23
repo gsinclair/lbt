@@ -18,11 +18,12 @@ local f = {}
 
 
 local expand = function(pc)
-  return "\emph{WS0}"
+  return [[\emph{WS0}]]
 end
 
 lbt.api.register_template {
-  name      = 'lbt.WS0',
+  name      = 'lbt.WS1',
+  desc      = 'A worksheet like WS0 but with added structure (as an example)',
   sources   = {"lbt.Questions"},
   init      = lbt.api.default_template_init,
   expand    = expand,

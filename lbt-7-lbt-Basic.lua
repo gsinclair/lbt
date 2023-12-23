@@ -196,6 +196,7 @@ end
 
 lbt.api.register_template {
   name      = 'Basic',
+  desc      = 'Fundamental Latex macros for everyday use (built in to lbt)',
   sources   = {},
   init      = lbt.api.default_template_init(),
   expand    = lbt.api.default_template_expand(),

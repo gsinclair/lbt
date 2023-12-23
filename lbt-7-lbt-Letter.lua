@@ -11,7 +11,8 @@ local function expand (pc)
 end
 
 lbt.api.register_template {
-  name      = 'lbt.Question',
+  name      = 'lbt.Letter',
+  desc      = 'From/to name and address, salutation, etc.',
   sources   = {},
   init      = lbt.api.default_template_init,
   expand    = lbt.api.default_template_expand,

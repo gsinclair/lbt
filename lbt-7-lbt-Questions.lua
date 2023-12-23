@@ -16,6 +16,7 @@ end
 lbt.api.register_template {
 
   name      = 'lbt.Questions',
+  desc      = 'Questions, hints, answers for worksheet, exam, course notes',
   sources   = {},
   init      = function() lbt.api.reset_counter('q') end,
   expand    = lbt.api.default_template_expand,
