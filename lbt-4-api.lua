@@ -2,23 +2,12 @@
 -- We act on the global table `lbt` and populate its subtable `lbt.api`.
 --
 
+local F = string.format
+
 local assert_string = pl.utils.assert_string
 local assert_bool = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
 local assert_table = function(n,x) pl.utils.assert_arg(n,x,'table') end
 
-
--- Result: lbt.system.templates has an entry for every possible template the user
---         can access, whether built-in, contrib, or user-side.
-lbt.fn.initialise_template_register = function ()
-  local templates = lbt.system.templates
-  if pl.tablex.size(tempates) > 0 then
-    return templates
-  end
-  template_register_add_path("Basic", "templates/Basic.lua")
-  template_register_realise_object("Basic")
-  -- TODO complete this function with reference to the filesystem
-  --      We will need to implement \lbtTemplateDirectory{...}
-end
 
 -- When starting up, we need to survey the filesystem to see what templates
 -- are available. We make a shallow register like
@@ -41,6 +30,8 @@ end
 --
 -- FIXME this means we can't call initialise_template_register in the .sty
 -- file, because the user has not built the path yet.
+--
+-- TODO delete this code
 lbt.api.initialise_template_register = function ()
   local templates = lbt.system.templates
   if pl.tablex.size(tempates) > 0 then
@@ -52,8 +43,26 @@ end
 -- Put each lua file in the directory into the template register,
 -- just with the path for now.
 lbt.api.add_template_directory = function (dir)
-  local filenames = pl.dir.getfiles(dir, "*.*")
-  IX(filenames)
+  dir = lbt.fn.expand_directory(dir)
+  if not pl.path.isdir(dir) then
+    lbt.err.E208_nonexistent_template_dir(dir)
+  end
+  lbt.log(F("Adding template directory: %s", dir))
+  local paths = pl.dir.getfiles(dir, "*.lua")
+  I("paths", paths)
+  for path in paths:iter() do
+    lbt.log(F(" * %s", pl.path.basename(path)))
+    local ok, x = pcall(dofile, path)
+    if ok then
+      local template_details = x
+      lbt.fn.register_template(template_details)
+    else
+      local err_details = x
+      lbt.err.E213_failed_template_load(path, err_details)
+    end
+  end
+  lbt.dbg("Added template directory <%s>; here is the current register...", dir)
+  lbt.dbg(lbt.system.template_register)
 end
 
 --------------------------------------------------------------------------------
@@ -192,13 +201,7 @@ end
 -- Template expansion acts on a single parameter (`text`) and returns a string of Latex.
 -- The default expansion is to run the contents of BODY through `lbt.fn.` 
 lbt.api.default_template_expand = function()
-  -- TODO implement!
-end
-
-lbt.api.register_template = function(tbl)
-  assert_table(1,tbl)
-  assert_string(1,tbl.name)
-  -- ...
-  lbt.system.template_register[tbl.name] = tbl
-  -- TODO complete verifications, and check we are not overwriting another template
+  return function (pc, sources, styles)
+    -- TODO implement!
+  end
 end

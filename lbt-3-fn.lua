@@ -136,7 +136,7 @@ end
 lbt.fn.latex_expansion = function (parsed_content)
   local pc = parsed_content
   local tn = lbt.fn.pc.template_name(pc)
-  local t = lbt.fn.template_by_name(tn)
+  local t = lbt.fn.template_object_or_error(tn)
   local src = lbt.fn.impl.consolidated_sources(pc, t)
   INSPECTX("Consolidated sources", src)
   local sty = lbt.fn.impl.consolidated_styles(pc, t)
@@ -199,114 +199,53 @@ end
 --  * template(name)
 --------------------------------------------------------------------------------
 
--- TODO make this fn.impl ?
-local function validate_template_object(name, path, t)
-  if type(t) ~= 'table' then
-    lbt.err.E401_invalid_template_object(name, path, "not a table")
-  end
-  if t.name == nil or t.sources == nil or t.init == nil or t.expand == nil or t.functions == nil then
-    lbt.err.E401_invalid_template_object(name, path, "missing one or more pieces of information")
+lbt.fn.expand_directory = function (path)
+  if path:startswith("PWD") then
+    return path:replace("PWD", os.getenv("PWD"), 1)
+  elseif path:startswith("TEXMF") then
+    lbt.err.E001_internal_logic_error("not implemented")
+  else
+    lbt.err.E207_invalid_template_path(path)
   end
 end
 
--- TODO make this fn.impl ?
--- Result: lbt.system.template_register has new entry `name` -> { path = path, template = nil }
-local function template_register_add_path (name, path)
-  if pl.path.exists(path) == false then
-    lib.err.E403_template_path_doesnt_exist(name, path)
+-- TODO include path as a parameter and store it in the register.
+--      Obstacle: the builtin templates.
+lbt.fn.register_template = function(template_details)
+  local td = template_details
+  local tn = template_details.name
+  ok, err_detail = lbt.fn.impl.template_details_are_valid(td)
+  if ok then
+    if lbt.fn.template_object_or_nil(tn) ~= nil then
+      lbt.log(F("WARN: Template name <%s> already exists; overwriting.", tn))
+      lbt.log(F("       * existing path: %s", '--- tbi ---'))
+      lbt.log(F("       * new path:      %s", '--- tbi ---'))
+    end
+    lbt.system.template_register[tn] = td
+  else
+    lbt.err.E215_invalid_template_details(td, err_detail)
   end
-  validate_template_object(name, path, template)
-  lbt.system.template_register[name] = { path = path, template = nil }
-  lbt.log(F("Template register: name <%s> --> path <%s>", name, path))
 end
 
--- TODO make this fn.impl ?
--- Result: lbt.system.template_register has updated entry `name` -> { path = path, template = (object) }
-local function template_register_realise_object (name)
-  local entry = lbt.system.template_register[name]
-  if entry == nil then
-    lbt.err.E404_template_name_not_registered(name)
-  end
-  local path = entry.path
-  local ok, template = pcall(dofile(path))
-  if ok == false then
-    lbt.err.E400_cant_load_template(name, path)
-  end
-  validate_template_object(name, path, template)
-  lbt.system.template_register[name] = { path = path, template = template }
-  lbt.log(F("Template register: realised template with name <%s>", name))
+lbt.fn.template_path = function(tn)
+  return 'not yet implemented'
 end
 
--- -- Result: lbt.system.template_register has an entry for every possible template the user
--- --         can access, whether built-in, contrib, or user-side.
--- lbt.fn.initialise_template_register = function ()
---   local templates = lbt.system.template_register
---   if pl.tablex.size(tempates) > 0 then
---     return templates
---   end
---   template_register_add_path("Basic", "templates/Basic.lua")
---   template_register_realise_object("Basic")
---   -- TODO complete this function with reference to the filesystem
---   --      We will need to implement \lbtTemplateDirectory{...}
--- end
--- -- }}}
+lbt.fn.template_object_or_nil = function(tn)
+  return lbt.system.template_register[tn]
+end
+
+lbt.fn.template_object_or_error = function(tn)
+  local t = lbt.fn.template_object_or_nil(tn)
+  if t == nil then
+    lbt.err.E200_no_template_for_name(tn)
+  end
+  return t
+end
 
 --------------------------------------------------------------------------------
 -- {{{ Miscellaneous old code to be integrated or reconsidered
 --------------------------------------------------------------------------------
-
--- -- Load all templates defined in lib/templates/*.lua
--- -- Result is cached, so this function may be called freely.
--- lbt.fn.template_table = function()
---   if lbt.system.templates_loaded == false then
---     local filenames = io.popen([[ls lib/templates/*.lua]])
---     for filename in filenames:lines() do
---       local _, _, template_name = string.find(filename, "/([A-z0-9_-]+)%.lua$")
---       local template_object = dofile(filename)
---       assert(template_name, "Unable to find template file: "..filename)
---       assert(template_object, "Unable to load template object")
---       lbt.system.templates[template_name] = template_object
---       lbt.dbg("Template table: %s --> %s", template_name, filename)
---     end
---     lbt.dbg("Loaded templates table for the first time:")
---     lbt.dbg(pp(lbt.system.templates))
---   else
---     lbt.system.templates_loaded = true
---     return lbt.system.templates
---   end
--- end
-
--- TODO rename (or remove), and maybe reimplement
-lbt.fn.string = function()
-  local result = {"lbt.content"}
-  for key, T in pairs(lbt.content) do
-    -- First level.
-    table.insert(result, "  " .. key)
-    if T[1] == nil then
-      -- We have a dictionary
-      for token,text in pairs(T) do
-        table.insert(result, F("    %-15s  %s", token, text:sub(1,35)))
-      end
-    else
-      -- We have a list
-      for _, vals in ipairs(T) do
-        local token, text = table.unpack(vals)
-        table.insert(result, F("    %-15s  %s", token, text:sub(1,35)))
-      end
-    end
-  end
-  return table.concat(result, "\n")
-end
-
-lbt.fn.template_by_name = function(name)
-  local tt = lbt.fn.template_table()
-  local t  = tt[name]
-  if t == nil then
-    lbt.err.E200_no_template_for_name(name)
-  end
-  return t
-end
--- }}}
 
 --------------------------------------------------------------------------------
 -- {{{ Functions assisting the implementation.
@@ -376,14 +315,14 @@ end
 lbt.fn.impl.consolidated_sources = function (pc, t)
   local src1 = lbt.fn.pc.extra_sources(pc)  -- optional specific source names (List)
   local src2 = pl.List(t.sources)           -- source names baked in to the template (List)
+  local sources = pl.List(); sources:extend(src1); sources:extend(src2)
   local result = pl.List()
-  for name in src1..src2 do
-    local ok, t = pcall(fn.template_by_name, name)
-    if ok then
+  for name in sources:iter() do
+    local t = lbt.fn.template_object_or_nil(name)
+    if t then
       result:append(t)
     else
       lbt.err.E206_cant_form_list_of_sources(name)
-      -- TODO learn how pcall works in more detail. Can I pass on the error message?
     end
   end
   return result
@@ -399,5 +338,25 @@ end
 --
 lbt.fn.impl.consolidated_styles = function (pc, t)
   return { placeholder = "hello" }
+end
+
+-- Return: ok, error_details
+lbt.fn.impl.template_details_are_valid = function (td)
+  if type(td) ~= 'table' then
+    return false, F('argument is not a table, it is a %s', type(td))
+  elseif type(td.name) ~= 'string' then
+    return false, F('name is not a string')
+  elseif type(td.desc) ~= 'string' or #td.desc < 10 then
+    return false, F('desc is not a string or is too short')
+  elseif type(td.sources) ~= 'table' then
+    return false, F('sources is not a table')
+  elseif type(td.init) ~= 'function' then
+    return false, F('init is not a function')
+  elseif type(td.expand) ~= 'function' then
+    return false, F('expand is not a function')
+  elseif type(td.functions) ~= 'table' then
+    return false, F('functions is not a table')
+  end
+  return true, ''
 end
 -- }}}

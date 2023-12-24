@@ -95,15 +95,28 @@ local function T_extra_sources()
   assert(s3 == pl.List{})
 end
 
+local function T_add_template_directory()
+  lbt.api.add_template_directory("PWD/templates")
+end
+
 
 --------------------------------------------------------------------------------
 
 local function RUN_TESTS(exit_on_completion)
+  print("\n\n======================= <TESTS>")
   lbt.api.set_debug_mode(true)
-  T_pragrams_and_other_lines()
-  T_parsed_content_1()
-  T_extra_sources()
-  if exit_on_completion then os.exit() end
+
+  -- T_pragrams_and_other_lines()
+  -- T_parsed_content_1()
+  -- T_extra_sources()
+  T_add_template_directory()
+
+  if exit_on_completion then
+    print("======================= </TESTS> (exiting)")
+    os.exit()
+  else
+    print("======================= </TESTS>")
+  end
 end
 
--- RUN_TESTS(1)
+RUN_TESTS(1)

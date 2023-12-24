@@ -67,7 +67,7 @@ INSPECT = function(text1, text2)
 end
 INSPECTX = function(text1, text2)
   INSPECT_impl(text1, text2)
-  print("\n\n ↑ ↑ ↑ ↑ </INSPECT>     EXITING NOW")
+  print("\n\n ↑ ↑ ↑ ↑ </INSPECT> (exiting)")
   os.exit()
 end
 

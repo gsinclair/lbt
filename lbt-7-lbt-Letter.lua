@@ -10,7 +10,7 @@ local function expand (pc)
   return F([[\textbf{Letter}]])
 end
 
-lbt.api.register_template {
+return {
   name      = 'lbt.Letter',
   desc      = 'From/to name and address, salutation, etc.',
   sources   = {},

@@ -13,7 +13,7 @@ local function expand (pc)
   return F([[\textbf{CourseNotes}]])
 end
 
-lbt.api.register_template {
+return {
   name      = 'lbt.CourseNotes',
   desc      = 'Title page, sections, running headings',
   sources   = {"lbt.Questions"},

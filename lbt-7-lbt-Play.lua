@@ -17,7 +17,7 @@ f.DIRECTION = function(n, args)
   return F([[\textbf{An actor's line}]])
 end
 
-lbt.api.register_template {
+return {
   name      = 'lbt.Play',
   desc      = 'Actor lines, stage directions, etc.',
   sources   = {},

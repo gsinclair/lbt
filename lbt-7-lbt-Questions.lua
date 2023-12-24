@@ -13,8 +13,7 @@ f.Q = function(n, args)
   return F([[\textbf{Question }%d\enspace]], lbt.api.counter_get('q'))
 end
 
-lbt.api.register_template {
-
+return {
   name      = 'lbt.Questions',
   desc      = 'Questions, hints, answers for worksheet, exam, course notes',
   sources   = {},

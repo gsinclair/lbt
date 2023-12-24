@@ -21,7 +21,7 @@ local expand = function(pc)
   return [[\emph{WS0}]]
 end
 
-lbt.api.register_template {
+return {
   name      = 'lbt.WS1',
   desc      = 'A worksheet like WS0 but with added structure (as an example)',
   sources   = {"lbt.Questions"},

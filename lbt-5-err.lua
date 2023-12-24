@@ -2,14 +2,6 @@
 -- We act on the global table `lbt` and populate its subtable `lbt.err`.
 --
 
-lbt.err.messages = {
-  E001 = [[Internal logic error: DETAILS]],
-  E002 = [[xxx]],
-  E003 = [[xxx]],
-  E004 = [[xxx]],
-  E005 = [[xxx]],
-}
-
 lbt.err.quit_with_error = function(msg, ...)
   message = string.format(msg, ...)
   traceback = debug.traceback()
@@ -31,13 +23,7 @@ local E = function(msg, ...)
   error(message, 3)
 end
 
-local function msg(intcode)
-  strcode = format("E%03d", intcode)
-  message = lbt.err.messages[strcode]
-  if message == nil then
-    lbt.err.quit_with_error("No such error code: ", strcode)
-  end
-end
+--------------------------------------------------------------------------------
 
 lbt.err.E001_internal_logic_error = function(details)
   details = details or "(no details provided)"
@@ -58,4 +44,32 @@ end
 
 lbt.err.E200_no_template_for_name = function(name)
   E("E200: No template for the given name <%s>", name)
+end
+
+lbt.err.E213_failed_template_load = function(path, error_details)
+  E("E213: Failed to load template:\n * path: %s\n * msg: %s", path, error_details)
+end
+
+lbt.err.E215_invalid_template_details = function(td, error_details)
+  message = [[
+E215: Invalid template details. An attempt was made to register a template
+with a table that has missing or invalid information. A Lua file that
+describes a template should have at the bottom:
+  
+  return {
+    name = <string>,
+    desc = <string>,
+    sources = <list (table) of strings>,    # name of each dependency
+    init = <function>,                      # can use lbt.api.template_default_init
+    expand = <function>,                    # can use lbt.api.template_default_expand
+    functions = <table of functions>
+  }
+
+The error detected in your template description was:
+  %s
+
+Your template description is below.
+
+%s]]
+  E(message, error_details, pl.pretty.write(td))
 end

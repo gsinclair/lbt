@@ -16,7 +16,7 @@ local expand = function(pc)
   return [[\emph{WS0}]]
 end
 
-lbt.api.register_template {
+return {
   name      = 'lbt.WS0',
   desc      = 'A worksheet with title, course, teacher notes',
   sources   = {"lbt.Questions"},

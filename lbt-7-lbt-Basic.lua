@@ -194,7 +194,7 @@ end
 -- | Then we call `lbt.api.make_template`. |
 -- +---------------------------------------+
 
-lbt.api.register_template {
+return {
   name      = 'Basic',
   desc      = 'Fundamental Latex macros for everyday use (built in to lbt)',
   sources   = {},
