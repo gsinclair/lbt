@@ -156,7 +156,7 @@ lbt.fn.parsed_content_to_latex_multi = function (body, sources, styles)
     if status == 'ok' then
       buffer:append(latex)
     elseif status == 'notfound' then
-      local msg = lbt.util.latex_message_token_not_resolved(line.token)
+      local msg = lbt.fn.impl.latex_message_token_not_resolved(line.token)
       buffer:append(msg)
     elseif status == 'error' then
       local err = latex
@@ -453,6 +453,10 @@ lbt.fn.impl.find_token_function = function (token, sources)
     end
   end
   return nil
+end
+
+lbt.fn.impl.latex_message_token_not_resolved = function (token)
+  return F([[\textcolor{red}{textbf{Token %s not resolved}}]], token)
 end
 
 lbt.fn.impl.latex_message_token_raised_error = function (token, err)

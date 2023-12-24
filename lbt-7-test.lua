@@ -48,7 +48,7 @@ local good_input_3 = content_lines([[
   +BODY
     TEXT Hello again]])
 
--- For testing expansion of Basic template
+-- For testing positive expansion of Basic template
 local good_input_4 = content_lines([[
   @META
     TEMPLATE lbt.Basic
@@ -56,6 +56,16 @@ local good_input_4 = content_lines([[
     TEXT Examples of animals:
     ITEMIZE  [topsep=0pt] :: Bear :: Chameleon :: Frog
     TEXT 30pt :: Have you seen any of these?]])
+
+-- For testing negative expansion of Basic template
+local bad_input_1 = content_lines([[
+  @META
+    TEMPLATE lbt.Basic
+  +BODY
+    TEXT
+    TEXT a :: b :: c
+    ITEMIZE
+    XYZ foo bar]])
 
 --------------------------------------------------------------------------------
 
@@ -133,6 +143,20 @@ local function T_expand_Basic_template_1()
   EQ(l[3], [[\vspace{30pt} Have you seen any of these? \par]])
 end
 
+local function T_expand_Basic_template_2()
+  lbt.fn.template_register_to_logfile()
+  local pc = lbt.fn.parsed_content(bad_input_1)
+  lbt.fn.validate_parsed_content(pc)
+  local l  = lbt.fn.latex_expansion(pc)
+  assert(l[1]:lfind("Token TEXT raised error"))
+  assert(l[1]:lfind("0 args given but 1-2 expected"))
+  assert(l[2]:lfind("Token TEXT raised error"))
+  assert(l[2]:lfind("3 args given but 1-2 expected"))
+  assert(l[3]:lfind("Token ITEMIZE raised error"))
+  assert(l[3]:lfind("0 args given but 1+ expected"))
+  assert(l[4]:lfind("Token XYZ not resolved"))
+end
+
 
 --------------------------------------------------------------------------------
 
@@ -144,7 +168,7 @@ local function RUN_TESTS(exit_on_completion)
   -- T_parsed_content_1()
   -- T_extra_sources()
   -- T_add_template_directory()
-  T_expand_Basic_template_1()
+  T_expand_Basic_template_2()
 
   if exit_on_completion then
     print("======================= </TESTS> (exiting)")
