@@ -195,7 +195,7 @@ end
 -- +---------------------------------------+
 
 return {
-  name      = 'Basic',
+  name      = 'lbt.Basic',
   desc      = 'Fundamental Latex macros for everyday use (built in to lbt)',
   sources   = {},
   init      = lbt.api.default_template_init(),
