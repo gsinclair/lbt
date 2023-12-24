@@ -170,10 +170,23 @@ lbt.api.default_template_init = function()
   end
 end
 
--- Template expansion acts on a single parameter (`text`) and returns a string of Latex.
--- The default expansion is to run the contents of BODY through `lbt.fn.` 
+-- Template expansion acts on a parsed content (plus sources and styles) and
+-- produces a string of Latex code.
+--
+-- A template that is a structural will provide its own expand() function to
+-- lay out the page as needed. A template that is content-based has no need
+-- to do this, so it can lean on this default implementation.
+--
+-- The default expansion is to run the contents of BODY through
+-- `lbt.fn.parsed_content_to_latex_multi`. That means this expansion is
+-- assuming that the author content includes a '+BODY' somewhere. We raise an
+-- error if it does not exist.
 lbt.api.default_template_expand = function()
   return function (pc, sources, styles)
-    -- TODO implement!
+    local body = lbt.fn.pc.content_list(pc, 'BODY')
+    if body == nil then
+      lbt.err.E301_default_expand_failed_no_body()
+    end
+    return lbt.fn.parsed_content_to_latex_multi(body, sources, styles)
   end
 end

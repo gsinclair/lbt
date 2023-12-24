@@ -73,3 +73,21 @@ Your template description is below.
 %s]]
   E(message, error_details, pl.pretty.write(td))
 end
+
+lbt.err.E301_default_expand_failed_no_body = function()
+  E("E301: Can't expand content -- there is no BODY section")
+end
+
+lbt.err.E302_content_list_not_found = function (pc, key)
+  E([[E302: While expanding a template, an attempt was made to access a
+content list, but it doesn't exist.
+  Template:     %s
+  Content list: %s]], lbt.fn.pc.template_name(pc), key)
+end
+
+lbt.err.E303_content_dictionary_not_found = function (pc, key)
+  E([[E302: While expanding a template, an attempt was made to access a
+content dictionary, but it doesn't exist.
+  Template:     %s
+  Dictionary:   %s]], lbt.fn.pc.template_name(pc), key)
+end

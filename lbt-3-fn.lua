@@ -138,12 +138,44 @@ lbt.fn.latex_expansion = function (parsed_content)
   local tn = lbt.fn.pc.template_name(pc)
   local t = lbt.fn.template_object_or_error(tn)
   local src = lbt.fn.impl.consolidated_sources(pc, t)
-  INSPECTX("Consolidated sources", src)
   local sty = lbt.fn.impl.consolidated_styles(pc, t)
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
   return t.expand(pc, src, sty)
+end
+
+-- Return List of strings, each containing Latex for a line of author content.
+-- If a line cannot be evaluated (no function to support a given token) then
+-- we insert some bold red information into the Latex so the author can see,
+-- rather than halt the processing.
+lbt.fn.parsed_content_to_latex_multi = function (body, sources, styles)
+  local buffer = pl.List()
+  for line in body:iter() do
+    local status, latex = lbt.fn.parsed_content_to_latex_single(line, sources, styles)
+    if status == 'ok' then
+      buffer:append(latex)
+    elseif status == 'notfound' then
+      local msg = lbt.util.latex_message_token_not_resolved(line.token)
+      buffer:append(msg)
+    elseif status == 'error' then
+      local err = latex
+      local msg = lbt.util.latex_message_token_raised_error(line.token, err)
+      buffer:append(msg)
+    end
+  end
+  return buffer
+end
+
+-- Take a single line of parsed author content (table with keys token, nargs,
+-- args and raw) and produce a string of Latex.
+--
+-- Return:
+--  * 'ok', latex       [succesful]
+--  * 'notfound', nil   [token not found among sources]
+--  * 'error', details  [error occurred while processing token]
+lbt.fn.parsed_content_to_latex_single = function (line, sources, styles)
+  return 'ok', F([[\emph{%s}]], line.token)
 end
 -- }}}
 
@@ -172,11 +204,19 @@ lbt.fn.pc.template_name = function (pc)
 end
 
 lbt.fn.pc.content_dictionary = function (pc, key)
-  ENI()
+  local d = pc[key]
+  if d == nil then
+    lbt.err.E303_content_dictinary_not_found(pc, key)
+  end
+  return d
 end
 
 lbt.fn.pc.content_list = function (pc, key)
-  ENI()
+  local l = pc[key]
+  if l == nil then
+    lbt.err.E302_content_list_not_found(pc, key)
+  end
+  return l
 end
 
 -- Return a List of template names given in META.SOURCES.
@@ -256,6 +296,14 @@ lbt.fn.template_path_or_error = function(tn)
   return p
 end
 
+lbt.fn.template_register_to_logfile = function()
+  local tr = lbt.system.template_register
+  lbt.log("")
+  lbt.log("The template register appears below.")
+  lbt.log("")
+  lbt.log(pp(tr))
+end
+
 --------------------------------------------------------------------------------
 -- {{{ Miscellaneous old code to be integrated or reconsidered
 --------------------------------------------------------------------------------
@@ -322,6 +370,9 @@ end
 -- A specific expansion optionally has extra sources defined in @META.SOURCES.
 -- The specific ones take precedence.
 --
+-- It is imperative that lbt.Basic appear somewhere, without having to be named
+-- by the user. It might as well appear at the end, so we add it.
+--
 -- Return: a List of source template _objects_ in the order they should be referenced.
 -- Error: if any template name cannot be resolved into a template object.
 --
@@ -338,6 +389,8 @@ lbt.fn.impl.consolidated_sources = function (pc, t)
       lbt.err.E206_cant_form_list_of_sources(name)
     end
   end
+  local basic = lbt.fn.template_object_or_error("lbt.Basic")
+  result:append(basic)
   return result
 end
 

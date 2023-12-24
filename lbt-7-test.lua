@@ -4,6 +4,7 @@
 
 local pp = pl.pretty.write
 local EQ = pl.test.asserteq
+local nothing = "<nil>"
 
 --------------------------------------------------------------------------------
 
@@ -18,6 +19,7 @@ end
 
 --------------------------------------------------------------------------------
 
+-- For testing parsed_content
 local good_input_1 = content_lines([[
   !DRAFT
   @META
@@ -45,6 +47,15 @@ local good_input_3 = content_lines([[
     TEMPLATE Basic
   +BODY
     TEXT Hello again]])
+
+-- For testing expansion of Basic template
+local good_input_4 = content_lines([[
+  @META
+    TEMPLATE lbt.Basic
+  +BODY
+    TEXT Examples of animals:
+    ITEMIZE  [topsep=0pt] :: Bear :: Chameleon :: Frog
+    TEXT 30pt :: Have you seen any of these?]])
 
 --------------------------------------------------------------------------------
 
@@ -110,6 +121,15 @@ local function T_add_template_directory()
   assert(p2:endswith("test/templates/HSCLectures.lua"))
 end
 
+local function T_expand_Basic_template()
+  lbt.fn.template_register_to_logfile()
+  local pc = lbt.fn.parsed_content(good_input_4)
+  I("parsed content", pc or nothing)
+  lbt.fn.validate_parsed_content(pc)
+  local l  = lbt.fn.latex_expansion(pc)
+  IX("latex content", l or nothing)
+end
+
 
 --------------------------------------------------------------------------------
 
@@ -120,7 +140,8 @@ local function RUN_TESTS(exit_on_completion)
   -- T_pragrams_and_other_lines()
   -- T_parsed_content_1()
   -- T_extra_sources()
-  T_add_template_directory()
+  -- T_add_template_directory()
+  T_expand_Basic_template()
 
   if exit_on_completion then
     print("======================= </TESTS> (exiting)")
