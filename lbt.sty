@@ -21,7 +21,8 @@
   -- Load the builtin templates.
   local register_builtin = function (lua_file)
     local td = require(lua_file)                -- template description
-    lbt.fn.register_template(td)
+    local path = "Built-in " .. lua_file
+    lbt.fn.register_template(td, path)
   end
 
   register_builtin('lbt-6-lbt-Basic')

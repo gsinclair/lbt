@@ -194,9 +194,13 @@ end
 
 --------------------------------------------------------------------------------
 -- {{{ Functions to do with loading templates
---  * initialise_template_register
---  * load_template_into_register(name)
---  * template(name)
+--  * register_template(td, path)
+--  * template_object_or_nil(name)
+--  * template_object_or_error(name)
+--  * template_path_or_nil(name)
+--  * template_path_or_error(name)
+--  *
+--  * [expand_directory -- an implementation detail]
 --------------------------------------------------------------------------------
 
 lbt.fn.expand_directory = function (path)
@@ -209,30 +213,26 @@ lbt.fn.expand_directory = function (path)
   end
 end
 
--- TODO include path as a parameter and store it in the register.
---      Obstacle: the builtin templates.
-lbt.fn.register_template = function(template_details)
+lbt.fn.register_template = function(template_details, path)
   local td = template_details
   local tn = template_details.name
   ok, err_detail = lbt.fn.impl.template_details_are_valid(td)
   if ok then
     if lbt.fn.template_object_or_nil(tn) ~= nil then
+      local curr_path = lbt.fn.template_path_or_error(tn)
       lbt.log(F("WARN: Template name <%s> already exists; overwriting.", tn))
-      lbt.log(F("       * existing path: %s", '--- tbi ---'))
-      lbt.log(F("       * new path:      %s", '--- tbi ---'))
+      lbt.log(F("       * existing path: %s", curr_path))
+      lbt.log(F("       * new path:      %s", path))
     end
-    lbt.system.template_register[tn] = td
+    lbt.system.template_register[tn] = { td = td, path = path }
   else
-    lbt.err.E215_invalid_template_details(td, err_detail)
+    lbt.err.E215_invalid_template_details(td, path, err_detail)
   end
 end
 
-lbt.fn.template_path = function(tn)
-  return 'not yet implemented'
-end
-
 lbt.fn.template_object_or_nil = function(tn)
-  return lbt.system.template_register[tn]
+  local te = lbt.system.template_register[tn]    -- template entry
+  return te and te.td
 end
 
 lbt.fn.template_object_or_error = function(tn)
@@ -241,6 +241,19 @@ lbt.fn.template_object_or_error = function(tn)
     lbt.err.E200_no_template_for_name(tn)
   end
   return t
+end
+
+lbt.fn.template_path_or_nil = function(tn)
+  local te = lbt.system.template_register[tn]    -- template entry
+  return te and te.path
+end
+
+lbt.fn.template_path_or_error = function(tn)
+  local p = lbt.fn.template_path_or_nil(tn)
+  if p == nil then
+    lbt.err.E200_no_template_for_name(tn)
+  end
+  return p
 end
 
 --------------------------------------------------------------------------------
