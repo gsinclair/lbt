@@ -49,7 +49,6 @@ lbt.api.add_template_directory = function (dir)
   end
   lbt.log(F("Adding template directory: %s", dir))
   local paths = pl.dir.getfiles(dir, "*.lua")
-  I("paths", paths)
   for path in paths:iter() do
     lbt.log(F(" * %s", pl.path.basename(path)))
     local ok, x = pcall(dofile, path)

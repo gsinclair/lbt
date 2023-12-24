@@ -96,7 +96,15 @@ local function T_extra_sources()
 end
 
 local function T_add_template_directory()
+  local t1 = lbt.fn.template_object_or_nil("HSCLectures.lua")
+  assert(t1 == nil)
   lbt.api.add_template_directory("PWD/templates")
+  -- Note: the templates directory has a file HSCLectures.lua in it.
+  local t2 = lbt.fn.template_object_or_nil("HSCLectures")
+  assert(t2 ~= nil)
+  assert(t2.name == "HSCLectures")
+  assert(t2.desc == "A test template for the lbt project")
+  assert(t2.sources[1] == "lbt.Questions")
 end
 
 
