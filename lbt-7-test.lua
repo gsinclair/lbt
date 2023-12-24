@@ -121,13 +121,16 @@ local function T_add_template_directory()
   assert(p2:endswith("test/templates/HSCLectures.lua"))
 end
 
-local function T_expand_Basic_template()
+local function T_expand_Basic_template_1()
   lbt.fn.template_register_to_logfile()
   local pc = lbt.fn.parsed_content(good_input_4)
-  I("parsed content", pc or nothing)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
-  IX("latex content", l or nothing)
+  EQ(l[1], [[Examples of animals: \par]])
+  assert(l[2]:lfind("\\item Bear"))
+  assert(l[2]:lfind("\\item Chameleon"))
+  assert(l[2]:lfind("\\item Frog"))
+  EQ(l[3], [[\vspace{30pt} Have you seen any of these? \par]])
 end
 
 
@@ -141,7 +144,7 @@ local function RUN_TESTS(exit_on_completion)
   -- T_parsed_content_1()
   -- T_extra_sources()
   -- T_add_template_directory()
-  T_expand_Basic_template()
+  T_expand_Basic_template_1()
 
   if exit_on_completion then
     print("======================= </TESTS> (exiting)")

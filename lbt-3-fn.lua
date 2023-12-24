@@ -160,7 +160,7 @@ lbt.fn.parsed_content_to_latex_multi = function (body, sources, styles)
       buffer:append(msg)
     elseif status == 'error' then
       local err = latex
-      local msg = lbt.util.latex_message_token_raised_error(line.token, err)
+      local msg = lbt.fn.impl.latex_message_token_raised_error(line.token, err)
       buffer:append(msg)
     end
   end
@@ -175,7 +175,26 @@ end
 --  * 'notfound', nil   [token not found among sources]
 --  * 'error', details  [error occurred while processing token]
 lbt.fn.parsed_content_to_latex_single = function (line, sources, styles)
-  return 'ok', F([[\emph{%s}]], line.token)
+  -- TODO perhaps remove parameter `styles` and make it lbt.const.styles
+  local token = line.token
+  local nargs = line.nargs
+  local args  = line.args
+  local token_function = lbt.fn.impl.find_token_function(token, sources)
+  if token_function == nil then
+    return 'notfound', nil
+  end
+  stat, x = token_function(nargs, args)
+  lbt.dbg('lbt.fn.parsed_content_to_latex_single')
+  lbt.dbg('  token & args: %s  %s', token, args)
+  lbt.dbg('  result (stat, x): %s   %s', stat, x)
+  if stat == 'ok' then
+    return 'ok', x
+  elseif stat == 'nargs' then
+    local msg = F("%d args given but %s expected", nargs, x)
+    return 'error', msg
+  elseif stat == 'error' then
+    return 'error', x
+  end
 end
 -- }}}
 
@@ -303,10 +322,7 @@ lbt.fn.template_register_to_logfile = function()
   lbt.log("")
   lbt.log(pp(tr))
 end
-
---------------------------------------------------------------------------------
--- {{{ Miscellaneous old code to be integrated or reconsidered
---------------------------------------------------------------------------------
+--}}}
 
 --------------------------------------------------------------------------------
 -- {{{ Functions assisting the implementation.
@@ -424,5 +440,22 @@ lbt.fn.impl.template_details_are_valid = function (td)
     return false, F('functions is not a table')
   end
   return true, ''
+end
+
+-- Look through all sources in order until a function of the given name is
+-- found. Return nil if none is found.
+lbt.fn.impl.find_token_function = function (token, sources)
+  for s in sources:iter() do
+    -- Each 'source' is a template object, with property 'functions'.
+    local f = s.functions[token]
+    if f then
+      return f
+    end
+  end
+  return nil
+end
+
+lbt.fn.impl.latex_message_token_raised_error = function (token, err)
+  return F([[\textcolor{red}{textbf{Token %s raised error: \emph{%s}}}]], token, err)
 end
 -- }}}

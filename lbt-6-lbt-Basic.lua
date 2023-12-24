@@ -3,13 +3,33 @@
 -- +---------------------------------------+
 
 local F = string.format
+local pp = pl.pretty.write
 
 local f = {}
 
 -- Text (TEXT puts a paragraph after, TEXT* does not)
 
-f.TEXT = function(text) return F([[%s \par]], text) end
-f["TEXT*"] = function(text) return F([[%s]], text) end
+-- f.TEXT = function(text) return F([[%s \par]], text) end
+-- f["TEXT*"] = function(text) return F([[%s]], text) end
+
+f["TEXT*"] = function (n, args)
+  if n == 0 or n > 2 then
+    return 'nargs', '1-2'
+  elseif n == 1 then
+    return 'ok', args[1]
+  elseif n == 2 then
+    return 'ok', F([[\vspace{%s} %s]], args[1], args[2])
+  end
+end
+
+f.TEXT = function (n, args)
+  local stat, x = f["TEXT*"](n, args)
+  if stat == 'ok' then
+    return 'ok', x .. [[ \par]]
+  else
+    return stat, x
+  end
+end
 
 -- General Latex command, and some specific ones.
 
@@ -82,22 +102,19 @@ end
 
 -- Itemize and enumerate
 
-f.ITEMIZE = function(text)
-  local args = split(text, '::')
-  local options = ""
-  local content = ""
-  if #args == 1 then
-    content = args[1]
-  elseif #args == 2 then
-    options = args[1]
-    content = args[2]
+f.ITEMIZE = function (n, args)
+  if n == 0 then
+    return 'nargs', '1+'
   end
+  local options, args = lbt.util.extract_option_argument(args)
+  local prepend_item = function(text) return [[\item ]] .. text end
+  local items = args:map(prepend_item):join("\n  ")
   local result = F([[
-    \begin{itemize}[%s]
-      %s
-    \end{itemize}
-  ]], options, content)
-  return result
+\begin{itemize}[%s]
+  %s
+\end{itemize}
+  ]], options or '', items)
+  return 'ok', result
 end
 
 f.ENUMERATE = function(text)
