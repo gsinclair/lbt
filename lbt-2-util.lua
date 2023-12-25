@@ -3,6 +3,8 @@
 --
 -- NOTE this is very much in progress.
 --
+-- The main intention of lbt.util.* is to be useful to people writing template
+-- code. Given that, it arguably should have a better name.
 
 -- `tex.print` but with formatting. Hint: local-alias this to `P`.
 function lbt.util.tex_print_formatted(text, ...)
@@ -17,31 +19,33 @@ function lbt.util.print_tex_lines(str)
   end
 end
 
--- Higher-order function for implementing simple template tokens.
--- This creates a Latex command that takes one argument and places \par afterwards.
--- e.g.   VSPACE = latex_cmd_par_1('vspace')
-function lbt.util.latex_cmd_par_1(cmd)
-  return function(arg)
-    return F([[\%s{%s} \par]], cmd, arg)
-  end
+function lbt.util.wrap_braces(x)
+  return '{' .. x .. '}'
 end
 
--- Higher-order function for implementing simple template tokens.
--- This creates a Latex command that takes one argument.
--- TODO remove this as it is not likely to be used.
--- e.g.   B = latex_cmd_1('textbf')
-function lbt.util.latex_cmd_1(cmd)
-  return function(arg)
-    return F([[\%s{%s}]], cmd, arg)
-  end
-end
-
--- Higher-order function for implementing simple template tokens.
--- This creates a plain Latex command with no arguments.
--- e.g.   VFILL = latex_cmd('vfill')
-function lbt.util.latex_cmd(cmd)
-  return function(_)
-    return F([[\%s]], cmd)
+-- name:      name of the command
+-- nargs:     exact number of arguments it takes
+-- paragraph: 'par' if you want a \par afterwards; nil otherwise
+-- 
+-- Examples:
+--   latex_cmd('vspace', 1, 'par')
+--   latex_cmd('vfill', 0)
+function lbt.util.latex_cmd(name, nargs, paragraph)
+  return function(n, args)
+    if n ~= nargs+1 then
+      return 'nargs', ''..nargs+1
+    end
+    local cmd = args[1]
+    if nargs == 1 then
+      result = F([[\%s]], cmd)
+    else
+      arguments = args:slice(2,-1):map(lbt.util.wrap_braces)
+      result = F([[\%s%s]], cmd, arguments)
+    end
+    if paragraph == 'par' then
+      result = result .. [[ \par]]
+    end
+    return result
   end
 end
 

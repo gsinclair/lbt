@@ -33,14 +33,31 @@ end
 
 -- General Latex command, and some specific ones.
 
-f.CMD = function(x) return F([[\%s]], x) end
+-- CMD vfill        --> \vfill
+-- CMD tabto 20pt   --> \tabto{20pt}     [can have more arguments]
+f.CMD = function(n, args)
+  if n == 0 then
+    return 'nargs', '1+'
+  end
+  local command = F([[\%s]], args[1])
+  local arguments = args:slice(2,-1):map(lbt.util.wrap_braces):join
+  return 'ok', command..arguments  
+end
 
-f.VSPACE = lbt.util.latex_cmd_par_1("vspace")
-f.VSTRETCH = function(x) return F([[\vspace{\stretch{%s}}]], x) end
-f.VFILL = lbt.util.latex_cmd("vfill")
-f.CLEARPAGE = lbt.util.latex_cmd("clearpage")
+f.VSPACE = lbt.util.latex_cmd('vspace', 1, 'par')
+f.VFILL = lbt.util.latex_cmd('vfill', 0)
+f.CLEARPAGE = lbt.util.latex_cmd('clearpage', 0)
 
-f.COMMENT = function(_) return "" end
+f.VSTRETCH = function(n, args)
+  if n ~= 1 then
+    return 'nargs', '1'
+  end
+  return F([[\vspace{\stretch{%s}}]], args[1])
+end
+
+f.COMMENT = function(n, args)
+  return ""
+end
 
 -- Begin and end environment     TODO allow for environment options
 
@@ -117,22 +134,19 @@ f.ITEMIZE = function (n, args)
   return 'ok', result
 end
 
-f.ENUMERATE = function(text)
-  local args = split(text, '::')
-  local options = ""
-  local content = ""
-  if #args == 1 then
-    content = args[1]
-  elseif #args == 2 then
-    options = args[1]
-    content = args[2]
+f.ENUMERATE = function (n, args)
+  if n == 0 then
+    return 'nargs', '1+'
   end
+  local options, args = lbt.util.extract_option_argument(args)
+  local prepend_item = function(text) return [[\item ]] .. text end
+  local items = args:map(prepend_item):join("\n  ")
   local result = F([[
-    \begin{enumerate}[%s]
-      %s
-    \end{enumerate}
-  ]], options, content)
-  return result
+\begin{enumerate}[%s]
+  %s
+\end{enumerate}
+  ]], options or '', items)
+  return 'ok', result
 end
 
 ----- f.HEADING = function(text)
@@ -217,6 +231,8 @@ return {
   sources   = {},
   init      = lbt.api.default_template_init(),
   expand    = lbt.api.default_template_expand(),
-  functions = f
+  functions = f,
+  -- experimental idea below, not implemented (yet)
+  argspec   = 'CMD 1+  VSPACE 1  VFILL 0  TEXT 1-2  TEXT* 1-2 '
 }
 
