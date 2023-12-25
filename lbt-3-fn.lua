@@ -113,7 +113,7 @@ lbt.fn.parsed_content = function (content_lines)
         }
         result[current_key]:append(parsedline)
       else
-        lbt.err.E000_internal_logic_error("append_mode: %s", append_mode)
+        lbt.err.E001_internal_logic_error("append_mode: %s", append_mode)
       end
     end
   end
@@ -134,25 +134,32 @@ lbt.fn.validate_parsed_content = function (pc)
 end
 
 lbt.fn.latex_expansion = function (parsed_content)
+  -- Find the main template for the parsed content.
   local pc = parsed_content
   local tn = lbt.fn.pc.template_name(pc)
   local t = lbt.fn.template_object_or_error(tn)
+  -- Calculate the consolidated sources and styles, and set them to global
+  -- variables so that the expansion functions can work.
   local src = lbt.fn.impl.consolidated_sources(pc, t)
+  lbt.fn.set_sources_for_current_expansion(src)
   local sty = lbt.fn.impl.consolidated_styles(pc, t)
+  lbt.fn.set_styles_for_current_expansion(sty)
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
-  return t.expand(pc, src, sty)
+  return t.expand(pc)
 end
 
 -- Return List of strings, each containing Latex for a line of author content.
 -- If a line cannot be evaluated (no function to support a given token) then
 -- we insert some bold red information into the Latex so the author can see,
 -- rather than halt the processing.
-lbt.fn.parsed_content_to_latex_multi = function (body, sources, styles)
+--
+-- Note: relies on global variables for sources and styles.
+lbt.fn.parsed_content_to_latex_multi = function (body)
   local buffer = pl.List()
   for line in body:iter() do
-    local status, latex = lbt.fn.parsed_content_to_latex_single(line, sources, styles)
+    local status, latex = lbt.fn.parsed_content_to_latex_single(line)
     if status == 'ok' then
       buffer:append(latex)
     elseif status == 'notfound' then
@@ -174,12 +181,15 @@ end
 --  * 'ok', latex       [succesful]
 --  * 'notfound', nil   [token not found among sources]
 --  * 'error', details  [error occurred while processing token]
-lbt.fn.parsed_content_to_latex_single = function (line, sources, styles)
-  -- TODO perhaps remove parameter `styles` and make it lbt.const.styles
+--
+-- Note: relies on global variables for sources and styles.
+lbt.fn.parsed_content_to_latex_single = function (line)
   local token = line.token
   local nargs = line.nargs
   local args  = line.args
+  local sources = lbt.fn.get_sources_for_current_expansion()
   local token_function = lbt.fn.impl.find_token_function(token, sources)
+  -- IDEA ^^^ local token_function, argmin, argmax = ...   [check args before calling]
   if token_function == nil then
     return 'notfound', nil
   end
@@ -194,6 +204,56 @@ lbt.fn.parsed_content_to_latex_single = function (line, sources, styles)
     return 'error', msg
   elseif stat == 'error' then
     return 'error', x
+  end
+end
+
+-- This is called once per expansion, before any expanding takes place. It is
+-- necessary for token resolution, but doesn't change through the course of
+-- expansion.
+lbt.fn.set_sources_for_current_expansion = function (src)
+  assert(src:len() >= 1)    -- indirect test that it's a List
+  if lbt.const.sources == nil then
+    lbt.const.sources = src
+  else
+    local msg = 'set_sources_for_current_expansion should be called only once per expansion'
+    lbt.err.E001_internal_logic_error(msg)
+  end
+end
+
+-- This is called frequently so that token resolution can occur.
+-- A good idea would be to make a higher-order function
+--   resolver(sources) --> function(token)
+-- This way the sources are kept in a closure and accessed by the generated
+-- function. It could also memoise the results to speed processing. I like this.
+-- It would be called once per expansion, and the cache would be automatically
+-- refreshed each time.
+lbt.fn.get_sources_for_current_expansion = function ()
+  if lbt.const.sources == nil then
+    local msg = 'get_sources_for_current_expansion: sources is nil -- must be set before now'
+    lbt.err.E001_internal_logic_error(msg)
+  else
+    return lbt.const.sources
+  end
+end
+
+-- This is called once when the parsed content is about to be Latexified.
+lbt.fn.set_styles_for_current_expansion = function (sty)
+  assert_table(1, sty)      -- a dictionary-style table
+  if lbt.const.styles == nil then
+    lbt.const.styles = sty
+  else
+    local msg = 'set_styles_for_current_expansion should be called only once per expansion'
+    lbt.err.E001_internal_logic_error(msg)
+  end
+end
+
+-- This is called in template functions to produce appropriate Latex code.
+lbt.fn.style = function (key)
+  local value = lbt.const.styles[key]
+  if value == nil then
+    local msg = F("There is no style for key <%s>, which means you've made an error", key)
+  else
+    return value
   end
 end
 -- }}}

@@ -132,6 +132,7 @@ local function T_add_template_directory()
 end
 
 local function T_expand_Basic_template_1()
+  lbt.fn.author_content_clear()
   lbt.fn.template_register_to_logfile()
   local pc = lbt.fn.parsed_content(good_input_4)
   lbt.fn.validate_parsed_content(pc)
@@ -144,6 +145,7 @@ local function T_expand_Basic_template_1()
 end
 
 local function T_expand_Basic_template_2()
+  lbt.fn.author_content_clear()
   lbt.fn.template_register_to_logfile()
   local pc = lbt.fn.parsed_content(bad_input_1)
   lbt.fn.validate_parsed_content(pc)
@@ -164,10 +166,11 @@ local function RUN_TESTS(exit_on_completion)
   print("\n\n======================= <TESTS>")
   lbt.api.set_debug_mode(true)
 
-  -- T_pragrams_and_other_lines()
-  -- T_parsed_content_1()
-  -- T_extra_sources()
-  -- T_add_template_directory()
+  T_pragrams_and_other_lines()
+  T_parsed_content_1()
+  T_extra_sources()
+  T_add_template_directory()
+  T_expand_Basic_template_1()
   T_expand_Basic_template_2()
 
   if exit_on_completion then

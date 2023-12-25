@@ -16,6 +16,8 @@ lbt.system = {
 -- It is reset using lbt.init.reset_const() every time a new expansion begins 
 lbt.const = {
   author_content = pl.List(), -- lightly processed strings go into this list for parsing
+  sources = nil,              -- consolidated sources for token resolution
+  styles  = nil               -- consolidated styles for token expansion
 }
 
 -- lbt.var contains variable data used by a single expansion.
@@ -48,7 +50,9 @@ lbt.test = {}
 lbt.init = {
   reset_const = function()
     lbt.const = {
-      author_content = pl.List()
+      author_content = pl.List(),
+      sources = nil,
+      styles  = nil
     }
   end,
   reset_var = function()

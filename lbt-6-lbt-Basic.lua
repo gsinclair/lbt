@@ -40,7 +40,7 @@ f.CMD = function(n, args)
     return 'nargs', '1+'
   end
   local command = F([[\%s]], args[1])
-  local arguments = args:slice(2,-1):map(lbt.util.wrap_braces):join
+  local arguments = args:slice(2,-1):map(lbt.util.wrap_braces):join()
   return 'ok', command..arguments  
 end
 
