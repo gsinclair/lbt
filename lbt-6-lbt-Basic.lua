@@ -5,13 +5,15 @@
 local F = string.format
 local pp = pl.pretty.write
 
-local f = {}
+local f = {}   -- functions
+local a = {}   -- number of arguments
 
 -- Text (TEXT puts a paragraph after, TEXT* does not)
 
 -- f.TEXT = function(text) return F([[%s \par]], text) end
 -- f["TEXT*"] = function(text) return F([[%s]], text) end
 
+a["TEXT*"] = 1
 f["TEXT*"] = function (n, args)
   if n == 0 or n > 2 then
     return 'nargs', '1-2'
@@ -22,6 +24,7 @@ f["TEXT*"] = function (n, args)
   end
 end
 
+a.TEXT = 1
 f.TEXT = function (n, args)
   local stat, x = f["TEXT*"](n, args)
   if stat == 'ok' then
@@ -35,6 +38,7 @@ end
 
 -- CMD vfill        --> \vfill
 -- CMD tabto 20pt   --> \tabto{20pt}     [can have more arguments]
+a.CMD = '1+'
 f.CMD = function(n, args)
   if n == 0 then
     return 'nargs', '1+'
@@ -44,10 +48,16 @@ f.CMD = function(n, args)
   return 'ok', command..arguments  
 end
 
+a.VSPACE = 1
 f.VSPACE = lbt.util.latex_cmd('vspace', 1, 'par')
+
+a.VFILL = 0
 f.VFILL = lbt.util.latex_cmd('vfill', 0)
+
+a.CLEARPAGE = 0
 f.CLEARPAGE = lbt.util.latex_cmd('clearpage', 0)
 
+a.VSTRETCH = 1
 f.VSTRETCH = function(n, args)
   if n ~= 1 then
     return 'nargs', '1'
@@ -55,12 +65,14 @@ f.VSTRETCH = function(n, args)
   return F([[\vspace{\stretch{%s}}]], args[1])
 end
 
+a.COMMENT = '0+'
 f.COMMENT = function(n, args)
   return ""
 end
 
 -- Begin and end environment     TODO allow for environment options
 
+a.BEGIN = '1+'
 f.BEGIN = function(text)
   local args = split(text)
   if #args == 1 then
@@ -74,12 +86,14 @@ f.BEGIN = function(text)
   end
 end
 
+a.END = 1
 f.END = function(arg)
   return F([[\end{%s}]], arg)
 end
 
 -- \newcommand
 
+a.NEWCOMMAND = 3
 f.NEWCOMMAND = function(text)
   local args = split(text, '::')
   if #args ~= 3 then
@@ -119,6 +133,7 @@ end
 
 -- Itemize and enumerate
 
+a.ITEMIZE = '1+'
 f.ITEMIZE = function (n, args)
   if n == 0 then
     return 'nargs', '1+'
@@ -134,6 +149,7 @@ f.ITEMIZE = function (n, args)
   return 'ok', result
 end
 
+a.ENUMERATE = '1+'
 f.ENUMERATE = function (n, args)
   if n == 0 then
     return 'nargs', '1+'
@@ -232,7 +248,6 @@ return {
   init      = lbt.api.default_template_init(),
   expand    = lbt.api.default_template_expand(),
   functions = f,
-  -- experimental idea below, not implemented (yet)
-  argspec   = 'CMD 1+  VSPACE 1  VFILL 0  TEXT 1-2  TEXT* 1-2 '
+  arguments = a
 }
 

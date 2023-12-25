@@ -327,6 +327,10 @@ lbt.fn.expand_directory = function (path)
   end
 end
 
+-- template_details (td): table with name, desc, init, expand, ...
+--                        {returned by template files like Basic.lua}
+-- path: filesystem path where this template was loaded, used to give
+--       the user good information if the same name is loaded twice.
 lbt.fn.register_template = function(template_details, path)
   local td = template_details
   local tn = template_details.name
@@ -342,6 +346,18 @@ lbt.fn.register_template = function(template_details, path)
   else
     lbt.err.E215_invalid_template_details(td, path, err_detail)
   end
+  -- Having cleared the hurdles so far and registered the template,
+  -- we now act on the argument specification (if provided) and turn it into
+  -- something that can be used at expansion time.
+  if td.arguments then
+    local ok, x = lbt.fn.impl.template_arguments_specification(td.arguments)
+    if ok then
+      td.arguments = x
+    else
+      lbt.err.E215_invalid_template_details(td, path, x)
+    end
+  end
+  return nil
 end
 
 lbt.fn.template_object_or_nil = function(tn)
@@ -495,6 +511,45 @@ lbt.fn.impl.template_details_are_valid = function (td)
     return false, F('functions is not a table')
   end
   return true, ''
+end
+
+-- Turn '1+' into { spec = '1+', min = 1, max = 9999 } and
+-- 3 (not number not string) into { spec = '3', min = 3, max = 3 }.
+-- Return nil if it's an invalid type or format.
+local convert_argspec = function(x)
+  if type(x) == 'number' then
+    return { spec = ''..x, min = x, max = x }
+  elseif type(x) ~= 'string' then
+    return nil
+  end
+  n = x:match('^(%d+)$') 
+  if n then
+    return { spec = x, min = tonumber(n), max = tonumber(n) }
+  end
+  n = x:match('^(%d+)[+]$') 
+  if n then
+    return { spec = x, min = tonumber(n), max = 9999 }
+  end
+  m, n = x:match('^(%d+)-(%d+)$')
+  if m and n then
+    return { spec = x, min = tonumber(m), max = tonumber(n) }
+  end
+  return nil
+end
+
+-- Apply `convert_argspec` (see above) to each token in the input.
+-- Return true, {...} if good and false, error_details if bad.
+lbt.fn.impl.template_arguments_specification = function (arguments)
+  local result = {}
+  for token, x in pairs(arguments) do
+    local spec = convert_argspec(x)
+    if spec then
+      result[token] = spec
+    else
+      return false, F('argument specification <%s> invalid for <%s>', x, token)
+    end
+  end
+  return true, result
 end
 
 lbt.fn.impl.latex_message_token_not_resolved = function (token)
