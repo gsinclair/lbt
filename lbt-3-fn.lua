@@ -138,16 +138,16 @@ lbt.fn.latex_expansion = function (parsed_content)
   local pc = parsed_content
   local tn = lbt.fn.pc.template_name(pc)
   local t = lbt.fn.template_object_or_error(tn)
-  -- Calculate the consolidated sources and styles, and set them to global
-  -- variables so that the expansion functions can work.
+  -- Calculate the consolidated sources and styles.
+  -- Save styles in a global variable to token expansion can work.
   local src = lbt.fn.impl.consolidated_sources(pc, t)
-  lbt.fn.set_sources_for_current_expansion(src)
   local sty = lbt.fn.impl.consolidated_styles(pc, t)
   lbt.fn.set_styles_for_current_expansion(sty)
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
-  return t.expand(pc)
+  local r = lbt.fn.resolver(src)
+  return t.expand(pc, r)
 end
 
 -- Return List of strings, each containing Latex for a line of author content.
@@ -156,10 +156,10 @@ end
 -- rather than halt the processing.
 --
 -- Note: relies on global variables for sources and styles.
-lbt.fn.parsed_content_to_latex_multi = function (body)
+lbt.fn.parsed_content_to_latex_multi = function (body, resolver)
   local buffer = pl.List()
   for line in body:iter() do
-    local status, latex = lbt.fn.parsed_content_to_latex_single(line)
+    local status, latex = lbt.fn.parsed_content_to_latex_single(line, resolver)
     if status == 'ok' then
       buffer:append(latex)
     elseif status == 'notfound' then
@@ -183,13 +183,14 @@ end
 --  * 'error', details  [error occurred while processing token]
 --
 -- Note: relies on global variables for sources and styles.
-lbt.fn.parsed_content_to_latex_single = function (line)
+lbt.fn.parsed_content_to_latex_single = function (line, resolver)
   local token = line.token
   local nargs = line.nargs
   local args  = line.args
-  local sources = lbt.fn.get_sources_for_current_expansion()
-  local token_function = lbt.fn.impl.find_token_function(token, sources)
-  -- IDEA ^^^ local token_function, argmin, argmax = ...   [check args before calling]
+  local token_function = resolver(token)
+  -- IDEA ^^^ get the function and the expected number of arguments,
+  --          and do the arg-checking _here_ instead of in every template
+  --          function.
   if token_function == nil then
     return 'notfound', nil
   end
@@ -207,32 +208,26 @@ lbt.fn.parsed_content_to_latex_single = function (line)
   end
 end
 
--- This is called once per expansion, before any expanding takes place. It is
--- necessary for token resolution, but doesn't change through the course of
--- expansion.
-lbt.fn.set_sources_for_current_expansion = function (src)
-  assert(src:len() >= 1)    -- indirect test that it's a List
-  if lbt.const.sources == nil then
-    lbt.const.sources = src
-  else
-    local msg = 'set_sources_for_current_expansion should be called only once per expansion'
-    lbt.err.E001_internal_logic_error(msg)
-  end
-end
-
--- This is called frequently so that token resolution can occur.
--- A good idea would be to make a higher-order function
---   resolver(sources) --> function(token)
--- This way the sources are kept in a closure and accessed by the generated
--- function. It could also memoise the results to speed processing. I like this.
--- It would be called once per expansion, and the cache would be automatically
--- refreshed each time.
-lbt.fn.get_sources_for_current_expansion = function ()
-  if lbt.const.sources == nil then
-    local msg = 'get_sources_for_current_expansion: sources is nil -- must be set before now'
-    lbt.err.E001_internal_logic_error(msg)
-  else
-    return lbt.const.sources
+-- Produce a function that looks through all sources (as provided here) in
+-- order until a function of the given name is found, or returns nil if none is
+-- found.
+lbt.fn.resolver = function (sources)
+  local cache = {}
+  return function (token)
+    if cache[token] ~= nil then
+      return cache[token]
+    else
+      for s in sources:iter() do
+        -- Each 'source' is a template object, with property 'functions'.
+        local f = s.functions[token]
+        if f then
+          cache[token] = f
+          return f
+        end
+      end
+      -- No token function found :(
+      return nil
+    end
   end
 end
 
@@ -500,19 +495,6 @@ lbt.fn.impl.template_details_are_valid = function (td)
     return false, F('functions is not a table')
   end
   return true, ''
-end
-
--- Look through all sources in order until a function of the given name is
--- found. Return nil if none is found.
-lbt.fn.impl.find_token_function = function (token, sources)
-  for s in sources:iter() do
-    -- Each 'source' is a template object, with property 'functions'.
-    local f = s.functions[token]
-    if f then
-      return f
-    end
-  end
-  return nil
 end
 
 lbt.fn.impl.latex_message_token_not_resolved = function (token)
