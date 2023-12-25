@@ -184,33 +184,60 @@ end
 --
 -- Note: relies on global variables for sources and styles.
 lbt.fn.parsed_content_to_latex_single = function (line, resolver)
+  lbt.dbg('\nparsed_content_to_latex_single: %s', pp(line))
   local token = line.token
   local nargs = line.nargs
   local args  = line.args
-  local token_function = resolver(token)
-  -- IDEA ^^^ get the function and the expected number of arguments,
-  --          and do the arg-checking _here_ instead of in every template
-  --          function.
-  if token_function == nil then
+  local findings = resolver(token)
+  -- Did we find a token function?
+  if findings == nil then
     return 'notfound', nil
   end
+  local token_function, argspec = table.unpack(findings)
+  -- Is there an argument spec? Do we have a valid number of arguments?
+  if argspec then
+    local a = argspec
+    lbt.dbg('argspec: %s', pp(a))
+    if nargs < a.min or nargs > a.max then
+      local msg = F("%d args given but %s expected", nargs, a.spec)
+      lbt.dbg('--> error: %s', msg)
+      return 'error', msg
+    end
+  end
+  -- Call the token function and assess the result (status).
   stat, x = token_function(nargs, args)
-  lbt.dbg('lbt.fn.parsed_content_to_latex_single')
-  lbt.dbg('  token & args: %s  %s', token, args)
-  lbt.dbg('  result (stat, x): %s   %s', stat, x)
+  -- lbt.dbg('lbt.fn.parsed_content_to_latex_single')
+  -- lbt.dbg('  token & args: %s  %s', token, args)
+  -- lbt.dbg('  result (stat, x): %s   %s', stat, x)
+
+  -- IDEA: token functions don't return a status like 'ok' or 'error'.
+  -- If they encounter an error (not really a thing I expect) then they
+  -- could return a special thing like { code = 'latex error', details = '...' }
+  -- using a util function. This could be picked up here. Again, it is
+  -- probably not even necessary and this code should just be simplified.
+  -- The code is like this because I was looking for an 'nargs' status, but
+  -- that is now dealt with separately above.
   if stat == 'ok' then
+    lbt.dbg('--> ok: %s', x)
     return 'ok', x
-  elseif stat == 'nargs' then
-    local msg = F("%d args given but %s expected", nargs, x)
-    return 'error', msg
   elseif stat == 'error' then
+    lbt.dbg('--> error: %s', x)
     return 'error', x
+  else
+    lbt.dbg('--> bad status: %s', stat)
+    local msg = F('Bad status <%s> from token_function(nargs, args) for token <%s>', stat, token)
+    lbt.err.E001_internal_logic_error(msg)
   end
 end
 
--- Produce a function that looks through all sources (as provided here) in
--- order until a function of the given name is found, or returns nil if none is
--- found.
+-- Produce a function that resolves tokens using the sources provided here.
+-- This means the sources don't need to be passed around.
+--
+-- As a bonus, a memoisation cache is used to speed up token resolution.
+--
+-- The resolver function returns (token_function, argspec) if a token function
+-- is found among the sources, or nil otherwise. Note that argspec might
+-- legitimately be nil, although we will put a warning in the log file.
 lbt.fn.resolver = function (sources)
   local cache = {}
   return function (token)
@@ -218,11 +245,16 @@ lbt.fn.resolver = function (sources)
       return cache[token]
     else
       for s in sources:iter() do
-        -- Each 'source' is a template object, with property 'functions'.
+        -- Each 'source' is a template object, with properties 'functions'
+        -- and 'arguments'.
         local f = s.functions[token]
+        local a = s.arguments[token]
         if f then
-          cache[token] = f
-          return f
+          cache[token] = {f, a}
+          if a == nil then
+            lbt.log(F('WARN: no argspec provided for token <%s>', token))
+          end
+          return {f, a}
         end
       end
       -- No token function found :(

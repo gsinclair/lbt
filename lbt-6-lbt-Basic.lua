@@ -13,18 +13,16 @@ local a = {}   -- number of arguments
 -- f.TEXT = function(text) return F([[%s \par]], text) end
 -- f["TEXT*"] = function(text) return F([[%s]], text) end
 
-a["TEXT*"] = 1
+a["TEXT*"] = '1-2'
 f["TEXT*"] = function (n, args)
-  if n == 0 or n > 2 then
-    return 'nargs', '1-2'
-  elseif n == 1 then
+  if n == 1 then
     return 'ok', args[1]
   elseif n == 2 then
     return 'ok', F([[\vspace{%s} %s]], args[1], args[2])
   end
 end
 
-a.TEXT = 1
+a.TEXT = '1-2'
 f.TEXT = function (n, args)
   local stat, x = f["TEXT*"](n, args)
   if stat == 'ok' then
@@ -40,9 +38,6 @@ end
 -- CMD tabto 20pt   --> \tabto{20pt}     [can have more arguments]
 a.CMD = '1+'
 f.CMD = function(n, args)
-  if n == 0 then
-    return 'nargs', '1+'
-  end
   local command = F([[\%s]], args[1])
   local arguments = args:slice(2,-1):map(lbt.util.wrap_braces):join()
   return 'ok', command..arguments  
@@ -59,9 +54,6 @@ f.CLEARPAGE = lbt.util.latex_cmd('clearpage', 0)
 
 a.VSTRETCH = 1
 f.VSTRETCH = function(n, args)
-  if n ~= 1 then
-    return 'nargs', '1'
-  end
   return F([[\vspace{\stretch{%s}}]], args[1])
 end
 
@@ -135,9 +127,6 @@ end
 
 a.ITEMIZE = '1+'
 f.ITEMIZE = function (n, args)
-  if n == 0 then
-    return 'nargs', '1+'
-  end
   local options, args = lbt.util.extract_option_argument(args)
   local prepend_item = function(text) return [[\item ]] .. text end
   local items = args:map(prepend_item):join("\n  ")
@@ -151,9 +140,6 @@ end
 
 a.ENUMERATE = '1+'
 f.ENUMERATE = function (n, args)
-  if n == 0 then
-    return 'nargs', '1+'
-  end
   local options, args = lbt.util.extract_option_argument(args)
   local prepend_item = function(text) return [[\item ]] .. text end
   local items = args:map(prepend_item):join("\n  ")
