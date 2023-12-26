@@ -16,20 +16,15 @@ local a = {}   -- number of arguments
 a["TEXT*"] = '1-2'
 f["TEXT*"] = function (n, args)
   if n == 1 then
-    return 'ok', args[1]
+    return args[1]
   elseif n == 2 then
-    return 'ok', F([[\vspace{%s} %s]], args[1], args[2])
+    return F([[\vspace{%s} %s]], args[1], args[2])
   end
 end
 
 a.TEXT = '1-2'
 f.TEXT = function (n, args)
-  local stat, x = f["TEXT*"](n, args)
-  if stat == 'ok' then
-    return 'ok', x .. [[ \par]]
-  else
-    return stat, x
-  end
+  return f["TEXT*"](n, args) .. [[ \par]]
 end
 
 -- General Latex command, and some specific ones.
@@ -40,7 +35,7 @@ a.CMD = '1+'
 f.CMD = function(n, args)
   local command = F([[\%s]], args[1])
   local arguments = args:slice(2,-1):map(lbt.util.wrap_braces):join()
-  return 'ok', command..arguments  
+  return command..arguments  
 end
 
 a.VSPACE = 1
@@ -135,7 +130,7 @@ f.ITEMIZE = function (n, args)
   %s
 \end{itemize}
   ]], options or '', items)
-  return 'ok', result
+  return result
 end
 
 a.ENUMERATE = '1+'
@@ -148,7 +143,7 @@ f.ENUMERATE = function (n, args)
   %s
 \end{enumerate}
   ]], options or '', items)
-  return 'ok', result
+  return result
 end
 
 ----- f.HEADING = function(text)

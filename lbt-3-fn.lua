@@ -154,8 +154,6 @@ end
 -- If a line cannot be evaluated (no function to support a given token) then
 -- we insert some bold red information into the Latex so the author can see,
 -- rather than halt the processing.
---
--- Note: relies on global variables for sources and styles.
 lbt.fn.parsed_content_to_latex_multi = function (body, resolver)
   local buffer = pl.List()
   for line in body:iter() do
@@ -181,8 +179,6 @@ end
 --  * 'ok', latex       [succesful]
 --  * 'notfound', nil   [token not found among sources]
 --  * 'error', details  [error occurred while processing token]
---
--- Note: relies on global variables for sources and styles.
 lbt.fn.parsed_content_to_latex_single = function (line, resolver)
   lbt.dbg('\nparsed_content_to_latex_single: %s', pp(line))
   local token = line.token
@@ -200,33 +196,21 @@ lbt.fn.parsed_content_to_latex_single = function (line, resolver)
     lbt.dbg('argspec: %s', pp(a))
     if nargs < a.min or nargs > a.max then
       local msg = F("%d args given but %s expected", nargs, a.spec)
-      lbt.dbg('--> error: %s', msg)
+      lbt.dbg('--> ERROR: %s', msg)
       return 'error', msg
     end
   end
-  -- Call the token function and assess the result (status).
-  stat, x = token_function(nargs, args)
-  -- lbt.dbg('lbt.fn.parsed_content_to_latex_single')
-  -- lbt.dbg('  token & args: %s  %s', token, args)
-  -- lbt.dbg('  result (stat, x): %s   %s', stat, x)
-
-  -- IDEA: token functions don't return a status like 'ok' or 'error'.
-  -- If they encounter an error (not really a thing I expect) then they
-  -- could return a special thing like { code = 'latex error', details = '...' }
-  -- using a util function. This could be picked up here. Again, it is
-  -- probably not even necessary and this code should just be simplified.
-  -- The code is like this because I was looking for an 'nargs' status, but
-  -- that is now dealt with separately above.
-  if stat == 'ok' then
-    lbt.dbg('--> ok: %s', x)
-    return 'ok', x
-  elseif stat == 'error' then
-    lbt.dbg('--> error: %s', x)
-    return 'error', x
+  -- Call the token function and return 'ok', ... or 'error', ...
+  result = token_function(nargs, args)
+  if type(result) == 'string' then
+    lbt.dbg('--> %s', result)
+    return 'ok', result
+  elseif type(result) == 'table' and type(result.error) == 'string' then
+    local errormsg = result.error
+    lbt.dbg('--> ERROR: %s', errormsg)
+    return 'error', errormsg
   else
-    lbt.dbg('--> bad status: %s', stat)
-    local msg = F('Bad status <%s> from token_function(nargs, args) for token <%s>', stat, token)
-    lbt.err.E001_internal_logic_error(msg)
+    lbt.E325_invalid_return_from_template_function(result)
   end
 end
 
