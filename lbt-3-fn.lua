@@ -95,14 +95,30 @@ lbt.fn.parsed_content = function (content_lines)
       append_mode = 'list'
       result[current_key] = pl.List()
     else
-      local token, text = line:match("^(%u+)%s*(.*)$")
-      -- We have a valid token, possibly with some text afterwards.
-      if token == nil then lbt.err.E100_invalid_token(line) end
-      if append_mode == nil or current_key == nil then lbt.err.E101_line_out_of_place(line) end
+      -- We have a (hopefully valid) token, possibly with some text afterwards.
+      local token, text = lbt.fn.impl.token_and_text(line)
+      if token == nil then
+        lbt.err.E001_internal_logic_error('somehow token is nil')
+      end
+      if not lbt.fn.impl.valid_token(token) then
+        lbt.err.E100_invalid_token(token)
+      end
+      if append_mode == nil or current_key == nil then
+        lbt.err.E101_line_out_of_place(line)
+      end
       if append_mode == 'dict' then
+        -- Put key and value in dictionary (note...no splitting...this may change)
         if text == nil then lbt.err.E105_dictionary_key_without_value(line) end
         result[current_key][token] = text
-      elseif append_mode == 'list' then
+      elseif append_mode == 'list' and text == nil then
+        local parsedline = {
+          token = token,
+          nargs = 0,
+          args  = pl.List(),
+          raw   = ""
+        }
+        result[current_key]:append(parsedline)
+      elseif append_mode == 'list' and text ~= nil then
         -- The text needs to be split into arguments.
         local args = pl.utils.split(text, "%s+::%s+")
         local parsedline = {
@@ -465,6 +481,19 @@ lbt.fn.impl.validate_content_key = function(line, dictionary)
     lbt.err.E103_invalid_content_key(line, "name can only be upper-case letters")
   end
   return name
+end
+
+lbt.fn.impl.token_and_text = function (line)
+  local x = pl.utils.split(line, '%s+', false, 2)
+  return table.unpack(x)
+end
+
+-- A valid token must begin with a capital letter and contain only capital
+-- letters, digits, and symbols. I would like to restrict the symbols to
+-- tasteful ones like [!*_.], but perhaps that is too restricting, and it is
+-- more hassle to implement.
+lbt.fn.impl.valid_token = function (token)
+  return token == token:upper()
 end
 
 -- lbt.fn.impl.consolidated_sources(pc,t)

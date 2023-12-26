@@ -55,7 +55,7 @@ local good_input_4 = content_lines([[
   +BODY
     TEXT Examples of animals:
     ITEMIZE  [topsep=0pt] :: Bear :: Chameleon :: Frog
-    TEXT 30pt :: Have you seen any of these?]])
+    TEXT* 30pt :: Have you seen any of these?]])
 
 -- For testing negative expansion of Basic template
 local bad_input_1 = content_lines([[
@@ -141,7 +141,7 @@ local function T_expand_Basic_template_1()
   assert(l[2]:lfind("\\item Bear"))
   assert(l[2]:lfind("\\item Chameleon"))
   assert(l[2]:lfind("\\item Frog"))
-  EQ(l[3], [[\vspace{30pt} Have you seen any of these? \par]])
+  EQ(l[3], [[\vspace{30pt} Have you seen any of these?]])
 end
 
 local function T_expand_Basic_template_2()
