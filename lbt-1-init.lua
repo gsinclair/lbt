@@ -13,6 +13,8 @@
 lbt.system = {
   template_register = {},      -- templates that are loaded and ready to use
                                --     (dictionary: name -> table)
+  document_wide_styles = {},   -- set via \lbtStyle{...} if the author wants
+                               -- to override a built-in style everywhere
   draft_mode       = false,
   debug_mode       = false,
 }
@@ -41,12 +43,6 @@ lbt.init.reset_const = function ()
   -- processing by lbt.fn.parsed_content(). Line continuation with » is handled
   -- by the code that populates this list.
   lbt.const.author_content = pl.List()
-  -- The various tokens within a template may have style information that
-  -- informs the Latex output (think CSS to HTML). The consolidated dictionary
-  -- of style information needs to be global because every template function
-  -- needs access to it via, for example, lbt.api.style('Q.color'). It is too
-  -- onerous for every template function to receive it as a parameter.
-  lbt.const.styles = nil
 end
 
 lbt.init.reset_var = function ()

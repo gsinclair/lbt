@@ -154,26 +154,26 @@ lbt.fn.latex_expansion = function (parsed_content)
   local pc = parsed_content
   local tn = lbt.fn.pc.template_name(pc)
   local t = lbt.fn.template_object_or_error(tn)
-  -- Calculate the consolidated sources and styles.
-  -- Save styles in a global variable to token expansion can work.
+  -- Calculate the consolidated sources, and a token resolver so that
+  -- expansions can use these sources. And a style resolver so that
+  -- expansions can access styles.
   local src = lbt.fn.impl.consolidated_sources(pc, t)
-  local sty = lbt.fn.impl.consolidated_styles(pc, t)
-  lbt.fn.set_styles_for_current_expansion(sty)
+  local tr = lbt.fn.token_resolver(src)
+  local sr = lbt.fn.style_resolver(pc)
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
-  local r = lbt.fn.resolver(src)
-  return t.expand(pc, r)
+  return t.expand(pc, tr, sr)
 end
 
 -- Return List of strings, each containing Latex for a line of author content.
 -- If a line cannot be evaluated (no function to support a given token) then
 -- we insert some bold red information into the Latex so the author can see,
 -- rather than halt the processing.
-lbt.fn.parsed_content_to_latex_multi = function (body, resolver)
+lbt.fn.parsed_content_to_latex_multi = function (body, tr, sr)
   local buffer = pl.List()
   for line in body:iter() do
-    local status, latex = lbt.fn.parsed_content_to_latex_single(line, resolver)
+    local status, latex = lbt.fn.parsed_content_to_latex_single(line, tr)
     if status == 'ok' then
       buffer:append(latex)
     elseif status == 'notfound' then
@@ -191,16 +191,21 @@ end
 -- Take a single line of parsed author content (table with keys token, nargs,
 -- args and raw) and produce a string of Latex.
 --
+-- Parameters:
+--  * line: parsed author content
+--  * tr:   a token resolver that we call to get a token function
+--  * sr:   a style resolver that we pass to the function for token expansion
+--
 -- Return:
 --  * 'ok', latex       [succesful]
 --  * 'notfound', nil   [token not found among sources]
 --  * 'error', details  [error occurred while processing token]
-lbt.fn.parsed_content_to_latex_single = function (line, resolver)
+lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
   lbt.dbg('\nparsed_content_to_latex_single: %s', pp(line))
   local token = line.token
   local nargs = line.nargs
   local args  = line.args
-  local findings = resolver(token)
+  local findings = tr(token)
   -- Did we find a token function?
   if findings == nil then
     return 'notfound', nil
@@ -238,51 +243,56 @@ end
 -- The resolver function returns (token_function, argspec) if a token function
 -- is found among the sources, or nil otherwise. Note that argspec might
 -- legitimately be nil, although we will put a warning in the log file.
-lbt.fn.resolver = function (sources)
-  local cache = {}
-  return function (token)
-    if cache[token] ~= nil then
-      return cache[token]
-    else
-      for s in sources:iter() do
-        -- Each 'source' is a template object, with properties 'functions'
-        -- and 'arguments'.
-        local f = s.functions[token]
-        local a = s.arguments[token]
-        if f then
-          cache[token] = {f, a}
-          if a == nil then
-            lbt.log(F('WARN: no argspec provided for token <%s>', token))
-          end
-          return {f, a}
+lbt.fn.token_resolver = function (sources)
+  return pl.utils.memoize(function (token)
+    for s in sources:iter() do
+      -- Each 'source' is a template object, with properties 'functions'
+      -- and 'arguments'.
+      local f = s.functions[token]
+      local a = s.arguments[token]
+      if f then
+        if a == nil then
+          lbt.log(F('WARN: no argspec provided for token <%s>', token))
         end
+        return {f, a}
       end
-      -- No token function found :(
-      return nil
     end
-  end
+    -- No token function found :(
+    return nil
+  end)
 end
 
--- This is called once when the parsed content is about to be Latexified.
-lbt.fn.set_styles_for_current_expansion = function (sty)
-  assert_table(1, sty)      -- a dictionary-style table
-  if lbt.const.styles == nil then
-    lbt.const.styles = sty
-  else
-    local msg = 'set_styles_for_current_expansion should be called only once per expansion'
-    lbt.err.E001_internal_logic_error(msg)
+-- Produce a function that resolves styles using global, template, and local
+-- style information. A memoisation cache is used to speed up resolution.
+--
+-- The resolver function takes a style key like 'Q.color' and returns a string
+-- like 'RoyalBlue'. If there is no such style, a program-halting error occurs.
+-- That's because the only place this resolver is called is in a token
+-- expansion function, and if no style is found, it means the coder has
+-- probably made a typo. They will want to know about it.
+lbt.fn.style_resolver = function (sources)
+  local lookup = pl.utils.memoize(function (key)
+    -- Step 1: is it in the parsed content style setting?    TODO
+    -- Step 2: is it in the document-wide style list?        TODO
+    -- Step 3: is it among the souce templates' built-in styles?
+    for s in sources:iter() do
+      -- Each 'source' is a template object, with property 'styles'.
+      local value = s.styles[key]
+      if value then
+        return value
+      end
+    end
+    -- No style found; template author probably made a typo. Fail fast.
+    lbt.err.E387_style_not_found(key)
+  end)
+  local get = function (multikeystring)
+    local x = multikeystring
+    local keys = pl.utils.split(x, '[, ]%s*')
+    return pl.seq(keys):map(lookup)
   end
+  return { get = get }
 end
 
--- This is called in template functions to produce appropriate Latex code.
-lbt.fn.style = function (key)
-  local value = lbt.const.styles[key]
-  if value == nil then
-    local msg = F("There is no style for key <%s>, which means you've made an error", key)
-  else
-    return value
-  end
-end
 -- }}}
 
 --------------------------------------------------------------------------------
@@ -524,18 +534,6 @@ lbt.fn.impl.consolidated_sources = function (pc, t)
   local basic = lbt.fn.template_object_or_error("lbt.Basic")
   result:append(basic)
   return result
-end
-
--- lbt.fn.impl.consolidated_styles(pc,t)
--- 
--- Like sources, a template has styles (not yet implemented) and these can be overridden
--- in a number of ways (not yet fully defined).
---
--- Return: a dictionary of style mappings like "Q.space -> 6pt"
--- Error: ...
---
-lbt.fn.impl.consolidated_styles = function (pc, t)
-  return { placeholder = "hello" }
 end
 
 -- Return: ok, error_details
