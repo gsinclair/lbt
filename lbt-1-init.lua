@@ -13,8 +13,8 @@
 lbt.system = {
   template_register = {},      -- templates that are loaded and ready to use
                                --     (dictionary: name -> table)
-  document_wide_styles = {},   -- set via \lbtStyle{...} if the author wants
-                               -- to override a built-in style everywhere
+  document_wide_styles = pl.Map(), -- set via \lbtStyle{...} if the author wants
+                                   -- to override a built-in style everywhere
   draft_mode       = false,
   debug_mode       = false,
 }

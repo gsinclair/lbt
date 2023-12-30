@@ -67,6 +67,33 @@ local bad_input_1 = content_lines([[
     ITEMIZE
     XYZ foo bar]])
 
+-- For testing styles (no local override)
+local good_input_5a = content_lines([[
+  @META
+    TEMPLATE TestQuestions
+  +BODY
+    TEXT 30pt :: Complete these questions in the space below.
+    Q Evaluate:
+    QQ $2+2$
+    QQ $5 \times 6$
+    QQ $\exp(i\pi)$
+    Q Which is a factor of $x^2 + 6x + 8$?
+    MC $x+1$ :: $x+2$ :: $x+3$ :: $x+4$]])
+
+-- For testing styles (local override)
+local good_input_5b = content_lines([[
+  @META
+    TEMPLATE TestQuestions
+    STYLES   Q.vspace 18pt :: MC.alphabet Roman
+  +BODY
+    TEXT 30pt :: Complete these questions in the space below.
+    Q Evaluate:
+    QQ $2+2$
+    QQ $5 \times 6$
+    QQ $\exp(i\pi)$
+    Q Which is a factor of $x^2 + 6x + 8$?
+    MC $x+1$ :: $x+2$ :: $x+3$ :: $x+4$]])
+
 --------------------------------------------------------------------------------
 
 local function T_pragrams_and_other_lines()
@@ -133,7 +160,7 @@ end
 
 local function T_expand_Basic_template_1()
   lbt.fn.author_content_clear()
-  lbt.fn.template_register_to_logfile()
+  lbt.fn.template_register_to_dbgfile()
   local pc = lbt.fn.parsed_content(good_input_4)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
@@ -146,7 +173,7 @@ end
 
 local function T_expand_Basic_template_2()
   lbt.fn.author_content_clear()
-  lbt.fn.template_register_to_logfile()
+  lbt.fn.template_register_to_dbgfile()
   local pc = lbt.fn.parsed_content(bad_input_1)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
@@ -159,6 +186,58 @@ local function T_expand_Basic_template_2()
   assert(l[4]:lfind("Token XYZ not resolved"))
 end
 
+local function T_util()
+  EQ(lbt.util.double_colon_split('a :: b :: c'), {'a', 'b', 'c'})
+  EQ(lbt.util.space_split('a b c'),    {'a', 'b', 'c'})
+  EQ(lbt.util.space_split('a b c', 2), {'a', 'b c'})
+end
+
+local function T_template_styles_specification()
+  local input = { Q  = { vspace = '12pt', color = 'blue' },
+                  MC = { alphabet = 'roman' } }
+  local expected = { ['Q.vspace'] = '12pt', ['Q.color'] = 'blue',
+                     ['MC.alphabet'] = 'roman' }
+  local ok, output = lbt.fn.impl.template_styles_specification(input)
+  assert(ok)
+  EQ(output, expected)
+end
+
+local function T_number_in_alphabet()
+  local f = lbt.util.number_in_alphabet
+  EQ(f(15, 'latin'), 'o')
+  EQ(f(15, 'Latin'), 'O')
+  EQ(f(15, 'roman'), 'xv')
+  EQ(f(15, 'Roman'), 'XV')
+end
+
+local function T_styles_in_test_question_template_5a()
+  lbt.api.add_template_directory("PWD/templates")
+  lbt.fn.author_content_clear()
+  local pc = lbt.fn.parsed_content(good_input_5a)
+  lbt.fn.validate_parsed_content(pc)
+  local l  = lbt.fn.latex_expansion(pc)
+  EQ(l[1], [[\vspace{30pt} Complete these questions in the space below. \par]])
+  EQ(l[2], [[{\vspace{12pt}
+              \bsferies\color{blue}Question~1}\enspace Evaluate:]])
+  EQ(l[3], [[(a)~$2+2$]])
+  EQ(l[4], [[(b)~$5 \times 6$]])
+  EQ(l[5], [[(c)~$\exp(i\pi)$]])
+  EQ(l[6], [[{\vspace{12pt}
+              \bsferies\color{blue}Question~2}\enspace Which is a factor of $x^2 + 6x + 8$?]])
+  EQ(l[7], [[(MC A) \quad $x+1$\\
+(MC B) \quad $x+2$\\
+(MC C) \quad $x+3$\\
+(MC D) \quad $x+4$\\]])
+  EQ(l[8], nil)
+end
+
+local function T_styles_in_test_question_template_5b()
+  lbt.api.add_template_directory("PWD/templates")
+  lbt.fn.author_content_clear()
+  local pc = lbt.fn.parsed_content(good_input_5b)
+  lbt.fn.validate_parsed_content(pc)
+  local l  = lbt.fn.latex_expansion(pc)
+end
 
 --------------------------------------------------------------------------------
 
@@ -172,6 +251,11 @@ local function RUN_TESTS(exit_on_completion)
   T_add_template_directory()
   T_expand_Basic_template_1()
   T_expand_Basic_template_2()
+  T_util()
+  T_template_styles_specification()
+  T_number_in_alphabet()
+  T_styles_in_test_question_template_5a()
+  -- T_styles_in_test_question_template_5b()
 
   if exit_on_completion then
     print("======================= </TESTS> (exiting)")

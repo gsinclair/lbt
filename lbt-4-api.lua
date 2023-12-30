@@ -3,6 +3,7 @@
 --
 
 local F = string.format
+local pp = pl.pretty.write
 
 local assert_string = pl.utils.assert_string
 local assert_bool = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
@@ -34,7 +35,7 @@ lbt.api.add_template_directory = function (dir)
     end
   end
   lbt.dbg("Added template directory <%s>; here is the current register...", dir)
-  lbt.dbg(lbt.system.template_register)
+  lbt.fn.template_register_to_dbgfile()
 end
 
 --------------------------------------------------------------------------------
@@ -184,7 +185,10 @@ end
 lbt.api.default_template_expand = function()
   return function (pc, tr, sr)
     -- abbreviations for: parsed content, token resolver, style resolver
+    lbt.dbg('Inside default_template_expand for template <%s>', lbt.fn.pc.template_name(pc))
+    lbt.dbg('  - argument sr == %s', pp(sr))
     local body = lbt.fn.pc.content_list(pc, 'BODY')
+    lbt.dbg(' * BODY has <%d> items to expand', body:len())
     if body == nil then
       lbt.err.E301_default_expand_failed_no_body()
     end
@@ -291,4 +295,12 @@ end
 --
 lbt.api.style = function (key)
   -- TODO remove!
+end
+
+lbt.api.add_styles = function (text)
+  local map = lbt.fn.style_string_to_map(text)
+  lbt.doc('Document-wide styles are being updated:')
+  lbt.doc(pp(map))
+  lbt.system.document_wide_styles:update(map)
+  return nil
 end

@@ -9,6 +9,9 @@
   pl = require("pl.import_into")()
   pl.stringx.import()
 
+  -- During active development, load debugger into global variable DEBUGGER.
+  DEBUGGER = require('debugger')
+
   -- Load lbt module into global variable lbt.
   lbt = {}                           -- todo check it doesn't exist already
   require('lbt-0-meta')
@@ -48,5 +51,7 @@
 \newcommand{\lbtDebugModeOff}{\directlua{lbt.api.set_debug_mode(false)}} 
 
 \newcommand{\lbtTemplateDirectory}[1]{\directlua{lbt.api.add_template_directory(#1)}} 
+
+\newcommand{\lbtStyles}[1]{\directlua{lbt.api.add_styles(#1)}} 
 
 % \newcommand{\lbtResetChapterCounters}{\luaexec{lbt.api.reset_chapter_counters()}}

@@ -46,6 +46,11 @@ lbt.err.E200_no_template_for_name = function(name)
   E("E200: No template for the given name <%s>", name)
 end
 
+lbt.err.E206_cant_form_list_of_sources = function (name)
+  E("E206: Can't form a consolidated list of sources.\n"..
+    "      The problem is the template named <%s>.", name)
+end
+
 lbt.err.E213_failed_template_load = function(path, error_details)
   E("E213: Failed to load template:\n * path: %s\n * msg: %s", path, error_details)
 end
@@ -90,4 +95,17 @@ lbt.err.E303_content_dictionary_not_found = function (pc, key)
 content dictionary, but it doesn't exist.
   Template:     %s
   Dictionary:   %s]], lbt.fn.pc.template_name(pc), key)
+end
+
+lbt.err.E343_invalid_template_expansion_result = function(x)
+  E("E343: Invalid template expansion result. Expected a string; got " .. type(x))
+end
+
+lbt.err.E387_style_not_found = function (key)
+  E("E387: No value for style key <%s>", key)
+end
+
+lbt.err.E402_invalid_alphabet = function (alph)
+  E("E402: Invalid alphabet <%s> for conversion.\n"..
+    "      Options are latin | Latin | roman | Roman", alph)
 end

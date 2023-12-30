@@ -149,6 +149,7 @@ lbt.fn.validate_parsed_content = function (pc)
   return nil
 end
 
+-- Returns a List.
 lbt.fn.latex_expansion = function (parsed_content)
   -- Find the main template for the parsed content.
   local pc = parsed_content
@@ -159,10 +160,13 @@ lbt.fn.latex_expansion = function (parsed_content)
   -- expansions can access styles.
   local src = lbt.fn.impl.consolidated_sources(pc, t)
   local tr = lbt.fn.token_resolver(src)
-  local sr = lbt.fn.style_resolver(pc)
+  local sr = lbt.fn.style_resolver(pc, src)
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
+  lbt.dbg('\n\n***')
+  lbt.dbg('About to latex-expand template <%s>', lbt.fn.pc.template_name(pc))
+  lbt.dbg('  * sources: %s', lbt.fn.impl.sources_list_compact_representation(src))
   return t.expand(pc, tr, sr)
 end
 
@@ -170,10 +174,14 @@ end
 -- If a line cannot be evaluated (no function to support a given token) then
 -- we insert some bold red information into the Latex so the author can see,
 -- rather than halt the processing.
+--
+-- body: List of parsed lines
+-- tr:   template resolver       call tr('Q') to resolve token Q to a function
+-- sr:   style resolver          call s.get('Q.vspace') to get the value
 lbt.fn.parsed_content_to_latex_multi = function (body, tr, sr)
   local buffer = pl.List()
   for line in body:iter() do
-    local status, latex = lbt.fn.parsed_content_to_latex_single(line, tr)
+    local status, latex = lbt.fn.parsed_content_to_latex_single(line, tr, sr)
     if status == 'ok' then
       buffer:append(latex)
     elseif status == 'notfound' then
@@ -201,35 +209,39 @@ end
 --  * 'notfound', nil   [token not found among sources]
 --  * 'error', details  [error occurred while processing token]
 lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
-  lbt.dbg('\nparsed_content_to_latex_single: %s', pp(line))
+  lbt.dbg('\nparsed_content_to_latex_single:\n  %s', lbt.fn.pc.compact_representation_line(line))
   local token = line.token
   local nargs = line.nargs
   local args  = line.args
   local findings = tr(token)
   -- Did we find a token function?
   if findings == nil then
+    lbt.dbg('    --> NOTFOUND')
     return 'notfound', nil
   end
   local token_function, argspec = table.unpack(findings)
   -- Is there an argument spec? Do we have a valid number of arguments?
   if argspec then
     local a = argspec
-    lbt.dbg('argspec: %s', pp(a))
     if nargs < a.min or nargs > a.max then
       local msg = F("%d args given but %s expected", nargs, a.spec)
-      lbt.dbg('--> ERROR: %s', msg)
+      lbt.dbg('    --> ERROR: %s', msg)
       return 'error', msg
     end
   end
   -- Call the token function and return 'ok', ... or 'error', ...
-  result = token_function(nargs, args)
+  result = token_function(nargs, args, sr)
   if type(result) == 'string' then
-    lbt.dbg('--> %s', result)
+    lbt.dbg('    --> %s', result)
     return 'ok', result
   elseif type(result) == 'table' and type(result.error) == 'string' then
     local errormsg = result.error
-    lbt.dbg('--> ERROR: %s', errormsg)
+    lbt.dbg('    --> ERROR: %s', errormsg)
     return 'error', errormsg
+  elseif type(result) == 'table' then
+    result = table.concat(result, "\n")
+    lbt.dbg('    --> %s', result)
+    return 'ok', result
   else
     lbt.E325_invalid_return_from_template_function(result)
   end
@@ -270,25 +282,28 @@ end
 -- That's because the only place this resolver is called is in a token
 -- expansion function, and if no style is found, it means the coder has
 -- probably made a typo. They will want to know about it.
-lbt.fn.style_resolver = function (sources)
-  local lookup = pl.utils.memoize(function (key)
-    -- Step 1: is it in the parsed content style setting?    TODO
-    -- Step 2: is it in the document-wide style list?        TODO
-    -- Step 3: is it among the souce templates' built-in styles?
-    for s in sources:iter() do
-      -- Each 'source' is a template object, with property 'styles'.
-      local value = s.styles[key]
-      if value then
-        return value
+
+lbt.fn.style_resolver = function (pc, sources)
+  local cache = {}
+  local get = function (multikeystring)
+    local x = multikeystring    -- e.g. 'Q.vspace Q.color'
+    local keys = pl.List(pl.utils.split(x, '[, ]%s*'))
+    local result = pl.List()
+    for k in keys:iter() do
+      if cache[k] then
+        local v = cache[k]
+        result:append(v)
+      else
+        local v = lbt.fn.impl.style_lookup_slow(k, pc, sources)
+        if v == nil then
+          -- No style found; template author probably made a typo. Fail fast.
+          lbt.err.E387_style_not_found(key)
+        end
+        cache[k] = v
+        result:append(v)
       end
     end
-    -- No style found; template author probably made a typo. Fail fast.
-    lbt.err.E387_style_not_found(key)
-  end)
-  local get = function (multikeystring)
-    local x = multikeystring
-    local keys = pl.utils.split(x, '[, ]%s*')
-    return pl.seq(keys):map(lookup)
+    return table.unpack(result)
   end
   return { get = get }
 end
@@ -303,6 +318,7 @@ end
 --  * list(pc, "BODY")
 --  * template_name(pc)
 --  * extra_sources(pc)
+--  * compact_representation(pc)       for debugging
 --------------------------------------------------------------------------------
 
 lbt.fn.pc = {}
@@ -346,6 +362,10 @@ lbt.fn.pc.extra_sources = function (pc)
     return pl.List()
   end
 end
+
+lbt.fn.pc.compact_representation_line = function(pc_line)
+  return F("%s | %s", pc_line.token, pc_line.raw:shorten(60))
+end
 -- }}}
 
 --------------------------------------------------------------------------------
@@ -357,6 +377,7 @@ end
 --  * template_path_or_error(name)
 --  *
 --  * [expand_directory -- an implementation detail]
+--  * [template_compact_representation -- for debugging]
 --------------------------------------------------------------------------------
 
 lbt.fn.expand_directory = function (path)
@@ -399,6 +420,15 @@ lbt.fn.register_template = function(template_details, path)
       lbt.err.E215_invalid_template_details(td, path, x)
     end
   end
+  -- Same as above, but with styles.
+  if td.styles then
+    local ok, x = lbt.fn.impl.template_styles_specification(td.styles)
+    if ok then
+      td.styles = x
+    else
+      lbt.err.E215_invalid_template_details(td, path, x)
+    end
+  end
   return nil
 end
 
@@ -428,17 +458,62 @@ lbt.fn.template_path_or_error = function(tn)
   return p
 end
 
-lbt.fn.template_register_to_logfile = function()
+lbt.fn.template_register_to_dbgfile = function()
   local tr = lbt.system.template_register
-  lbt.log("")
-  lbt.log("The template register appears below.")
-  lbt.log("")
-  lbt.log(pp(tr))
+  lbt.dbg("")
+  lbt.dbg("The template register appears below.")
+  lbt.dbg("")
+  for name, t in pairs(tr) do
+    lbt.dbg(" * " .. name)
+    local x = lbt.fn.template_compact_representation(t)
+    lbt.dbg(x)
+  end
+end
+
+lbt.fn.template_compact_representation = function(te)
+  local x = pl.List()
+  local t = te.td
+  -- local src = lbt.fn.impl.sources_list_compact_representation(t.sources)
+  local src = pl.List(t.sources):join(',')
+  local fun = '-F-'
+  local sty = '-S-'
+  local arg = '-A-'
+  local s = F([[
+      name:      %s
+      path:      %s
+      sources:   %s
+      functions: %s
+      styles:    %s
+      argspecs:  %s
+  ]], t.name, te.path, src, fun, sty, arg)
+  return s
 end
 --}}}
 
 --------------------------------------------------------------------------------
--- {{{ Functions assisting the implementation.
+-- {{{ Miscellaneous functions
+--  * style_string_to_map(text)
+--------------------------------------------------------------------------------
+
+-- 'Q.color gray :: MC.alphabet roman'
+--    --> { 'Q.color' = 'gray', 'MC.alphabet' = 'roman'}
+--
+-- Return type is a pl.Map, at least for now. This is probably helpful for
+-- calling 'update'.
+lbt.fn.style_string_to_map = function(text)
+  local result = pl.Map()
+  for sty in lbt.util.double_colon_split(text) do
+    -- sty is something like 'Q.color PeachPuff'
+    local key, val = lbt.util.space_split(text, 2)
+    result[key] = value
+  end
+  return result
+end
+
+-- }}}
+
+--------------------------------------------------------------------------------
+-- {{{ Functions assisting the implementation, part 1
 -- These are lower-level in nature and just do one thing with the argument(s)
 -- they are given.
 --  * xxx
@@ -508,9 +583,9 @@ end
 
 -- lbt.fn.impl.consolidated_sources(pc,t)
 -- 
--- A template itself has sources. For example, Exam might rely on Questions and Figures.
--- A specific expansion optionally has extra sources defined in @META.SOURCES.
--- The specific ones take precedence.
+-- A template itself has sources, starting with itself. For example, Exam might
+-- rely on Questions and Figures. A specific expansion optionally has extra
+-- sources defined in @META.SOURCES. The specific ones take precedence.
 --
 -- It is imperative that lbt.Basic appear somewhere, without having to be named
 -- by the user. It might as well appear at the end, so we add it.
@@ -521,7 +596,12 @@ end
 lbt.fn.impl.consolidated_sources = function (pc, t)
   local src1 = lbt.fn.pc.extra_sources(pc)  -- optional specific source names (List)
   local src2 = pl.List(t.sources)           -- source names baked in to the template (List)
-  local sources = pl.List(); sources:extend(src1); sources:extend(src2)
+  local sources = pl.List();
+  do
+    sources:extend(src1);
+    sources:append(t.name)                  -- the template itself has to go in there
+    sources:extend(src2)
+  end
   local result = pl.List()
   for name in sources:iter() do
     local t = lbt.fn.template_object_or_nil(name)
@@ -535,6 +615,18 @@ lbt.fn.impl.consolidated_sources = function (pc, t)
   result:append(basic)
   return result
 end
+
+-- }}}
+
+--------------------------------------------------------------------------------
+-- {{{ Functions assisting the implementation, part 2
+-- These are lower-level in nature and just do one thing with the argument(s)
+-- they are given.
+--  * xxx
+--  * xxx
+--  * xxx
+--  * xxx
+--------------------------------------------------------------------------------
 
 -- Return: ok, error_details
 lbt.fn.impl.template_details_are_valid = function (td)
@@ -595,11 +687,56 @@ lbt.fn.impl.template_arguments_specification = function (arguments)
   return true, result
 end
 
+-- Convert { Q = { vspace = '12pt', color = 'blue' }, MC = { alphabet = 'roman' }}
+-- to { 'Q.vspace' = '12pt', 'Q.color' = 'blue', 'MC.alphabet' = 'roman'}
+--
+-- In other words, flatten the dictionary and preseve the prefix.
+--
+-- Return type: pl.Map
+--
+-- Return true, result  or  false, errormsg
+--
+-- TODO implement and test error checking
+lbt.fn.impl.template_styles_specification = function (styles)
+  local result = pl.Map()
+  for k1,map in pairs(styles) do
+    for k2,v in pairs(map) do
+      local style_key = F('%s.%s', k1, k2)
+      local style_value = v
+      result[style_key] = style_value
+    end
+  end
+  return true, result
+end
+
 lbt.fn.impl.latex_message_token_not_resolved = function (token)
   return F([[\textcolor{red}{textbf{Token %s not resolved}}]], token)
 end
 
 lbt.fn.impl.latex_message_token_raised_error = function (token, err)
-  return F([[\textcolor{red}{textbf{Token %s raised error: \emph{%s}}}]], token, err)
+  return F([[\textcolor{red}{textbf{Token %s raised error: \emph{%s}} }]], token, err)
 end
+
+lbt.fn.impl.sources_list_compact_representation = function (sources)
+  local name = function (td) return td.name end
+  return sources:map(name):join(', ')
+end
+
+-- Find the value of a style key, or nil if not found.
+-- There are three places to look.
+-- This function supports the cached lbt.fn.style_resolver, which should
+-- be used instead of this.
+lbt.fn.impl.style_lookup_slow = function (key, pc, sources)
+  -- Step 1: is it in the parsed content style setting?    TODO
+  -- Step 2: is it in the document-wide style list?        TODO
+  -- Step 3: is it among the souce templates' built-in styles?
+  for s in sources:iter() do
+    if s.styles and s.styles[key] then
+      return s.styles[key]
+    end
+  end
+  -- Step 4: not found, return nil
+  return nil
+end
+
 -- }}}
