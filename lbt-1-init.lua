@@ -9,15 +9,14 @@
 --------------------------------------------------------------------------------
 
 -- lbt.system contains data shared for the whole Latex document.
--- It is initialised here because it only needs to happen once.
-lbt.system = {
-  template_register = {},      -- templates that are loaded and ready to use
-                               --     (dictionary: name -> table)
-  document_wide_styles = pl.Map(), -- set via \lbtStyle{...} if the author wants
-                                   -- to override a built-in style everywhere
-  draft_mode       = false,
-  debug_mode       = false,
-}
+--
+-- It is reset using lbt.init.reset_system() once during \usepackage{lbt}.
+--
+-- In here, we keep track of all templates that are available for use, and
+-- any styles the author wants to override globally.
+--
+-- Furthermore, we know whether draft mode and debug mode are enabled.
+lbt.system = {}
 
 -- lbt.const contains constant data used by a single expansion.
 --
@@ -37,6 +36,76 @@ lbt.var = {}
 -- lbt.init contains two functions for resetting lbt.const and lbt.init, so
 -- they are in a state ready for a new expansion to take place.
 lbt.init = {}
+
+--------------------------------------------------------------------------------
+-- Functions to perform initialisation (reset)
+--
+-- * specific:
+--   - init_system()
+--   - reset_const()
+--   - reset_var()
+--
+-- * purposeful:
+--   - initialize_all()        [called once, in lbt.sty]
+--   - reset_const_var()       [for a new expansion]
+--   - soft_reset_system()     [good for testing -- see lbt.api.reset_global_data()]
+--------------------------------------------------------------------------------
+
+lbt.init.initialize_all = function ()
+  lbt.init.init_system()
+  lbt.init.reset_const()
+  lbt.init.reset_var()
+end
+
+lbt.init.reset_const_var = function ()
+  lbt.init.reset_const()
+  lbt.init.reset_var()
+end
+
+-- Warning: only call this once, as it wipes out builtin template.
+-- See: lbt.init.soft_reset_system()
+lbt.init.init_system = function ()
+  -- Collection of templates that are loaded and ready to use.
+  -- Type: pl.Map
+  -- Mapping from template name to template register entry.
+  -- For example:
+  --   'CourseNotes' --> { path = '/path/to/CourseNotes.lua',
+  --                       td   = { name = 'CourseNotes',
+  --                                desc = '...',
+  --                                functions = { ... }
+  --                                ...}}
+  -- This data is global (system-wide) because template data is read-only,
+  -- and once a template has been referenced (and hence loaded) once, it is
+  -- available for use from then on.
+  lbt.system.template_register = pl.Map()
+  -- Style mapping that the author wants applied in every template expansion.
+  -- Set via (for example) \lbtStyles{Q.color purple :: MC.alphabet roman}
+  lbt.system.document_wide_styles = pl.Map()
+  -- If we have a system-wide draft mode, then only content labeled !DRAFT
+  -- will be expanded.
+  -- Set via \lbtDraftMode{true}
+  lbt.system.draft_mode       = false
+  -- If debug mode is set, extra information is sent to the debug file lbt.dbg
+  -- or the log file lbt.log. I will likely reduce it to one file (log) in the
+  -- future. Design needed.
+  lbt.system.debug_mode       = false
+end
+
+-- Reset the lbt.system table to a clean but workable state.
+--  * clear document-wide styles
+--  * leave builtin templates alone but remove any others
+--  * leave draft and debug mode as they were
+lbt.init.soft_reset_system = function ()
+  lbt.system.document_wide_styles = pl.Map()
+  for name, t in lbt.system.template_register:iter() do
+    if name:startswith('lbt.') then
+      -- do nothing
+    else
+      -- remove it
+      lbt.system.template_register[name] = nil
+    end
+  end
+end
 
 lbt.init.reset_const = function ()
   -- Every line between \begin{lbt} and \end{lbt} goes into this list for

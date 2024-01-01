@@ -9,6 +9,15 @@ local assert_string = pl.utils.assert_string
 local assert_bool = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
 local assert_table = function(n,x) pl.utils.assert_arg(n,x,'table') end
 
+-- Reset all global data but leave the following things alone:
+--  * builtin templates
+--  * draft and debug mode
+-- 
+-- Designed to be helpful for testing. Should not be needed elsewhere.
+lbt.api.reset_global_data = function ()
+  lbt.init.soft_reset_system()
+  lbt.init.reset_const_var()
+end
 
 -- Each Lua file in the directory is loaded and expected to produce a table
 -- that functions as a template description. This table and the path are stored
@@ -34,8 +43,8 @@ lbt.api.add_template_directory = function (dir)
       lbt.err.E213_failed_template_load(path, err_details)
     end
   end
-  lbt.dbg("Added template directory <%s>; here is the current register...", dir)
-  lbt.fn.template_register_to_dbgfile()
+  lbt.dbg("Added template directory <%s>", dir)
+  lbt.fn.template_names_to_dbgfile()
 end
 
 --------------------------------------------------------------------------------
@@ -299,8 +308,8 @@ end
 
 lbt.api.add_styles = function (text)
   local map = lbt.fn.style_string_to_map(text)
-  lbt.doc('Document-wide styles are being updated:')
-  lbt.doc(pp(map))
+  lbt.log('Document-wide styles are being updated:')
+  lbt.log(pp(map))
   lbt.system.document_wide_styles:update(map)
   return nil
 end

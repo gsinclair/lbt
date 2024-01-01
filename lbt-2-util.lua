@@ -72,17 +72,20 @@ end
 
 -- double_colon_split('a :: b :: c')    -> {a,b,c}
 function lbt.util.double_colon_split(text)
-  return pl.utils.split(text, '%s+::%s+')
+  local result = pl.utils.split(text, '%s+::%s+')
+  return pl.List(result)
 end
 
 -- space_split('a b c d')      -> {a,b,c,d}
 -- space_split('a b c d', 2)   -> {a,b c d}
 function lbt.util.space_split(text, n)
+  local result = nil
   if n == nil then
-    return pl.utils.split(text, '%s+')
+    result = pl.utils.split(text, '%s+')
   else
-    return pl.utils.split(text, '%s+', false, n)
+    result = pl.utils.split(text, '%s+', false, n)
   end
+  return pl.List(result)
 end
 
 --------------------------------------------------------------------------------

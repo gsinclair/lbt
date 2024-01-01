@@ -15,7 +15,7 @@
   -- Load lbt module into global variable lbt.
   lbt = {}                           -- todo check it doesn't exist already
   require('lbt-0-meta')
-  require('lbt-1-init')
+  require('lbt-1-init');   lbt.init.initialize_all()
   require('lbt-2-util')
   require('lbt-3-fn')
   require('lbt-4-api')

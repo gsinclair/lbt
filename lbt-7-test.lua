@@ -84,7 +84,7 @@ local good_input_5a = content_lines([[
 local good_input_5b = content_lines([[
   @META
     TEMPLATE TestQuestions
-    STYLES   Q.vspace 18pt :: MC.alphabet Roman
+    STYLES   Q.vspace 18pt :: MC.alphabet roman
   +BODY
     TEXT 30pt :: Complete these questions in the space below.
     Q Evaluate:
@@ -96,7 +96,8 @@ local good_input_5b = content_lines([[
 
 --------------------------------------------------------------------------------
 
-local function T_pragrams_and_other_lines()
+local function T_pragmas_and_other_lines()
+  lbt.api.reset_global_data()
   local input = pl.List.new{"!DRAFT", "Line 1", "!IGNORE", "Line 2", "Line 3"}
   local pragmas, lines = lbt.fn.impl.pragmas_and_other_lines(input)
   lbt.dbg(pp(pragmas))
@@ -106,6 +107,7 @@ local function T_pragrams_and_other_lines()
 end
 
 local function T_parsed_content_1()
+  lbt.api.reset_global_data()
   -- DEBUG(pp(input))
   local pc = lbt.fn.parsed_content(good_input_1)
   lbt.dbg(pc)
@@ -134,6 +136,7 @@ local function T_parsed_content_1()
 end
 
 local function T_extra_sources()
+  lbt.api.reset_global_data()
   -- We assume parsed_content works for these inputs.
   local pc2 = lbt.fn.parsed_content(good_input_2)
   local pc3 = lbt.fn.parsed_content(good_input_3)
@@ -144,6 +147,7 @@ local function T_extra_sources()
 end
 
 local function T_add_template_directory()
+  lbt.api.reset_global_data()
   local t1 = lbt.fn.template_object_or_nil("HSCLectures")
   local p1 = lbt.fn.template_path_or_nil("HSCLectures")
   assert(t1 == nil and p1 == nil)
@@ -159,7 +163,7 @@ local function T_add_template_directory()
 end
 
 local function T_expand_Basic_template_1()
-  lbt.fn.author_content_clear()
+  lbt.api.reset_global_data()
   lbt.fn.template_register_to_dbgfile()
   local pc = lbt.fn.parsed_content(good_input_4)
   lbt.fn.validate_parsed_content(pc)
@@ -172,7 +176,7 @@ local function T_expand_Basic_template_1()
 end
 
 local function T_expand_Basic_template_2()
-  lbt.fn.author_content_clear()
+  lbt.api.reset_global_data()
   lbt.fn.template_register_to_dbgfile()
   local pc = lbt.fn.parsed_content(bad_input_1)
   lbt.fn.validate_parsed_content(pc)
@@ -187,12 +191,14 @@ local function T_expand_Basic_template_2()
 end
 
 local function T_util()
+  lbt.api.reset_global_data()
   EQ(lbt.util.double_colon_split('a :: b :: c'), {'a', 'b', 'c'})
   EQ(lbt.util.space_split('a b c'),    {'a', 'b', 'c'})
   EQ(lbt.util.space_split('a b c', 2), {'a', 'b c'})
 end
 
 local function T_template_styles_specification()
+  lbt.api.reset_global_data()
   local input = { Q  = { vspace = '12pt', color = 'blue' },
                   MC = { alphabet = 'roman' } }
   local expected = { ['Q.vspace'] = '12pt', ['Q.color'] = 'blue',
@@ -203,6 +209,7 @@ local function T_template_styles_specification()
 end
 
 local function T_number_in_alphabet()
+  lbt.api.reset_global_data()
   local f = lbt.util.number_in_alphabet
   EQ(f(15, 'latin'), 'o')
   EQ(f(15, 'Latin'), 'O')
@@ -210,9 +217,46 @@ local function T_number_in_alphabet()
   EQ(f(15, 'Roman'), 'XV')
 end
 
-local function T_styles_in_test_question_template_5a()
+local function T_style_string_to_map()
+  local text = "Q.vspace 30pt :: Q.color navy :: MC.alphabet latin"
+  local map  = lbt.fn.style_string_to_map(text)
+  EQ(map, { ["MC.alphabet"] = "latin", ["Q.color"] = "navy", ["Q.vspace"] = "30pt" })
+end
+
+-- In this test, we do not add any global styles, but we do add local ones
+local function T_style_resolver_1a()
+  lbt.dbg('*** T_style_resolver_1a ***')
+  lbt.api.reset_global_data()
   lbt.api.add_template_directory("PWD/templates")
-  lbt.fn.author_content_clear()
+  -- This is inside baseball, but it is necessary setup for a style resolver.
+  local pc = lbt.fn.parsed_content(good_input_5b)
+  local _, sr = lbt.fn.token_and_style_resolvers(pc)
+  -- We are now ready to test.
+  EQ(sr('Q.vspace'), '18pt')        -- local
+  EQ(sr('Q.color'), 'blue')         -- default
+  EQ(sr('QQ.alphabet'), 'latin')    -- default
+  EQ(sr('MC.alphabet'), 'roman')    -- local
+end
+
+-- In this test, we add both global and local styles
+local function T_style_resolver_1b()
+  lbt.dbg('*** T_style_resolver_1b ***')
+  lbt.api.reset_global_data()
+  lbt.api.add_styles("Q.vspace 30pt :: Q.color navy :: MC.alphabet roman")
+  lbt.api.add_template_directory("PWD/templates")
+  -- This is inside baseball, but it is necessary setup for a style resolver.
+  local pc = lbt.fn.parsed_content(good_input_5b)
+  local _, sr = lbt.fn.token_and_style_resolvers(pc)
+  -- We are now ready to test.
+  EQ(sr('Q.vspace'), '18pt')        -- local
+  EQ(sr('Q.color'), 'navy')         -- global
+  EQ(sr('QQ.alphabet'), 'latin')    -- default
+  EQ(sr('MC.alphabet'), 'roman')    -- local
+end
+
+local function T_styles_in_test_question_template_5a()
+  lbt.api.reset_global_data()
+  lbt.api.add_template_directory("PWD/templates")
   local pc = lbt.fn.parsed_content(good_input_5a)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
@@ -232,20 +276,40 @@ local function T_styles_in_test_question_template_5a()
 end
 
 local function T_styles_in_test_question_template_5b()
+  lbt.api.reset_global_data()
   lbt.api.add_template_directory("PWD/templates")
-  lbt.fn.author_content_clear()
   local pc = lbt.fn.parsed_content(good_input_5b)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
+  EQ(l[1], [[\vspace{30pt} Complete these questions in the space below. \par]])
+  EQ(l[2], [[{\vspace{18pt}
+              \bsferies\color{blue}Question~1}\enspace Evaluate:]])
+  EQ(l[3], [[(a)~$2+2$]])
+  EQ(l[4], [[(b)~$5 \times 6$]])
+  EQ(l[5], [[(c)~$\exp(i\pi)$]])
+  EQ(l[6], [[{\vspace{18pt}
+              \bsferies\color{blue}Question~2}\enspace Which is a factor of $x^2 + 6x + 8$?]])
+  EQ(l[7], [[(MC i) \quad $x+1$\\
+(MC ii) \quad $x+2$\\
+(MC iii) \quad $x+3$\\
+(MC iv) \quad $x+4$\\]])
 end
 
 --------------------------------------------------------------------------------
 
-local function RUN_TESTS(exit_on_completion)
+-- flag:
+--   0: don't run tests (but continue the program)
+--   1: run tests and exit
+--   2: run tests and continue
+local function RUN_TESTS(flag)
+  if flag == 0 then return end
+
   print("\n\n======================= <TESTS>")
   lbt.api.set_debug_mode(true)
 
-  T_pragrams_and_other_lines()
+  -- IX(lbt.system.template_register)
+
+  T_pragmas_and_other_lines()
   T_parsed_content_1()
   T_extra_sources()
   T_add_template_directory()
@@ -254,14 +318,19 @@ local function RUN_TESTS(exit_on_completion)
   T_util()
   T_template_styles_specification()
   T_number_in_alphabet()
+  T_style_string_to_map()
+  T_style_resolver_1a()
+  T_style_resolver_1b()
   T_styles_in_test_question_template_5a()
-  -- T_styles_in_test_question_template_5b()
+  T_styles_in_test_question_template_5b()
 
-  if exit_on_completion then
+  if flag == 1 then
     print("======================= </TESTS> (exiting)")
     os.exit()
-  else
+  elseif flag == 2 then
     print("======================= </TESTS>")
+  else
+    error('Invalid flag for RUN_TESTS in lbt-7-test.lua')
   end
 end
 

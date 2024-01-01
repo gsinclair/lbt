@@ -151,22 +151,15 @@ end
 
 -- Returns a List.
 lbt.fn.latex_expansion = function (parsed_content)
-  -- Find the main template for the parsed content.
   local pc = parsed_content
-  local tn = lbt.fn.pc.template_name(pc)
-  local t = lbt.fn.template_object_or_error(tn)
-  -- Calculate the consolidated sources, and a token resolver so that
-  -- expansions can use these sources. And a style resolver so that
-  -- expansions can access styles.
-  local src = lbt.fn.impl.consolidated_sources(pc, t)
-  local tr = lbt.fn.token_resolver(src)
-  local sr = lbt.fn.style_resolver(pc, src)
+  local t = lbt.fn.pc.template_object(pc)
+  -- Obtain token and style resolvers so that expansion can occur.
+  local tr, sr = lbt.fn.token_and_style_resolvers(pc)
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
   lbt.dbg('\n\n***')
   lbt.dbg('About to latex-expand template <%s>', lbt.fn.pc.template_name(pc))
-  lbt.dbg('  * sources: %s', lbt.fn.impl.sources_list_compact_representation(src))
   return t.expand(pc, tr, sr)
 end
 
@@ -247,6 +240,23 @@ lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
   end
 end
 
+-- From one parsed-content object, we can derive a token resolve and a style
+-- resolver.
+lbt.fn.token_and_style_resolvers = function (pc)
+  -- The name of the template allows us to retrieve the template object.
+  local t = lbt.fn.pc.template_object(pc)
+  -- From the pc we can look for added sources. The template object has sources
+  -- too. So we can calculate "consolidated sources".
+  local src = lbt.fn.impl.consolidated_sources(pc, t)
+  -- Styles can come from three places: doc-wide, written into the content,
+  -- and from the consolidated sources that are in use. 
+  local sty = lbt.fn.impl.consolidated_styles(lbt.system.document_wide_styles, pc, src)
+  -- With consolidated sources and styles, we can make the resolvers.
+  local tr = lbt.fn.token_resolver(src)
+  local sr = lbt.fn.style_resolver(sty)
+  return tr, sr
+end
+
 -- Produce a function that resolves tokens using the sources provided here.
 -- This means the sources don't need to be passed around.
 --
@@ -255,6 +265,8 @@ end
 -- The resolver function returns (token_function, argspec) if a token function
 -- is found among the sources, or nil otherwise. Note that argspec might
 -- legitimately be nil, although we will put a warning in the log file.
+--
+-- TODO make this impl
 lbt.fn.token_resolver = function (sources)
   return pl.utils.memoize(function (token)
     for s in sources:iter() do
@@ -275,37 +287,35 @@ lbt.fn.token_resolver = function (sources)
 end
 
 -- Produce a function that resolves styles using global, template, and local
--- style information. A memoisation cache is used to speed up resolution.
+-- style information, as contained in the consolidated style_map parameter.
 --
 -- The resolver function takes a style key like 'Q.color' and returns a string
 -- like 'RoyalBlue'. If there is no such style, a program-halting error occurs.
 -- That's because the only place this resolver is called is in a token
 -- expansion function, and if no style is found, it means the coder has
 -- probably made a typo. They will want to know about it.
-
-lbt.fn.style_resolver = function (pc, sources)
-  local cache = {}
-  local get = function (multikeystring)
+--
+-- As a convenience for the template author, the resolver function can take
+-- many keys and return many values. For example:
+--
+--   local col, vsp = sr('Q.color Q.vspace')        ->  'blue', '12pt'
+--
+-- TODO make this impl
+lbt.fn.style_resolver = function (style_map)
+  return function (multikeystring)
     local x = multikeystring    -- e.g. 'Q.vspace Q.color'
     local keys = pl.List(pl.utils.split(x, '[, ]%s*'))
     local result = pl.List()
     for k in keys:iter() do
-      if cache[k] then
-        local v = cache[k]
-        result:append(v)
+      local value = style_map[k]
+      if value then
+        result:append(value)
       else
-        local v = lbt.fn.impl.style_lookup_slow(k, pc, sources)
-        if v == nil then
-          -- No style found; template author probably made a typo. Fail fast.
-          lbt.err.E387_style_not_found(key)
-        end
-        cache[k] = v
-        result:append(v)
+        lbt.err.E387_style_not_found(k)
       end
     end
     return table.unpack(result)
   end
-  return { get = get }
 end
 
 -- }}}
@@ -317,7 +327,9 @@ end
 --  * dictionary(pc, "META")
 --  * list(pc, "BODY")
 --  * template_name(pc)
+--  * template_object(pc)
 --  * extra_sources(pc)
+--  * extra_styles(pc)
 --  * compact_representation(pc)       for debugging
 --------------------------------------------------------------------------------
 
@@ -333,6 +345,12 @@ end
 
 lbt.fn.pc.template_name = function (pc)
   return pc.META.TEMPLATE
+end
+
+lbt.fn.pc.template_object = function (pc)
+  local tn = lbt.fn.pc.template_name(pc)
+  local t = lbt.fn.template_object_or_error(tn)
+  return t
 end
 
 lbt.fn.pc.content_dictionary = function (pc, key)
@@ -360,6 +378,17 @@ lbt.fn.pc.extra_sources = function (pc)
     return pl.List(bits):map(pl.stringx.strip)
   else
     return pl.List()
+  end
+end
+
+-- Return a Map of style settings given in META.STYLES.
+-- May be empty.
+lbt.fn.pc.extra_styles = function (pc)
+  local styles = pc.META.STYLES
+  if styles then
+    return lbt.fn.style_string_to_map(styles)
+  else
+    return pl.Map()
   end
 end
 
@@ -458,6 +487,17 @@ lbt.fn.template_path_or_error = function(tn)
   return p
 end
 
+lbt.fn.template_names_to_dbgfile = function()
+  local tr = lbt.system.template_register
+  lbt.dbg("")
+  lbt.dbg("Template names currently loaded")
+  lbt.dbg("")
+  for name, te in pairs(tr) do
+    local nfunctions = #(te.td.functions)
+    lbt.dbg(" * %-20s (%d functions)", name, nfunctions)
+  end
+end
+
 lbt.fn.template_register_to_dbgfile = function()
   local tr = lbt.system.template_register
   lbt.dbg("")
@@ -502,10 +542,10 @@ end
 -- calling 'update'.
 lbt.fn.style_string_to_map = function(text)
   local result = pl.Map()
-  for sty in lbt.util.double_colon_split(text) do
+  for style_string in lbt.util.double_colon_split(text):iter() do
     -- sty is something like 'Q.color PeachPuff'
-    local key, val = lbt.util.space_split(text, 2)
-    result[key] = value
+    local key, val = table.unpack(lbt.util.space_split(style_string, 2))
+    result[key] = val
   end
   return result
 end
@@ -616,6 +656,56 @@ lbt.fn.impl.consolidated_sources = function (pc, t)
   return result
 end
 
+-- lbt.fn.impl.consolidated_styles(docwide, pc, sources)
+--
+-- There are three places that styles can be defined.
+--  * In templates, with code such as `s.Q = { vspace = '12pt', color = 'blue' }`
+--  * Document-wide, with code such as `\lbtStyles{Q.vspace 30pt}`
+--  * Expansion-local, with code such as `STYLES Q.color red :: MC.alphabet Roman`
+--
+-- The precedence is expansion-local, then document-wide, then the templates.
+--
+-- There are potentially many templates at play (the list of sources). In the
+-- expansion, there can be only one STYLES setting. Document-wide, there can be
+-- several `\lbtStyles` commands, but they all end up affecting the one piece
+-- of data: `lbt.system.document_wide_styles`.
+--
+-- In this function we create a single dictionary (pl.Map) that contains all styles
+-- set, respecing precedence. It will be used to resolve styles in all token
+-- evaluations for the whole expansion.
+--
+-- Input:
+--  * docwide        a Map of document-wide styles (i.e. lbt.system.d_w_s)
+--  * pc             parsed content, which gives us access to STYLES
+--  * templates      consolidated list of templates in precedence order
+--                   (we extract the 'styles' map from each)
+-- 
+-- Return:
+--  * a pl.Map of all style mappings, respecting precedence
+--
+-- Errors:
+--  * none that I can think of
+--
+lbt.fn.impl.consolidated_styles = function (docwide, pc, sources)
+  local result = pl.Map()
+  local styles = nil
+  for s in pl.List(sources):reverse():iter() do
+    styles = s.styles or pl.Map()
+    lbt.dbg('extracting styles from <%s>: %s', s.name, styles)
+    result:update(styles)
+    -- I(result)
+  end
+  styles = docwide
+  lbt.dbg('extracting document-wide styles:', styles)
+  result:update(styles)
+  -- I(result)
+  styles = lbt.fn.pc.extra_styles(pc)
+  lbt.dbg('extracting styles from parsed content: %s', styles)
+  result:update(styles)
+  -- IX(result)
+  return result
+end
+
 -- }}}
 
 --------------------------------------------------------------------------------
@@ -720,23 +810,6 @@ end
 lbt.fn.impl.sources_list_compact_representation = function (sources)
   local name = function (td) return td.name end
   return sources:map(name):join(', ')
-end
-
--- Find the value of a style key, or nil if not found.
--- There are three places to look.
--- This function supports the cached lbt.fn.style_resolver, which should
--- be used instead of this.
-lbt.fn.impl.style_lookup_slow = function (key, pc, sources)
-  -- Step 1: is it in the parsed content style setting?    TODO
-  -- Step 2: is it in the document-wide style list?        TODO
-  -- Step 3: is it among the souce templates' built-in styles?
-  for s in sources:iter() do
-    if s.styles and s.styles[key] then
-      return s.styles[key]
-    end
-  end
-  -- Step 4: not found, return nil
-  return nil
 end
 
 -- }}}

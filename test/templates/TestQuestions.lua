@@ -38,7 +38,7 @@ a.Q = 1
 s.Q = { vspace = '12pt', color = 'blue' }
 f.Q = function(n, args, s)
   lbt.api.counter_reset('qq')
-  local vsp, col = s.get('Q.vspace Q.color')
+  local vsp, col = s('Q.vspace Q.color')
   local q = lbt.api.counter_inc('q')
   return F([[{\vspace{%s}
               \bsferies\color{%s}Question~%d}\enspace %s]],
@@ -48,18 +48,20 @@ end
 a.QQ = 1
 s.QQ = { alphabet = 'latin' }
 f.QQ = function(n, args, s)
-  local alph = s.get('QQ.alphabet')
+  local alph = s('QQ.alphabet')
   local qq = lbt.api.counter_inc('qq')
   qq = lbt.util.number_in_alphabet(qq, alph)
   return F([[(%s)~%s]], qq, args[1])
 end
 
 a.MC = '1+'
+s.MC = { alphabet = 'Latin' }
 f.MC = function(n, args, s)
   local result = pl.List()
+  local alph = s('MC.alphabet')
   for i,x in ipairs(args) do
     local line = F([[(MC %s) \quad %s\\]],
-      lbt.util.number_in_alphabet(i,'Latin'), x)
+      lbt.util.number_in_alphabet(i, alph), x)
     result:append(line)
   end
   return result
