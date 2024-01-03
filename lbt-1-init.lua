@@ -123,6 +123,14 @@ lbt.init.reset_var = function ()
   -- the current heading, so that a running header can be implemented.
   -- lbt.api.data_get(...); lbt.api.data_set(...)
   lbt.var.data = {}
+  -- Current register values and expiry times.
+  lbt.var.registers = pl.Map()
+  -- We need to know what token number we are on so that we know when registers
+  -- expire. Ideally this would be a local variable but it's too much trouble
+  -- as it would be passed to functions and back again.
+  -- Start at zero and increment when we are about to act on a token.
+  -- Do not increment if the "token" is a register allocation.
+  lbt.var.token_count = 0
 end
 
 

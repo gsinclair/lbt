@@ -192,6 +192,9 @@ end
 -- Take a single line of parsed author content (table with keys token, nargs,
 -- args and raw) and produce a string of Latex.
 --
+-- Before sending the arguments to the token function, any register references
+-- like ◊ABC are expanded.
+--
 -- Parameters:
 --  * line: parsed author content
 --  * tr:   a token resolver that we call to get a token function
@@ -199,21 +202,31 @@ end
 --
 -- Return:
 --  * 'ok', latex       [succesful]
+--  * 'sto', nil        [STO register allocation]
 --  * 'notfound', nil   [token not found among sources]
 --  * 'error', details  [error occurred while processing token]
+--
+-- Side effect:
+--  * lbt.var.line_count is increased (unless this is a register allocation)
+--  * lbt.var.registers might be updated
 lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
   lbt.dbg('\nparsed_content_to_latex_single:\n  %s', lbt.fn.pc.compact_representation_line(line))
   local token = line.token
   local nargs = line.nargs
   local args  = line.args
+  -- 1. Handle a register allocation. Do not increment linecount.
+  if token == 'STO' then
+    lbt.fn.impl.assign_register(line)
+    return 'sto', nil
+  end
+  -- 2. Search for a token function and return if we did not find one.
   local findings = tr(token)
-  -- Did we find a token function?
   if findings == nil then
     lbt.dbg('    --> NOTFOUND')
     return 'notfound', nil
   end
   local token_function, argspec = table.unpack(findings)
-  -- Is there an argument spec? Do we have a valid number of arguments?
+  -- 3. Check we have a valid number of arguments.
   if argspec then
     local a = argspec
     if nargs < a.min or nargs > a.max then
@@ -222,7 +235,11 @@ lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
       return 'error', msg
     end
   end
-  -- Call the token function and return 'ok', ... or 'error', ...
+  -- 4. We really are processing a token, so we can increase the token_count.
+  lbt.fn.impl.inc_token_count()
+  -- 5. Expand register references where necessary.
+  args = args:map(lbt.fn.impl.expand_register_references)
+  -- 6. Call the token function and return 'ok', ... or 'error', ...
   result = token_function(nargs, args, sr)
   if type(result) == 'string' then
     lbt.dbg('    --> %s', result)
@@ -805,6 +822,141 @@ end
 
 lbt.fn.impl.latex_message_token_raised_error = function (token, err)
   return F([[\textcolor{red}{textbf{Token %s raised error: \emph{%s}} }]], token, err)
+end
+
+lbt.fn.impl.assign_register = function (line)
+  if line.nargs ~= 3 then
+    lbt.err.E318_invalid_register_assignment_nargs(line)
+  end
+  local regname, ttl, defn = table.unpack(line.args)
+  local regname, mathmode = lbt.fn.impl.register_name_and_mathmode(regname)
+  local value = lbt.fn.impl.expand_register_references(defn, mathmode)
+  local record = { name     = regname,
+                   exp      = lbt.fn.impl.current_token_count() + ttl,
+                   mathmode = mathmode,
+                   value    = value }
+  lbt.fn.impl.register_store(record)
+  -- I('assigned register', record)
+end
+
+-- str: the string we are expanding (looking for ◊xyz and replacing)
+-- mathmode: boolean that influences our expansion (somehow!)
+--           * If we _are_ in math mode, and the register value we want
+--             to insert requires math mode, we're good
+--           * If we are _not_ in math mode, and the register value we want
+--             to insert requires math mode, we wrap in \ensuremath{}
+--           * I really hope it's that simple but I fear it's not
+lbt.fn.impl.expand_register_references = function (str, mathmode)
+  local pattern = "◊%a[%a%d]*"
+  local result = str:gsub(pattern, function (ref)
+    local name = ref:sub(4)    -- skip the lozenge (bytes 1-3)
+    local status, value = lbt.fn.impl.register_value(name)
+    if status == 'nonexistent' then
+      -- This register never existed; don't change anything.
+      return ref
+    elseif status == 'stale' then
+      -- This register has expired; don't change anything.
+      -- TODO Consider logging.
+      return ref
+    elseif status == 'ok' then
+      -- We have a live one.
+      return value
+    else
+      lbt.err.E001_internal_logic_error('register_value return error')
+    end
+  end)
+  lbt.dbg('expand_register_references:')
+  lbt.dbg(' * input:  %s', str)
+  lbt.dbg(' * result: %s', result)
+  return result
+end
+
+lbt.fn.impl.current_token_count = function ()
+  local token_count = lbt.var.token_count
+  if token_count == nil then
+    lbt.err.E001_internal_logic_error('current token_count not set')
+  end
+  return token_count
+end
+
+lbt.fn.impl.inc_token_count = function ()
+  local token_count = lbt.var.token_count
+  if token_count == nil then
+    lbt.err.E001_internal_logic_error('current token_count not set')
+  end
+  lbt.var.token_count = token_count + 1
+end
+
+lbt.fn.impl.register_store = function (record)
+  -- TODO check whether this name is already assigned and not expired
+  lbt.var.registers[record.name] = record
+end
+
+-- Return status, value
+-- status: nonexistent | stale | ok
+lbt.fn.impl.register_value = function (name)
+  local r = lbt.var.registers
+  local re = lbt.var.registers[name]
+  -- DEBUGGER()
+  if re == nil then
+    return 'nonexistent', nil
+  elseif lbt.fn.impl.current_token_count() > re.exp then
+    return 'stale', nil
+  else
+    return 'ok', re.value
+  end
+end
+
+-- Act on a single string. Expand until there are no more register references.
+-- Return a new string.
+lbt.fn.impl.delete_me_expand_register_references = function (str)
+  local finished = false
+  local index = 0
+  while true do
+    str, finished, index = lbt.fn.impl.expand_one_register_reference(str, index)
+    if finished then
+      return str
+    end
+  end
+end
+
+lbt.fn.impl.register_name_and_mathmode = function (name)
+  local mathmode = false
+  if name:startswith('$') then
+    mathmode = true
+    name = name:sub(2)
+  end
+  if name:match('^[A-z][A-z0-9]*$') then
+    return name, mathmode
+  else
+    lbt.err.E309_invalid_register_name(name)
+  end
+end
+
+-- Return str, finished, index
+--   str:       the string in its current state of expansion
+--   finished:  true iff more processing is necessary
+--   index:     where to start the next register reference search
+lbt.fn.impl.deleteme_expand_one_register_reference = function (str, index)
+  local pattern = "◊(%a[%a%d]*)"
+  local i, j, name = str:find(pattern, index)
+  if i == nil then
+    -- No potential register reference found, so we have finished.
+    return str, true, nil
+  else
+    local name = str:sub(i+2,j)
+    local reg_entry = lbt.var.registers[name]
+    if reg_entry == nil then
+      -- This register never existed; don't change anything.
+      return str, false, j
+    elseif fn.impl.register_expired(name) then
+      -- This register is expired; don't change anything. Consider logging.
+      return str, false, j
+    else
+      -- We have a live one. Make the change.
+      local search = str:sub(i,j)
+    end
+  end
 end
 
 lbt.fn.impl.sources_list_compact_representation = function (sources)

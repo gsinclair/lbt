@@ -94,6 +94,22 @@ local good_input_5b = content_lines([[
     Q Which is a factor of $x^2 + 6x + 8$?
     MC $x+1$ :: $x+2$ :: $x+3$ :: $x+4$]])
 
+-- For testing registers
+local good_input_6 = content_lines([[
+  @META
+    TEMPLATE lbt.Basic
+  +BODY
+    STO $Delta :: 4 :: b^2 - 4ac
+    STO $Num   :: 4 :: -b \pm \sqrt{◊Delta}
+    STO $Den   :: 4 :: 2a
+    STO $QF    :: 1000 :: x = \frac{◊Num}{◊Den}
+    TEXT The quadratic formula is \[ ◊QF. \]
+    STO fn1    :: 1 :: Hello Bolivia!
+    TEXT Viewers of Roy and HG's \emph{The Dream}\footnote{◊fn1} \dots
+    TEXT No longer defined: ◊fn1
+    TEXT Never was defined: ◊abc
+    TEXT ◊abc and ◊QF]])
+
 --------------------------------------------------------------------------------
 
 local function T_pragmas_and_other_lines()
@@ -295,6 +311,14 @@ local function T_styles_in_test_question_template_5b()
 (MC iv) \quad $x+4$\\]])
 end
 
+local function T_register_expansion()
+  lbt.api.reset_global_data()
+  local pc = lbt.fn.parsed_content(good_input_6)
+  lbt.fn.validate_parsed_content(pc)
+  local l  = lbt.fn.latex_expansion(pc)
+  EQ(l[1], [=[The quadratic formula is \[ \ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}.} \]]=])
+end
+
 --------------------------------------------------------------------------------
 
 -- flag:
@@ -309,20 +333,21 @@ local function RUN_TESTS(flag)
 
   -- IX(lbt.system.template_register)
 
-  T_pragmas_and_other_lines()
-  T_parsed_content_1()
-  T_extra_sources()
-  T_add_template_directory()
-  T_expand_Basic_template_1()
-  T_expand_Basic_template_2()
-  T_util()
-  T_template_styles_specification()
-  T_number_in_alphabet()
-  T_style_string_to_map()
-  T_style_resolver_1a()
-  T_style_resolver_1b()
-  T_styles_in_test_question_template_5a()
-  T_styles_in_test_question_template_5b()
+  -- T_pragmas_and_other_lines()
+  -- T_parsed_content_1()
+  -- T_extra_sources()
+  -- T_add_template_directory()
+  -- T_expand_Basic_template_1()
+  -- T_expand_Basic_template_2()
+  -- T_util()
+  -- T_template_styles_specification()
+  -- T_number_in_alphabet()
+  -- T_style_string_to_map()
+  -- T_style_resolver_1a()
+  -- T_style_resolver_1b()
+  -- T_styles_in_test_question_template_5a()
+  -- T_styles_in_test_question_template_5b()
+  T_register_expansion()
 
   if flag == 1 then
     print("======================= </TESTS> (exiting)")
