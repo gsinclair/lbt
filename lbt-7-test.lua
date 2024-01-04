@@ -108,7 +108,7 @@ local good_input_6 = content_lines([[
     TEXT Viewers of Roy and HG's \emph{The Dream}\footnote{◊fn1} \dots
     TEXT No longer defined: ◊fn1
     TEXT Never was defined: ◊abc
-    TEXT ◊abc and ◊QF]])
+    TEXT ◊abc and $◊QF$]])
 
 --------------------------------------------------------------------------------
 
@@ -317,6 +317,10 @@ local function T_register_expansion()
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
   EQ(l[1], [=[The quadratic formula is \[ \ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}. \] \par]=])
+  EQ(l[2], [[Viewers of Roy and HG's \emph{The Dream}\footnote{Hello Bolivia!} \dots \par]])
+  EQ(l[3], [[No longer defined: ◊fn1 \par]])
+  EQ(l[4], [[Never was defined: ◊abc \par]])
+  EQ(l[5], [[◊abc and $\ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}$ \par]])
 end
 
 --------------------------------------------------------------------------------

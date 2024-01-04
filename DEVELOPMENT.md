@@ -3,84 +3,6 @@
 This is not an appending journal. It is a live document with a place to design and/or document features. Ultimately the information either withers or ends up in proper documentation.
 
 
-## Registers
-
-STOre a value in a named register and access it later. Each one has a TTL so that it doesn't stay around polluting the namespace for long. This solves a real problem when it comes to long content. It simulates a local variable.
-
-The following code builds up the quadratic formula bit by bit. While it is a toy example, it accurately demonstrates a key value of the register feature: giving names to pieces of information that can then be used in a readable way, such that paragraphs of text can be clear, without containing expansive low-level typesetting.
-
-Note that the $ in the name shows that it is mathematical text, meaning it will be silently wrapped in `\ensuremath`
-
-    STO $Delta :: 4 :: b^2 - 4ac
-    STO $Num   :: 4 :: -b \pm \sqrt{◊Delta}
-    STO $Den   :: 4 :: 2a
-    STO $QF    :: 1000 :: x = \frac{◊Num}{◊Den}
-
-The building blocks `Delta`, `Num` and `Den` have a short life: they are being used to build `QF`. But `QF` has a long life as it will see a lot of use in whatever section we are writing. This way, if some text further down refers to `Num` it will be either a new value or an error (because the author forgot to redefine it). It will *not* silently refer to `-b \pm \sqrt{◊Delta}`.
-
-The author has used this register feature most commonly to typeset complicated integrals. Consider an exam question where variants of the same integral appear in multiple places, say with different bounds. Now the following is possible.
-
-    STO $Exp    :: 5 :: \frac{x^{2^n}}{1 - x^{2^{n+1}} }
-    STO $A      :: 5 :: \frac{1}{1 - x^{2^{n}}}
-    STO $B      :: 5 :: \frac{1}{1 - x^{2^{n+1}} }
-    STO $C      :: 5 :: \frac{1}{1 - x}
-    STO $D      :: 5 :: \frac{1}{1 - x^{2^{N+1}} }
-    STO $SumInf :: 5 :: \sum_{n=0}^\infty
-    STO $SumN   :: 5 :: \sum_{n=0}^N
-    STO $Final  :: 5 :: ◊SumInf \frac{1}{2021^{2^n} - 2021^{-2^n}}
-
-    Q*
-    QQ 2 :: Noting that $a^{b^c}$ means $a^{(b^c)}$, show that
-     » \[ ◊Exp = ◊A - ◊B. \]
-    QQ 1 :: Hence show \[ ◊SumN ◊Exp = ◊C - ◊D. \]
-    QQ 1 :: Let $x$ be a real number with $-1 < x < 1$. Show that
-     » \[ ◊SumInf ◊Exp = \frac{x}{1-x} \]
-     » by considering the behaviour of $◊SumN\dots$ as $N->\infty$.
-    QQ 2 :: Hence find \[ $Final. \]
-
-The result is a nice separation of the gnarlier mathematical content from the ordinary question text. It does not mean that the typesetting code is easy to *read*, but it does make it easier to write and easier to maintain.
-
-Another place where we might like to separate concerns is footnotes. Borrowing an example from https://www.bibliography.com/apa/using-footnotes-in-apa/, we could write:
-
-    STO fn1 :: 1 :: See Burquest (2010), especially chapter 5, for more
-    » information on this journalist's theory.
-    STO fn2 :: 1 :: From the chapter ``Theories of Photojournalism'', W.
-    » Jones and R. Smith, 2010, Photojournalism, 21, p.~122. Copyright 2007
-    » by Copyright Holder. Reprinted with permission.
-
-    Journalists examined---over several years\footnote{◊fn1}---the ancient
-    tools used in photojournalism.\footnote{◊fn2}
-
-Now the typesetting source code for the paragraph itself is easy to read. The messy details are out of the way, but are well within reach if maintenance is needed, and they only stick around in memory as long as they are needed.
-
-### About the design
-
-The instruction `STO` was inspired by high school calculators of the author's acquaintance, which use exactly that instruction to store a value in the chosen memory (A--F). It is suitable for use in LBT because it is short, easily remembered once learned, and is unlikely to clash with the name of a token an author might want to use.
-
-The lozenge ◊ is taken from Scribble, a document-preparation tool associated with the Racket programming language. The idea is to use a non-ASCII symbol so that is easy to spot and is not likely to clash with any symbols an author wants to use. But what if an author wants to use a lozenge? No problem. `◊ABC` wll only expand to the contents of a register if `ABC` is actually the name of a currently-defined register. Otherwise, it will simply render as it is written.
-
-Should the author be warned (via the logfile, say) if `◊ABC` is encountered but not resolved? Perhaps. But even if they are not, they will surely notice that the PDF output does not match their intention, and the lozenge will draw attention to itself?
-
-But how do you type the lozenge into your source code? That's up to you. It's not trivial, to be sure, but this drawback is greatly outweighed by the benefits of using it. You can copy the symbol from a website: unicode "Lozenge" with code 25CA. For what it's worth, I have an insert-mode mapping in my editor (neovim): `inoremap ,, ◊`.
-
-The time-to-live ticks down for every token that is processed. `STO` does not count.
-
-When a `STO` definition includes a register reference, it is expanded immediately. Like lines 2 and 4 of the following.
-
-    STO $Delta :: 4 :: b^2 - 4ac
-    STO $Num   :: 4 :: -b \pm \sqrt{◊Delta}
-    STO $Den   :: 4 :: 2a
-    STO $QF    :: 1000 :: x = \frac{◊Num}{◊Den}
-
-`◊QF` is long-lived. It does not matter that it relies on the short-lived `◊Num` and `◊Den` for its definition.
-
-When a line of parsed content is expanded into Latex, it is first scanned for any registers, and they are replaced with their value. There is no need for recursion as register values will not contain register references: those have already been expanded.
-
-A line of parsed content may *be* a register definition, with the "token" (it's really a built-in) `STO` and the arguments `{'$Den', '4', '2a'}`. Now say the current `statement_number` (a local variable in the expansion function) is 39. Then the mapping `Den -> { value = '\ensuremath{2a}', exp = 43 }` is inserted into the Map at `lbt.var.registers`.
-
-We don't bother to clear out expired registers; we just check whether they are expired before allowing their expansion to take place.
-
-
 ## Error messages
 
 Error messages are all coded in `lbt.err`, one function per error. An example is `lbt.err.E203_no_META_defined`. Each one calls the local function `E`, which prints the error message to screen and logfile and debug file, then exists the process.
@@ -248,3 +170,97 @@ When implementing styles I was at one point going to write `lbt.api.style(key)` 
     lbt.api.style = function (key)
       -- TODO remove!
     end
+
+
+## Registers
+
+STOre a value in a named register and access it later. Each one has a TTL so that it doesn't stay around polluting the namespace for long. This solves a real problem when it comes to long content. It simulates a local variable.
+
+The following code builds up the quadratic formula bit by bit. While it is a toy example, it accurately demonstrates a key value of the register feature: giving names to pieces of information that can then be used in a readable way, such that paragraphs of text can be clear, without containing expansive low-level typesetting.
+
+Note that the $ in the name shows that it is mathematical text, meaning it will be silently wrapped in `\ensuremath`
+
+    STO $Delta :: 4 :: b^2 - 4ac
+    STO $Num   :: 4 :: -b \pm \sqrt{◊Delta}
+    STO $Den   :: 4 :: 2a
+    STO $QF    :: 1000 :: x = \frac{◊Num}{◊Den}
+
+The building blocks `Delta`, `Num` and `Den` have a short life: they are being used to build `QF`. But `QF` has a long life as it will see a lot of use in whatever section we are writing. This way, if some text further down refers to `Num` it will be either a new value or an error (because the author forgot to redefine it). It will *not* silently refer to `-b \pm \sqrt{◊Delta}`.
+
+The author has used this register feature most commonly to typeset complicated integrals. Consider an exam question where variants of the same integral appear in multiple places, say with different bounds. Now the following is possible.
+
+    STO $Exp    :: 5 :: \frac{x^{2^n}}{1 - x^{2^{n+1}} }
+    STO $A      :: 5 :: \frac{1}{1 - x^{2^{n}}}
+    STO $B      :: 5 :: \frac{1}{1 - x^{2^{n+1}} }
+    STO $C      :: 5 :: \frac{1}{1 - x}
+    STO $D      :: 5 :: \frac{1}{1 - x^{2^{N+1}} }
+    STO $SumInf :: 5 :: \sum_{n=0}^\infty
+    STO $SumN   :: 5 :: \sum_{n=0}^N
+    STO $Final  :: 5 :: ◊SumInf \frac{1}{2021^{2^n} - 2021^{-2^n}}
+
+    Q*
+    QQ 2 :: Noting that $a^{b^c}$ means $a^{(b^c)}$, show that
+     » \[ ◊Exp = ◊A - ◊B. \]
+    QQ 1 :: Hence show \[ ◊SumN ◊Exp = ◊C - ◊D. \]
+    QQ 1 :: Let $x$ be a real number with $-1 < x < 1$. Show that
+     » \[ ◊SumInf ◊Exp = \frac{x}{1-x} \]
+     » by considering the behaviour of $◊SumN\dots$ as $N->\infty$.
+    QQ 2 :: Hence find \[ $Final. \]
+
+The result is a nice separation of the gnarlier mathematical content from the ordinary question text. It does not mean that the typesetting code is easy to *read*, but it does make it easier to write and easier to maintain.
+
+Another place where we might like to separate concerns is footnotes. Borrowing an example from https://www.bibliography.com/apa/using-footnotes-in-apa/, we could write:
+
+    STO fn1 :: 1 :: See Burquest (2010), especially chapter 5, for more
+    » information on this journalist's theory.
+    STO fn2 :: 1 :: From the chapter ``Theories of Photojournalism'', W.
+    » Jones and R. Smith, 2010, Photojournalism, 21, p.~122. Copyright 2007
+    » by Copyright Holder. Reprinted with permission.
+
+    Journalists examined---over several years\footnote{◊fn1}---the ancient
+    tools used in photojournalism.\footnote{◊fn2}
+
+Now the typesetting source code for the paragraph itself is easy to read. The messy details are out of the way, but are well within reach if maintenance is needed, and they only stick around in memory as long as they are needed.
+
+### About the design
+
+The instruction `STO` was inspired by high school calculators of the author's acquaintance, which use exactly that instruction to store a value in the chosen memory (A--F). It is suitable for use in LBT because it is short, easily remembered once learned, and is unlikely to clash with the name of a token an author might want to use.
+
+The lozenge ◊ is taken from Scribble, a document-preparation tool associated with the Racket programming language. The idea is to use a non-ASCII symbol so that is easy to spot and is not likely to clash with any symbols an author wants to use. But what if an author wants to use a lozenge? No problem. `◊ABC` wll only expand to the contents of a register if `ABC` is actually the name of a currently-defined register. Otherwise, it will simply render as it is written.
+
+Should the author be warned (via the logfile, say) if `◊ABC` is encountered but not resolved? Perhaps. But even if they are not, they will surely notice that the PDF output does not match their intention, and the lozenge will draw attention to itself?
+
+But how do you type the lozenge into your source code? That's up to you. It's not trivial, to be sure, but this drawback is greatly outweighed by the benefits of using it. You can copy the symbol from a website: unicode "Lozenge" with code 25CA. For what it's worth, I have an insert-mode mapping in my editor (neovim): `inoremap ,, ◊`.
+
+The time-to-live ticks down for every token that is processed. `STO` does not count.
+
+When a `STO` definition includes a register reference, it is expanded immediately. Like lines 2 and 4 of the following.
+
+    STO $Delta :: 4 :: b^2 - 4ac
+    STO $Num   :: 4 :: -b \pm \sqrt{◊Delta}
+    STO $Den   :: 4 :: 2a
+    STO $QF    :: 1000 :: x = \frac{◊Num}{◊Den}
+
+`◊QF` is long-lived. It does not matter that it relies on the short-lived `◊Num` and `◊Den` for its definition.
+
+When a line of parsed content is expanded into Latex, it is first scanned for any registers, and they are replaced with their value. There is no need for recursion as register values will not contain register references: those have already been expanded.
+
+A line of parsed content may *be* a register definition, with the "token" (it's really a built-in) `STO` and the arguments `{'$Den', '4', '2a'}`. Now say the current `statement_number` (a local variable in the expansion function) is 39. Then the mapping `Den -> { value = '\ensuremath{2a}', exp = 43 }` is inserted into the Map at `lbt.var.registers`.
+
+We don't bother to clear out expired registers; we just check whether they are expired before allowing their expansion to take place.
+
+*Although*, I am thinking of including a builtin token provisionally called CTRL, which allows you to pass through "control" messages. Some examples might be:
+
+    CTRL clear-registers
+    CTRL ignore-on
+    ...
+    ...     {many lines of content to be ignored for now}
+    ...
+    CTRL ignore-off
+    CTRL unknown-register-error    [default?]
+    CTRL unknown-register-warn
+    CTRL log "some message..."
+    CTRL log-state                 [for debugging]
+    CTRL dump-state filename.txt
+
+This would be a good way to give the user the ability to exercise some control over things without greatly expanding the number of tokens used.  
