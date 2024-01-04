@@ -195,7 +195,6 @@ lbt.api.default_template_expand = function()
   return function (pc, tr, sr)
     -- abbreviations for: parsed content, token resolver, style resolver
     lbt.dbg('Inside default_template_expand for template <%s>', lbt.fn.pc.template_name(pc))
-    lbt.dbg('  - argument sr == %s', pp(sr))
     local body = lbt.fn.pc.content_list(pc, 'BODY')
     lbt.dbg(' * BODY has <%d> items to expand', body:len())
     if body == nil then

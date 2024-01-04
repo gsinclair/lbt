@@ -1,11 +1,17 @@
 \documentclass[a4paper,11pt]{article}
 
 \usepackage{lbt}
+\usepackage{lipsum}
+\usepackage{multicol}
+\usepackage{microtype}
+\usepackage[base]{babel}
 
 \begin{document}
   \lbtDebugModeOn{}
 
-  Document.
+  Document \textbf{before} LBT content\dots
+
+  \noindent\rule{\textwidth}{0.5pt}
 
   \directlua{lbt.log("Hello from lbt.log!")}
   \begin{luacode*}
@@ -15,13 +21,17 @@
   \begin{lbt}
     !DRAFT
     @META
-      TEMPLATE Basic
-      Foo      Bar
+      TEMPLATE lbt.Basic
     +BODY
       BEGIN multicols :: 2
-      TEXT Hello there
+      TEXT \lipsum[1-5]
       END multicols
       VSPACE 30pt
-      TEXT Hello again
+      TEXT Hello again.
+      TEXT 60pt :: And again.
   \end{lbt}
+
+  \noindent\rule{\textwidth}{0.5pt}
+
+  Document \textbf{after} LBT content\dots
 \end{document}

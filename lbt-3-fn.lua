@@ -705,6 +705,7 @@ end
 --  * none that I can think of
 --
 lbt.fn.impl.consolidated_styles = function (docwide, pc, sources)
+  lbt.dbg('')
   local result = pl.Map()
   local styles = nil
   for s in pl.List(sources):reverse():iter() do
@@ -866,9 +867,9 @@ lbt.fn.impl.expand_register_references = function (str, math_context)
       lbt.err.E001_internal_logic_error('register_value return error')
     end
   end)
-  lbt.dbg('expand_register_references:')
-  lbt.dbg(' * input:  %s', str)
-  lbt.dbg(' * result: %s', result)
+  -- lbt.dbg('expand_register_references:')
+  -- lbt.dbg(' * input:  %s', str)
+  -- lbt.dbg(' * result: %s', result)
   return result
 end
 

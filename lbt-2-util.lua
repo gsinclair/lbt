@@ -6,6 +6,8 @@
 -- The main intention of lbt.util.* is to be useful to people writing template
 -- code. Given that, it arguably should have a better name.
 
+local F = string.format
+
 -- `tex.print` but with formatting. Hint: local-alias this to `P`.
 function lbt.util.tex_print_formatted(text, ...)
   tex.print(string.format(text, ...))
@@ -23,32 +25,6 @@ function lbt.util.wrap_braces(x)
   return '{' .. x .. '}'
 end
 
--- name:      name of the command
--- nargs:     exact number of arguments it takes
--- paragraph: 'par' if you want a \par afterwards; nil otherwise
--- 
--- Examples:
---   latex_cmd('vspace', 1, 'par')
---   latex_cmd('vfill', 0)
-function lbt.util.latex_cmd(name, nargs, paragraph)
-  return function(n, args)
-    if n ~= nargs+1 then
-      return 'nargs', ''..nargs+1
-    end
-    local cmd = args[1]
-    if nargs == 1 then
-      result = F([[\%s]], cmd)
-    else
-      arguments = args:slice(2,-1):map(lbt.util.wrap_braces)
-      result = F([[\%s%s]], cmd, arguments)
-    end
-    if paragraph == 'par' then
-      result = result .. [[ \par]]
-    end
-    return result
-  end
-end
-
 -- Given arguments to a token, see if the first one is an "options" argument.
 -- Return the options argument (or nil) and the rest of the arguments.
 -- e.g.
@@ -57,6 +33,10 @@ end
 -- What signifies an options argument? It is surrounded by [].
 --
 -- Input: args (List)
+--
+-- TODO Allow caller to specify which index to look at for the options.
+--      We currently only look at the first, but I think sometimes it
+--      would be useful to look at the second.
 function lbt.util.extract_option_argument (args)
   if args:len() == 0 then
     return nil, pl.List()

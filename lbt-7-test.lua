@@ -208,6 +208,7 @@ end
 
 local function T_util()
   lbt.api.reset_global_data()
+  -- Splitting text
   EQ(lbt.util.double_colon_split('a :: b :: c'), {'a', 'b', 'c'})
   EQ(lbt.util.space_split('a b c'),    {'a', 'b', 'c'})
   EQ(lbt.util.space_split('a b c', 2), {'a', 'b c'})
@@ -337,20 +338,20 @@ local function RUN_TESTS(flag)
 
   -- IX(lbt.system.template_register)
 
-  -- T_pragmas_and_other_lines()
-  -- T_parsed_content_1()
-  -- T_extra_sources()
-  -- T_add_template_directory()
-  -- T_expand_Basic_template_1()
-  -- T_expand_Basic_template_2()
-  -- T_util()
-  -- T_template_styles_specification()
-  -- T_number_in_alphabet()
-  -- T_style_string_to_map()
-  -- T_style_resolver_1a()
-  -- T_style_resolver_1b()
-  -- T_styles_in_test_question_template_5a()
-  -- T_styles_in_test_question_template_5b()
+  T_pragmas_and_other_lines()
+  T_parsed_content_1()
+  T_extra_sources()
+  T_add_template_directory()
+  T_expand_Basic_template_1()
+  T_expand_Basic_template_2()
+  T_util()
+  T_template_styles_specification()
+  T_number_in_alphabet()
+  T_style_string_to_map()
+  T_style_resolver_1a()
+  T_style_resolver_1b()
+  T_styles_in_test_question_template_5a()
+  T_styles_in_test_question_template_5b()
   T_register_expansion()
 
   if flag == 1 then
@@ -363,4 +364,4 @@ local function RUN_TESTS(flag)
   end
 end
 
-RUN_TESTS(1)
+RUN_TESTS(0)

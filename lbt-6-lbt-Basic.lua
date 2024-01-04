@@ -24,7 +24,11 @@ end
 
 a.TEXT = '1-2'
 f.TEXT = function (n, args)
-  return f["TEXT*"](n, args) .. [[ \par]]
+  if n == 1 then
+    return F([[%s \par]], args[1])
+  elseif n == 2 then
+    return F([[\vspace{%s} %s \par]], args[1], args[2])
+  end
 end
 
 -- General Latex command, and some specific ones.
@@ -39,13 +43,19 @@ f.CMD = function(n, args)
 end
 
 a.VSPACE = 1
-f.VSPACE = lbt.util.latex_cmd('vspace', 1, 'par')
+f.VSPACE = function(n, args)
+  return F([[\vspace{%s}]], args[1])
+end
 
 a.VFILL = 0
-f.VFILL = lbt.util.latex_cmd('vfill', 0)
+f.VFILL = function(n, args)
+  return F([[\vfill{}]])
+end
 
 a.CLEARPAGE = 0
-f.CLEARPAGE = lbt.util.latex_cmd('clearpage', 0)
+f.CLEARPAGE = function(n, args)
+  return F([[\clearpage{}]])
+end
 
 a.VSTRETCH = 1
 f.VSTRETCH = function(n, args)
@@ -60,22 +70,19 @@ end
 -- Begin and end environment     TODO allow for environment options
 
 a.BEGIN = '1+'
-f.BEGIN = function(text)
-  local args = split(text)
-  if #args == 1 then
-    return F([[\begin{%s}]], args[1])
-  elseif #args == 2 then
-    return F([[\begin{%s}{%s}]], args[1], args[2])
-  elseif #args == 3 then
-    return F([[\begin{%s}{%s}{%s}]], args[1], args[2], args[3])
+f.BEGIN = function(n, args)
+  local command = F([[\begin{%s}]], args[1])
+  if n > 1 then
+    local arguments = args:slice(2,-1):map(lbt.util.wrap_braces):join()
+    return command..arguments
   else
-    return F([[{\color{red} ENV needs 1-3 arguments, not '%s'}]], text)
+    return command
   end
 end
 
 a.END = 1
-f.END = function(arg)
-  return F([[\end{%s}]], arg)
+f.END = function(n, args)
+  return F([[\end{%s}]], args[1])
 end
 
 -- \newcommand
@@ -96,27 +103,6 @@ f.NEWCOMMAND = function(text)
     end
   end
 end
-
------ -- The purpose of DEF is to define a "register" for immediate use. The name
------ -- should be like mathA or something that definitely won't conflict with an
------ -- existing name. No need for a clear name because it is for immediate use.
------ f.DEF = function (text)
------   local args = split(text, '::')
------   if #args == 2 then
------     local name, content = table.unpack(args)
------     -- Remove $ at beginning and end
------     if content:sub(1,1) == '$' and content:sub(-1,-1) == '$' then
------       content = content:sub(2, -2)
------     end
------     local template = [[
------       \providecommand{\%s}{}
------       \renewcommand{\%s}{%s}
------     ]]
------     return F(template, name, name, content)
------   else
------     return GSC.util.tex_error('DEF requires two arguments separated by ::')
------   end
------ end
 
 -- Itemize and enumerate
 
