@@ -238,7 +238,8 @@ lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
   -- 4. We really are processing a token, so we can increase the token_count.
   lbt.fn.impl.inc_token_count()
   -- 5. Expand register references where necessary.
-  args = args:map(lbt.fn.impl.expand_register_references)
+  --    We are not necessarily in mathmode, hence false.
+  args = args:map(lbt.fn.impl.expand_register_references, false)
   -- 6. Call the token function and return 'ok', ... or 'error', ...
   result = token_function(nargs, args, sr)
   if type(result) == 'string' then
@@ -836,21 +837,15 @@ lbt.fn.impl.assign_register = function (line)
                    mathmode = mathmode,
                    value    = value }
   lbt.fn.impl.register_store(record)
-  -- I('assigned register', record)
 end
 
 -- str: the string we are expanding (looking for ◊xyz and replacing)
--- mathmode: boolean that influences our expansion (somehow!)
---           * If we _are_ in math mode, and the register value we want
---             to insert requires math mode, we're good
---           * If we are _not_ in math mode, and the register value we want
---             to insert requires math mode, we wrap in \ensuremath{}
---           * I really hope it's that simple but I fear it's not
-lbt.fn.impl.expand_register_references = function (str, mathmode)
+-- math_context: boolean that helps us decide whether to include \ensuremath
+lbt.fn.impl.expand_register_references = function (str, math_context)
   local pattern = "◊%a[%a%d]*"
   local result = str:gsub(pattern, function (ref)
     local name = ref:sub(4)    -- skip the lozenge (bytes 1-3)
-    local status, value = lbt.fn.impl.register_value(name)
+    local status, value, mathmode = lbt.fn.impl.register_value(name)
     if status == 'nonexistent' then
       -- This register never existed; don't change anything.
       return ref
@@ -860,7 +855,13 @@ lbt.fn.impl.expand_register_references = function (str, mathmode)
       return ref
     elseif status == 'ok' then
       -- We have a live one.
-      return value
+      -- If _this_ register is mathmode and we are _not_ in a mathematical
+      -- context, then \ensuremath is needed.
+      if mathmode and not math_context then
+        return F([[\ensuremath{%s}]], value)
+      else
+        return value
+      end
     else
       lbt.err.E001_internal_logic_error('register_value return error')
     end
@@ -892,7 +893,7 @@ lbt.fn.impl.register_store = function (record)
   lbt.var.registers[record.name] = record
 end
 
--- Return status, value
+-- Return status, value, mathmode
 -- status: nonexistent | stale | ok
 lbt.fn.impl.register_value = function (name)
   local r = lbt.var.registers
@@ -903,59 +904,25 @@ lbt.fn.impl.register_value = function (name)
   elseif lbt.fn.impl.current_token_count() > re.exp then
     return 'stale', nil
   else
-    return 'ok', re.value
+    return 'ok', re.value, re.mathmode
   end
 end
 
--- Act on a single string. Expand until there are no more register references.
--- Return a new string.
-lbt.fn.impl.delete_me_expand_register_references = function (str)
-  local finished = false
-  local index = 0
-  while true do
-    str, finished, index = lbt.fn.impl.expand_one_register_reference(str, index)
-    if finished then
-      return str
-    end
-  end
-end
-
-lbt.fn.impl.register_name_and_mathmode = function (name)
+-- $Delta    ->   Delta, true
+-- fn1       ->   fn1, false
+lbt.fn.impl.register_name_and_mathmode = function (text)
+  local name = nil
   local mathmode = false
-  if name:startswith('$') then
+  if text:startswith('$') then
     mathmode = true
-    name = name:sub(2)
+    name = text:sub(2)
+  else
+    name = text
   end
   if name:match('^[A-z][A-z0-9]*$') then
     return name, mathmode
   else
     lbt.err.E309_invalid_register_name(name)
-  end
-end
-
--- Return str, finished, index
---   str:       the string in its current state of expansion
---   finished:  true iff more processing is necessary
---   index:     where to start the next register reference search
-lbt.fn.impl.deleteme_expand_one_register_reference = function (str, index)
-  local pattern = "◊(%a[%a%d]*)"
-  local i, j, name = str:find(pattern, index)
-  if i == nil then
-    -- No potential register reference found, so we have finished.
-    return str, true, nil
-  else
-    local name = str:sub(i+2,j)
-    local reg_entry = lbt.var.registers[name]
-    if reg_entry == nil then
-      -- This register never existed; don't change anything.
-      return str, false, j
-    elseif fn.impl.register_expired(name) then
-      -- This register is expired; don't change anything. Consider logging.
-      return str, false, j
-    else
-      -- We have a live one. Make the change.
-      local search = str:sub(i,j)
-    end
   end
 end
 

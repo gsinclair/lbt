@@ -316,7 +316,7 @@ local function T_register_expansion()
   local pc = lbt.fn.parsed_content(good_input_6)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
-  EQ(l[1], [=[The quadratic formula is \[ \ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}.} \]]=])
+  EQ(l[1], [=[The quadratic formula is \[ \ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}. \] \par]=])
 end
 
 --------------------------------------------------------------------------------
