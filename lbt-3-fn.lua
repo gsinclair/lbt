@@ -75,6 +75,10 @@ lbt.fn.parsed_content = function (content_lines)
   if pragmas.ignore then
     return result
   end
+  -- Detect debug and act accordingly.
+  if pragmas.debug then
+    lbt.fn.set_log_channels_for_debugging_single_expansion()
+  end
   -- Local variables know whether we are appending to a list or a dictionary,
   -- and what current key in the results table we are appending to.
   local append_mode = nil
@@ -82,7 +86,7 @@ lbt.fn.parsed_content = function (content_lines)
   -- Process each line. It could be something like @META or something like +BODY,
   -- or something like "TEXT There once was a man from St Ives...".
   for line in lines:iter() do
-    lbt.log('parse', "Processing line: <<%s>>", line)
+    lbt.log('parse', "Parsing line: <<%s>>", line)
     if line:at(1) == '@' then
       -- We have @META or similar, which acts as a dictionary.
       current_key = lbt.fn.impl.validate_content_key(line, result)
@@ -571,6 +575,20 @@ lbt.fn.style_string_to_map = function(text)
   return result
 end
 
+lbt.fn.set_log_channels_for_debugging_single_expansion = function ()
+  lbt.var.saved_log_channels = pl.List(lbt.system.log_channels)
+  lbt.system.log_channels = pl.List{'all'}
+  lbt.log(0, "Debug mode set for this expansion; all channels activated")
+end
+
+lbt.fn.reset_log_channels_if_necessary = function ()
+  if lbt.var.saved_log_channels then
+    lbt.system.log_channels = lbt.var.saved_log_channels
+    lbt.var.saved_log_channels = nil
+    lbt.log(0, "Log channels restored after completion of expansion")
+  end
+end
+
 -- }}}
 
 --------------------------------------------------------------------------------
@@ -870,9 +888,6 @@ lbt.fn.impl.expand_register_references = function (str, math_context)
       lbt.err.E001_internal_logic_error('register_value return error')
     end
   end)
-  lbt.log('register', 'expand_register_references:')
-  lbt.log('register', ' * input:  %s', str)
-  lbt.log('register', ' * result: %s', result)
   return result
 end
 

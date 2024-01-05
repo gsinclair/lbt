@@ -99,6 +99,7 @@ lbt.api.author_content_emit_latex = function()
   local l  = lbt.fn.latex_expansion(pc)
   lbt.log(3, '  * latex expansion complete')
   tex.print(l)
+  lbt.fn.reset_log_channels_if_necessary()
 end
 
 --------------------------------------------------------------------------------
