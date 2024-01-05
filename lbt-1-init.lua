@@ -15,7 +15,8 @@
 -- In here, we keep track of all templates that are available for use, and
 -- any styles the author wants to override globally.
 --
--- Furthermore, we know whether draft mode and debug mode are enabled.
+-- Furthermore, we know whether draft mode is enabled, and which log channels
+-- are to be included in the logfile.
 lbt.system = {}
 
 -- lbt.const contains constant data used by a single expansion.
@@ -85,16 +86,15 @@ lbt.init.init_system = function ()
   -- will be expanded.
   -- Set via \lbtDraftMode{true}
   lbt.system.draft_mode       = false
-  -- If debug mode is set, extra information is sent to the debug file lbt.dbg
-  -- or the log file lbt.log. I will likely reduce it to one file (log) in the
-  -- future. Design needed.
-  lbt.system.debug_mode       = false
+  -- By default, we log only channels 1-3 (ERROR, WARN, INFO)
+  lbt.system.log_channels     = pl.List{1,2,3}
 end
 
 -- Reset the lbt.system table to a clean but workable state.
 --  * clear document-wide styles
 --  * leave builtin templates alone but remove any others
---  * leave draft and debug mode as they were
+--  * leave draft mode as it was
+--  * set log channels to the default 1,2,3
 lbt.init.soft_reset_system = function ()
   lbt.system.document_wide_styles = pl.Map()
   for name, t in lbt.system.template_register:iter() do
@@ -105,6 +105,7 @@ lbt.init.soft_reset_system = function ()
       lbt.system.template_register[name] = nil
     end
   end
+  lbt.system.log_channels = pl.Set{1,2,3}
 end
 
 lbt.init.reset_const = function ()

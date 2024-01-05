@@ -59,7 +59,7 @@ Levels:
     1: ERROR
     2: WARN
     3: INFO
-    4: DEBUG
+    4: DEBUG   [TRACE?]
 
 A logfile message could be written with `lbt.log(3, 'Expanded line %s', line)`, which includes the level and a formatted message.
 
@@ -69,7 +69,31 @@ For active development, extra debugging is needed, which is ephemeral. This is w
 
 The author could configure logging with `\lbtLog{3,reg}` to get all of 1-3 *and* the `reg` channel.
 
-Work in progress. Well, not even work. Thoughts in progress.
+In fact, channels are good for some general debugging information, like:
+ - #read           reading contents between 'begin' and 'end' lbt
+ - #parse          turning it into parsed content
+ - #emit           turning it into Latex
+
+It would be useful to be able to turn each of those on and off.
+
+A general #dev channel could cover all active development.
+
+User interface:
+
+    \lbtLog{1,2,3,emit,dev}
+    ...
+    \lbtLog{-dev}               [remove the dev channel; keep rest the same]
+                                [not implemented at first - see if it's needed]
+
+    \lbtLog{all}                [special keyword that enables every channel]
+
+    \begin{lbt}
+        !DEBUG                  [sets all channels for this expansion]
+        ...
+    \end{lbt}
+
+This might see the end of `lbtDebugMode(On|Off)`.
+
 
 ## Documentation of styles
 

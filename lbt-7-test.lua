@@ -116,17 +116,13 @@ local function T_pragmas_and_other_lines()
   lbt.api.reset_global_data()
   local input = pl.List.new{"!DRAFT", "Line 1", "!IGNORE", "Line 2", "Line 3"}
   local pragmas, lines = lbt.fn.impl.pragmas_and_other_lines(input)
-  lbt.dbg(pp(pragmas))
-  lbt.dbg(pp(lines))
   EQ(pragmas, { draft = true, ignore = true, debug = false })
   EQ(lines, pl.List.new({"Line 1", "Line 2", "Line 3"}))
 end
 
 local function T_parsed_content_1()
   lbt.api.reset_global_data()
-  -- DEBUG(pp(input))
   local pc = lbt.fn.parsed_content(good_input_1)
-  lbt.dbg(pc)
   local exp_pragmas = { draft = true, debug = false, ignore = false }
   EQ(pc.pragmas, exp_pragmas)
   local exp_meta = {
@@ -180,7 +176,7 @@ end
 
 local function T_expand_Basic_template_1()
   lbt.api.reset_global_data()
-  lbt.fn.template_register_to_dbgfile()
+  lbt.fn.template_register_to_logfile()
   local pc = lbt.fn.parsed_content(good_input_4)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
@@ -193,7 +189,7 @@ end
 
 local function T_expand_Basic_template_2()
   lbt.api.reset_global_data()
-  lbt.fn.template_register_to_dbgfile()
+  lbt.fn.template_register_to_logfile()
   local pc = lbt.fn.parsed_content(bad_input_1)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
@@ -212,6 +208,7 @@ local function T_util()
   EQ(lbt.util.double_colon_split('a :: b :: c'), {'a', 'b', 'c'})
   EQ(lbt.util.space_split('a b c'),    {'a', 'b', 'c'})
   EQ(lbt.util.space_split('a b c', 2), {'a', 'b c'})
+  EQ(comma_split('one,two   ,     three'), {'one','two','three'})
 end
 
 local function T_template_styles_specification()
@@ -242,7 +239,6 @@ end
 
 -- In this test, we do not add any global styles, but we do add local ones
 local function T_style_resolver_1a()
-  lbt.dbg('*** T_style_resolver_1a ***')
   lbt.api.reset_global_data()
   lbt.api.add_template_directory("PWD/templates")
   -- This is inside baseball, but it is necessary setup for a style resolver.
@@ -257,7 +253,6 @@ end
 
 -- In this test, we add both global and local styles
 local function T_style_resolver_1b()
-  lbt.dbg('*** T_style_resolver_1b ***')
   lbt.api.reset_global_data()
   lbt.api.add_styles("Q.vspace 30pt :: Q.color navy :: MC.alphabet roman")
   lbt.api.add_template_directory("PWD/templates")

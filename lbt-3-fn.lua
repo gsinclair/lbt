@@ -27,8 +27,7 @@ end
 --------------------------------------------------------------------------------
 
 lbt.fn.author_content_clear = function()
-  lbt.dbg("lbt.fn.author_content_clear() -- starting a new lbt collection phase")
-  lbt.dbg("    Filename: %s   Line number: %d", status.filename, status.linenumber)
+  lbt.log(4, "lbt.fn.author_content_clear()")
   lbt.init.reset_const()
   lbt.init.reset_var()
 end
@@ -83,7 +82,7 @@ lbt.fn.parsed_content = function (content_lines)
   -- Process each line. It could be something like @META or something like +BODY,
   -- or something like "TEXT There once was a man from St Ives...".
   for line in lines:iter() do
-    lbt.dbg("Processing line: <<%s>>", line)
+    lbt.log('parse', "Processing line: <<%s>>", line)
     if line:at(1) == '@' then
       -- We have @META or similar, which acts as a dictionary.
       current_key = lbt.fn.impl.validate_content_key(line, result)
@@ -158,8 +157,7 @@ lbt.fn.latex_expansion = function (parsed_content)
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
-  lbt.dbg('\n\n***')
-  lbt.dbg('About to latex-expand template <%s>', lbt.fn.pc.template_name(pc))
+  lbt.log(4, 'About to latex-expand template <%s>', lbt.fn.pc.template_name(pc))
   return t.expand(pc, tr, sr)
 end
 
@@ -210,7 +208,9 @@ end
 --  * lbt.var.line_count is increased (unless this is a register allocation)
 --  * lbt.var.registers might be updated
 lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
-  lbt.dbg('\nparsed_content_to_latex_single:\n  %s', lbt.fn.pc.compact_representation_line(line))
+  lbt.log(4, 'parsed_content_to_latex_single: %s', lbt.fn.pc.compact_representation_line(line))
+  lbt.log('emit', '')
+  lbt.log('emit', 'Line: %s', lbt.fn.pc.compact_representation_line(line))
   local token = line.token
   local nargs = line.nargs
   local args  = line.args
@@ -222,7 +222,8 @@ lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
   -- 2. Search for a token function and return if we did not find one.
   local findings = tr(token)
   if findings == nil then
-    lbt.dbg('    --> NOTFOUND')
+    lbt.log('emit', '    --> NOTFOUND')
+    lbt.log(2, 'Token not resolved: %s', token)
     return 'notfound', nil
   end
   local token_function, argspec = table.unpack(findings)
@@ -231,7 +232,8 @@ lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
     local a = argspec
     if nargs < a.min or nargs > a.max then
       local msg = F("%d args given but %s expected", nargs, a.spec)
-      lbt.dbg('    --> ERROR: %s', msg)
+      lbt.log('emit', '    --> ERROR: %s', msg)
+      lbt.log(1, 'Error attempting to expand token:\n    %s', msg)
       return 'error', msg
     end
   end
@@ -243,15 +245,16 @@ lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
   -- 6. Call the token function and return 'ok', ... or 'error', ...
   result = token_function(nargs, args, sr)
   if type(result) == 'string' then
-    lbt.dbg('    --> %s', result)
+    lbt.log('emit', '    --> %s', result)
     return 'ok', result
   elseif type(result) == 'table' and type(result.error) == 'string' then
     local errormsg = result.error
-    lbt.dbg('    --> ERROR: %s', errormsg)
+    lbt.log('emit', '    --> ERROR: %s', errormsg)
+    lbt.log(1, 'Error occurred while processing token %s\n    %s', token, errormsg)
     return 'error', errormsg
   elseif type(result) == 'table' then
     result = table.concat(result, "\n")
-    lbt.dbg('    --> %s', result)
+    lbt.log('emit', '    --> %s', result)
     return 'ok', result
   else
     lbt.E325_invalid_return_from_template_function(result)
@@ -294,7 +297,7 @@ lbt.fn.token_resolver = function (sources)
       local a = s.arguments[token]
       if f then
         if a == nil then
-          lbt.log(F('WARN: no argspec provided for token <%s>', token))
+          lbt.log(2, 'WARN: no argspec provided for token <%s>', token)
         end
         return {f, a}
       end
@@ -448,9 +451,9 @@ lbt.fn.register_template = function(template_details, path)
   if ok then
     if lbt.fn.template_object_or_nil(tn) ~= nil then
       local curr_path = lbt.fn.template_path_or_error(tn)
-      lbt.log(F("WARN: Template name <%s> already exists; overwriting.", tn))
-      lbt.log(F("       * existing path: %s", curr_path))
-      lbt.log(F("       * new path:      %s", path))
+      lbt.log(2, "WARN: Template name <%s> already exists; overwriting.", tn)
+      lbt.log(2, "       * existing path: %s", curr_path)
+      lbt.log(2, "       * new path:      %s", path)
     end
     lbt.system.template_register[tn] = { td = td, path = path }
   else
@@ -505,26 +508,26 @@ lbt.fn.template_path_or_error = function(tn)
   return p
 end
 
-lbt.fn.template_names_to_dbgfile = function()
+lbt.fn.template_names_to_logfile = function()
   local tr = lbt.system.template_register
-  lbt.dbg("")
-  lbt.dbg("Template names currently loaded")
-  lbt.dbg("")
+  lbt.log('templates', "")
+  lbt.log('templates', "Template names currently loaded")
+  lbt.log('templates', "")
   for name, te in pairs(tr) do
     local nfunctions = #(te.td.functions)
-    lbt.dbg(" * %-20s (%d functions)", name, nfunctions)
+    lbt.log('templates', " * %-20s (%d functions)", name, nfunctions)
   end
 end
 
-lbt.fn.template_register_to_dbgfile = function()
+lbt.fn.template_register_to_logfile = function()
   local tr = lbt.system.template_register
-  lbt.dbg("")
-  lbt.dbg("The template register appears below.")
-  lbt.dbg("")
+  lbt.log('templates', "")
+  lbt.log('templates', "The template register appears below.")
+  lbt.log('templates', "")
   for name, t in pairs(tr) do
-    lbt.dbg(" * " .. name)
+    lbt.log('templates', " * " .. name)
     local x = lbt.fn.template_compact_representation(t)
-    lbt.dbg(x)
+    lbt.log('templates', x)
   end
 end
 
@@ -705,21 +708,21 @@ end
 --  * none that I can think of
 --
 lbt.fn.impl.consolidated_styles = function (docwide, pc, sources)
-  lbt.dbg('')
+  lbt.log('styles', '')
   local result = pl.Map()
   local styles = nil
   for s in pl.List(sources):reverse():iter() do
     styles = s.styles or pl.Map()
-    lbt.dbg('extracting styles from <%s>: %s', s.name, styles)
+    lbt.log('styles', 'extracting styles from <%s>: %s', s.name, styles)
     result:update(styles)
     -- I(result)
   end
   styles = docwide
-  lbt.dbg('extracting document-wide styles:', styles)
+  lbt.log('styles', 'extracting document-wide styles:', styles)
   result:update(styles)
   -- I(result)
   styles = lbt.fn.pc.extra_styles(pc)
-  lbt.dbg('extracting styles from parsed content: %s', styles)
+  lbt.log('styles', 'extracting styles from parsed content: %s', styles)
   result:update(styles)
   -- IX(result)
   return result
@@ -867,9 +870,9 @@ lbt.fn.impl.expand_register_references = function (str, math_context)
       lbt.err.E001_internal_logic_error('register_value return error')
     end
   end)
-  -- lbt.dbg('expand_register_references:')
-  -- lbt.dbg(' * input:  %s', str)
-  -- lbt.dbg(' * result: %s', result)
+  lbt.log('register', 'expand_register_references:')
+  lbt.log('register', ' * input:  %s', str)
+  lbt.log('register', ' * result: %s', result)
   return result
 end
 

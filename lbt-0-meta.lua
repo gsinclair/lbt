@@ -1,4 +1,6 @@
 
+local F = string.format
+
 ---It is good form to provide some background information about this Lua
 ---module.
 
@@ -14,33 +16,29 @@ modules['lbt'] = {
 }
 
 --
--- We set up logging and debugging functions here because they are "meta"
--- to the package.
+-- We set up a log file and log function here because they are "meta" to the
+-- package.
 --
 
 local logfile = io.open("lbt.log", "w")
-local dbgfile = io.open("lbt.dbg", "w")
 
-lbt.log = function (text, level)
-  local level = level or 1
-  logfile:write(string.format([[L%d » %s]].."\n", level, text))
-  logfile:flush()
+local channel_subscribed = function (ch)
+  local x = lbt.system.log_channels
+  return ch == 0 or x:contains(ch) or x:contains('all')
 end
 
-lbt.dbg = function (format, ...)
-  -- TODO make this sensitive to both system debug and per-instance debug
-  --      (or something)
-  if not lbt.api.get_debug_mode() then
-    return
+local channel_name = { [0] = 'ANN',  [1] = 'ERROR', [2] = 'WARN',
+                       [3] = 'INFO', [4] = 'TRACE' }
+
+lbt.log = function (channel, format, ...)
+  assert(lbt.system.log_channels:len() >= 0)
+  if channel_subscribed(channel) then
+    local message = F(format, ...)
+    local name = channel_name[channel] or channel
+    local line = F('[#%-10s] %s\n', name, message)
+    logfile:write(line)
+    logfile:flush()
   end
-  local line = nil
-  if type(format) == 'string' then
-    line = string.format(format, ...)
-  else
-    line = pl.pretty.write(format)
-  end
-  dbgfile:write(line.."\n")
-  dbgfile:flush()
 end
 
 local pp = pl.pretty.write

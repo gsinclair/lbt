@@ -7,16 +7,11 @@
 \usepackage[base]{babel}
 
 \begin{document}
-  \lbtDebugModeOn{}
+  \lbtLogChannels{1,2,3,-emit}
 
   Document \textbf{before} LBT content\dots
 
   \noindent\rule{\textwidth}{0.5pt}
-
-  \directlua{lbt.log("Hello from lbt.log!")}
-  \begin{luacode*}
-    lbt.dbg("Draft: %s", lbt.api.get_draft_mode())
-  \end{luacode*}
 
   \begin{lbt}
     !DRAFT

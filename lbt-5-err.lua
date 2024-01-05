@@ -2,26 +2,25 @@
 -- We act on the global table `lbt` and populate its subtable `lbt.err`.
 --
 
-lbt.err.quit_with_error = function(msg, ...)
+lbt.err.quit_with_error = function (msg, ...)
   message = string.format(msg, ...)
-  traceback = debug.traceback()
-  debug_message = "\n\n\n" .. message .. "\n\n\n" .. debug.traceback() .. "\n\n\n"
-  lbt.log("An error occurred (message below). See debug file for more information.")
-  lbt.log(message)
-  lbt.dbg(debug_message)
-  print(debug_message)
+  text = pl.stringio.create()
+  text:write('\n\n\n')
+  text:write('************************************************************\n')
+  text:write('  An error has occurred -- details below\n')
+  text:write('  The process will exit\n')
+  text:write('************************************************************\n')
+  text:write('\n\n\n')
+  text:write(message)
+  text:write('\n\n\n')
+  text:write(debug.traceback())
+  text:write('\n')
+  log.dbg(1, text)
+  print(text)
   os.exit()
 end
 
--- local E = lbt.err.quit_with_error
-local E = function(msg, ...)
-  message = string.format(msg, ...)
-  debug_message = "\n\n\n" .. message .. "\n\n\n" .. debug.traceback() .. "\n\n\n"
-  lbt.log("An error occurred (message below). See debug file for more information.")
-  lbt.log(message)
-  lbt.dbg(debug_message)
-  error(message, 3)
-end
+local E = lbt.err.quit_with_error
 
 --------------------------------------------------------------------------------
 

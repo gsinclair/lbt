@@ -30,10 +30,10 @@ lbt.api.add_template_directory = function (dir)
   if not pl.path.isdir(dir) then
     lbt.err.E208_nonexistent_template_dir(dir)
   end
-  lbt.log(F("Adding template directory: %s", dir))
+  lbt.log(3, "Adding template directory: %s", dir)
   local paths = pl.dir.getfiles(dir, "*.lua")
   for path in paths:iter() do
-    lbt.log(F(" * %s", pl.path.basename(path)))
+    lbt.log(3, " * %s", pl.path.basename(path))
     local ok, x = pcall(dofile, path)
     if ok then
       local template_details = x
@@ -43,8 +43,9 @@ lbt.api.add_template_directory = function (dir)
       lbt.err.E213_failed_template_load(path, err_details)
     end
   end
-  lbt.dbg("Added template directory <%s>", dir)
-  lbt.fn.template_names_to_dbgfile()
+  lbt.log(3, "Added template directory <%s>", dir)
+  lbt.log('templates', "Added template directory <%s>", dir)
+  lbt.fn.template_names_to_logfile()
 end
 
 --------------------------------------------------------------------------------
@@ -75,20 +76,28 @@ lbt.api.author_content_collect = function()
   end
   -- Register that function. It will be unregistered when the environment ends.
   luatexbase.add_to_callback('process_input_buffer', f, 'process_line')
+  -- Informative log message.
+  lbt.log(3, "New lbt environment encountered")
+  lbt.log(3, "  * filename: %s", status.filename)
+  lbt.log(3, "  * line:     %s", status.linenumber)
 end
 
 lbt.api.author_content_emit_latex = function()
-  lbt.dbg("lbt.api.author_content_emit_latex()")
-  lbt.dbg("  Current contents of lbt.const.author_content pasted below")
-  lbt.dbg("")
-  lbt.dbg("<<<")
-  lbt.dbg(pl.pretty.write(lbt.const.author_content))
-  lbt.dbg(">>>")
-  lbt.dbg("")
   local c  = lbt.const.author_content
+  lbt.log(4, "lbt.api.author_content_emit_latex()")
+  lbt.log(3, "  * author content: %d lines", #c)
+  lbt.log('read', 'Contents of lbt.const.author_content pasted below.')
+  lbt.log('read', "<<<")
+  lbt.log('read', pl.pretty.write(c))
+  lbt.log('read', ">>>")
+  lbt.log('read', "")
   local pc = lbt.fn.parsed_content(c)
+  lbt.log('parse', 'Parsed content below')
+  lbt.log('parse', pp(pc))
   lbt.fn.validate_parsed_content(pc)
+  lbt.log(3, '  * template: %s', lbt.fn.pc.template_name(pc))
   local l  = lbt.fn.latex_expansion(pc)
+  lbt.log(3, '  * latex expansion complete')
   tex.print(l)
 end
 
@@ -194,9 +203,9 @@ end
 lbt.api.default_template_expand = function()
   return function (pc, tr, sr)
     -- abbreviations for: parsed content, token resolver, style resolver
-    lbt.dbg('Inside default_template_expand for template <%s>', lbt.fn.pc.template_name(pc))
+    lbt.log(4, 'Inside default_template_expand for template <%s>', lbt.fn.pc.template_name(pc))
     local body = lbt.fn.pc.content_list(pc, 'BODY')
-    lbt.dbg(' * BODY has <%d> items to expand', body:len())
+    lbt.log(4, ' * BODY has <%d> items to expand', body:len())
     if body == nil then
       lbt.err.E301_default_expand_failed_no_body()
     end
@@ -212,8 +221,21 @@ end
 
 lbt.api.add_styles = function (text)
   local map = lbt.fn.style_string_to_map(text)
-  lbt.log('Document-wide styles are being updated:')
-  lbt.log(pp(map))
+  lbt.log(3, 'Document-wide styles are being updated:')
+  lbt.log(3, pp(map))
   lbt.system.document_wide_styles:update(map)
   return nil
+end
+
+
+lbt.api.set_log_channels = function (csv)
+  lbt.system.log_channels = pl.List()
+  local channels = lbt.util.comma_split(csv)
+  for c in channels:iter() do
+    if c:match('^[1234]$') then
+      c = tonumber(c)
+    end
+    lbt.system.log_channels:append(c)
+  end
+  lbt.log(0, 'Log channels set to: %s', lbt.system.log_channels)
 end

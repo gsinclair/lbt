@@ -38,7 +38,8 @@
 
   require('lbt-7-test')
 
-  lbt.log("lbt-{0,1,2,3,4,5,6,7}-*.lua files have been loaded")
+  lbt.log(0, 'LBT starting up at %s', os.date('%Y %B %d %X', os.time()))
+  lbt.log(3, "lbt-{0,1,2,3,4,5,6,7}-*.lua files have been loaded")
 \end{luacode*}
 
 \newenvironment{lbt}%
@@ -47,11 +48,11 @@
 
 \newcommand{\lbtDraftModeOn}{\directlua{lbt.api.set_draft_mode(true)}} 
 \newcommand{\lbtDraftModeOff}{\directlua{lbt.api.set_draft_mode(false)}} 
-\newcommand{\lbtDebugModeOn}{\directlua{lbt.api.set_debug_mode(true)}} 
-\newcommand{\lbtDebugModeOff}{\directlua{lbt.api.set_debug_mode(false)}} 
 
-\newcommand{\lbtTemplateDirectory}[1]{\directlua{lbt.api.add_template_directory(#1)}} 
+\newcommand{\lbtTemplateDirectory}[1]{\directlua{lbt.api.add_template_directory("#1")}} 
 
-\newcommand{\lbtStyles}[1]{\directlua{lbt.api.add_styles(#1)}} 
+\newcommand{\lbtStyles}[1]{\directlua{lbt.api.add_styles("#1")}} 
+
+\newcommand{\lbtLogChannels}[1]{\directlua{lbt.api.set_log_channels("#1")}} 
 
 % \newcommand{\lbtResetChapterCounters}{\luaexec{lbt.api.reset_chapter_counters()}}

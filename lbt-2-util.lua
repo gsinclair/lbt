@@ -68,6 +68,13 @@ function lbt.util.space_split(text, n)
   return pl.List(result)
 end
 
+-- Split on comma and remove any space.
+-- comma_split('one,two   ,     three') --> {one,two,three}
+function lbt.util.comma_split(text)
+  local result = pl.utils.split(text, '%s*,%s*')
+  return pl.List(result)
+end
+
 --------------------------------------------------------------------------------
 
 -- Roman numerals code, slightly adapted from
