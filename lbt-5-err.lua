@@ -3,8 +3,8 @@
 --
 
 lbt.err.quit_with_error = function (msg, ...)
-  message = string.format(msg, ...)
-  text = pl.stringio.create()
+  local message = string.format(msg, ...)
+  local text = pl.stringio.create()
   text:write('\n\n\n')
   text:write('************************************************************\n')
   text:write('  An error has occurred -- details below\n')
@@ -15,7 +15,8 @@ lbt.err.quit_with_error = function (msg, ...)
   text:write('\n\n\n')
   text:write(debug.traceback())
   text:write('\n')
-  log.dbg(1, text)
+  text = text:value()
+  lbt.log(1, text)
   print(text)
   os.exit()
 end
@@ -61,12 +62,14 @@ with a table that has missing or invalid information. A Lua file that
 describes a template should have at the bottom:
   
   return {
-    name = <string>,
-    desc = <string>,
-    sources = <list (table) of strings>,    # name of each dependency
-    init = <function>,                      # can use lbt.api.template_default_init
-    expand = <function>,                    # can use lbt.api.template_default_expand
-    functions = <table of functions>
+    name      = <string>,
+    desc      = <string>,
+    sources   = <list (table) of strings>,   # name of each dependency
+    init      = <function>,                  # can be omitted
+    expand    = <function>,                  # can be omitted
+    functions = <table of functions>,
+    arguments = <table of arg specs>,        # can be omitted
+    styles    = <table of styles>            # can be omitted
   }
 
 The error detected in your template description was:

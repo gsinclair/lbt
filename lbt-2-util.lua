@@ -21,6 +21,27 @@ function lbt.util.print_tex_lines(str)
   end
 end
 
+-- Call this function from within a template `expand` function, perhaps even
+-- multiple times. Most commonly it would be once and the key would be 'BODY'.
+-- Arguments:
+--  * key:         the name of the content section (e.g. BODY, INTRO, OUTRO)
+--  * pc:          parsed content (passed to the `expand` function)
+--  * tr:          token resolver (passed to the `expand` function)
+--  * sr:          style resolver (passed to the `expand` function)
+lbt.util.latex_expand_content_list = function (key, pc, tr, sr)
+  local list = lbt.fn.pc.content_list(pc, key)
+  if list == nil then
+    lbt.err.E302_content_list_not_found(key)
+  end
+  lines = lbt.fn.parsed_content_to_latex_multi(list, tr, sr)
+  return lines:concat("\n")
+end
+
+lbt.util.content_meta = function (pc, key)
+  local meta = lbt.fn.pc.meta(pc)
+  return meta[key]
+end
+
 function lbt.util.wrap_braces(x)
   return '{' .. x .. '}'
 end

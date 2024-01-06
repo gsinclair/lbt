@@ -8,17 +8,51 @@
 local F = string.format
 
 local f = {}
+local a = {}
+local s = {}
 
 f.Q = function(n, args)
-  return F([[\textbf{Question }%d\enspace]], lbt.api.counter_get('q'))
+  return F([[\textbf{Question }%d\enspace %s]], lbt.api.counter_inc('q'), args[1])
+end
+
+a.Q = 1
+s.Q = { vspace = '6pt', color = 'blue' }
+f.Q = function(n, args, s)
+  lbt.api.counter_reset('qq')
+  lbt.api.counter_reset('mc')
+  local vsp, col = s('Q.vspace Q.color')
+  local q = lbt.api.counter_inc('q')
+  local template = [[
+    \vspace{%s}
+    {\color{%s}\bfseries Question~%d}\quad %s \par
+  ]]
+  return F(template, vsp, col, q, args[1])
+end
+
+a.QQ = 1
+f.QQ = function(n, args, s)
+  local qq = lbt.api.counter_inc('qq')
+  local label_style = [[\textcolor{blue}{(\alph*)}]]
+  local template = [[
+    \begin{enumerate}[align=left, topsep=3pt, start=%d, left=3mm .. 13mm]
+      \item %s
+    \end{enumerate}
+  ]]
+  return F(template, qq, args[1])
+end
+
+f.QQ = function(n, args, s)
+  return F([[\hspace{1cm} QQ %s]], args[1])
 end
 
 return {
   name      = 'lbt.Questions',
   desc      = 'Questions, hints, answers for worksheet, exam, course notes',
   sources   = {},
-  init      = function() lbt.api.reset_counter('q') end,
-  expand    = lbt.api.default_template_expand,
-  functions = f
+  init      = nil,
+  expand    = nil,
+  functions = f,
+  arguments = a,
+  styles    = s
 }
 

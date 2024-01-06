@@ -298,7 +298,7 @@ lbt.fn.token_resolver = function (sources)
       -- Each 'source' is a template object, with properties 'functions'
       -- and 'arguments'.
       local f = s.functions[token]
-      local a = s.arguments[token]
+      local a = s.arguments and s.arguments[token]
       if f then
         if a == nil then
           lbt.log(2, 'WARN: no argspec provided for token <%s>', token)
@@ -768,12 +768,16 @@ lbt.fn.impl.template_details_are_valid = function (td)
     return false, F('desc is not a string or is too short')
   elseif type(td.sources) ~= 'table' then
     return false, F('sources is not a table')
-  elseif type(td.init) ~= 'function' then
+  elseif td.init and type(td.init) ~= 'function' then
     return false, F('init is not a function')
-  elseif type(td.expand) ~= 'function' then
+  elseif td.expand and type(td.expand) ~= 'function' then
     return false, F('expand is not a function')
   elseif type(td.functions) ~= 'table' then
     return false, F('functions is not a table')
+  elseif td.arguments and type(td.arguments) ~= 'table' then
+    return false, F('arguments is not a table')
+  elseif td.styles and type(td.styles) ~= 'table' then
+    return false, F('styles is not a table')
   end
   return true, ''
 end
@@ -840,7 +844,7 @@ lbt.fn.impl.template_styles_specification = function (styles)
 end
 
 lbt.fn.impl.latex_message_token_not_resolved = function (token)
-  return F([[\textcolor{red}{textbf{Token %s not resolved}}]], token)
+  return F([[\textcolor{red}{\textbf{Token %s not resolved}}]], token)
 end
 
 lbt.fn.impl.latex_message_token_raised_error = function (token, err)

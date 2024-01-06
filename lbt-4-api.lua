@@ -78,8 +78,8 @@ lbt.api.author_content_collect = function()
   luatexbase.add_to_callback('process_input_buffer', f, 'process_line')
   -- Informative log message.
   lbt.log(3, "New lbt environment encountered")
-  lbt.log(3, "  * filename: %s", status.filename)
-  lbt.log(3, "  * line:     %s", status.linenumber)
+  lbt.log(3, "  * filename:       %s", status.filename)
+  lbt.log(3, "  * line:           %s", status.linenumber)
 end
 
 lbt.api.author_content_emit_latex = function()
@@ -95,10 +95,12 @@ lbt.api.author_content_emit_latex = function()
   lbt.log('parse', 'Parsed content below')
   lbt.log('parse', pp(pc))
   lbt.fn.validate_parsed_content(pc)
-  lbt.log(3, '  * template: %s', lbt.fn.pc.template_name(pc))
+  lbt.log(3, '  * template:       %s', lbt.fn.pc.template_name(pc))
   local l  = lbt.fn.latex_expansion(pc)
   lbt.log(3, '  * latex expansion complete')
+  tex.print([[\begingroup]])
   tex.print(l)
+  tex.print([[\endgroup]])
   lbt.fn.reset_log_channels_if_necessary()
 end
 
@@ -213,12 +215,6 @@ lbt.api.default_template_expand = function()
     return lbt.fn.parsed_content_to_latex_multi(body, tr, sr)
   end
 end
-
--- TODO lbt.api.expand_content_list(key)
--- So that template authors can call it on BODY or on other things.
--- Then default_template_expand can use this.
-
-
 
 lbt.api.add_styles = function (text)
   local map = lbt.fn.style_string_to_map(text)
