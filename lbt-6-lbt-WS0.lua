@@ -27,28 +27,37 @@ s.WS0 = { title_color = 'CadetBlue', teacher_notes_color = 'blue' }
 local function template_text(tn_color)
   lbt.log('dev', 'WS0 template_text <%s>', tn_color)
   return F([[
-    \newpage
-    \setlength{\parindent}{0pt}
+\newpage
 
-    \noindent\fbox{\color{%s} Teacher's notes on \textbf{TITLESINGLE}} \\[18pt]
+TEACHERNOTES
 
-    {\color{%s}
-    TEACHERNOTES
-    }
+\newpage
 
-    \newpage
+\addcontentsline{toc}{section}{TITLESINGLE}
 
-    \addcontentsline{toc}{section}{TITLESINGLE}
+TITLELINE
+\rule{\textwidth}{0.4pt}
 
-    \noindent TITLELINE
-    \noindent\rule{\textwidth}{0.4pt}
+\vspace{24pt}
 
-    \vspace{24pt}
+BODY
 
-    BODY
-
-    \clearpage
+\clearpage
   ]], tn_color, tn_color)
+end
+
+local function teacher_notes(text, color)
+  return F([[
+\begingroup
+\setlength{\parindent}{0em}
+\setlength{\parskip}{6pt plus 2pt minus 2pt}
+\fbox{\color{CadetBlue} Teacher's notes on \textbf{Network hardware, IDE, digital currency}}
+\vspace{18pt}
+
+\color{CadetBlue}
+This is the first piece of work for 2023. Network hardware is sort of revision. IDE is new. Digital currency: we watched a video right at the end of 2022 but didn't write notes. \par \lipsum[1] \par \lipsum[3]
+\endgroup
+  ]])
 end
 
 local function title_line(title, course, color)
@@ -68,20 +77,22 @@ end
 local function expand(pc, tr, sr)
   local title  = lbt.util.content_meta(pc, 'TITLE') or '(no title)'
   local course = lbt.util.content_meta(pc, 'COURSE') or nil
-  local notes  = lbt.util.content_meta(pc, 'TEACHERNOTES') or "(none specified)"
+  local tnotes  = lbt.util.content_meta(pc, 'TEACHERNOTES') or "(none specified)"
   local tcol   = sr('WS0.title_color')
   local tncol  = sr('WS0.teacher_notes_color')
   local result = template_text(tcol)
 
+  -- DEBUGGER()
+
   -- Substitute KEY WORDS in the template text for their actual values.
+  result = result:gsub('TEACHERNOTES', teacher_notes(tnotes, tncol))
   result = result:gsub('TITLESINGLE', title)
   result = result:gsub('TITLELINE', title_line(title, course, tcol))
-  result = result:gsub('TEACHERNOTES', notes)
 
   -- Evaluate the BODY and substitute it in.
   -- Most structural templates will need code very much like this.
-  body_content = lbt.util.latex_expand_content_list('BODY', pc, tr, sr)
-  result = result:gsub('BODY', body_content)
+  local body_latex = lbt.util.latex_expand_content_list('BODY', pc, tr, sr)
+  result = result:gsub('BODY', body_latex)
 
   return result
 end

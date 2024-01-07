@@ -78,29 +78,35 @@ lbt.api.author_content_collect = function()
   luatexbase.add_to_callback('process_input_buffer', f, 'process_line')
   -- Informative log message.
   lbt.log(3, "New lbt environment encountered")
+  lbt.log(3, "  * expansion ID:   %d", lbt.fn.next_expansion_id())
   lbt.log(3, "  * filename:       %s", status.filename)
   lbt.log(3, "  * line:           %s", status.linenumber)
 end
 
 lbt.api.author_content_emit_latex = function()
   local c  = lbt.const.author_content
+  local eid = lbt.fn.current_expansion_id()
   lbt.log(4, "lbt.api.author_content_emit_latex()")
   lbt.log(3, "  * author content: %d lines", #c)
-  lbt.log('read', 'Contents of lbt.const.author_content pasted below.')
+  lbt.log('read', 'Contents of lbt.const.author_content pasted below. eID=%d', eid)
   lbt.log('read', "<<<")
   lbt.log('read', pl.pretty.write(c))
   lbt.log('read', ">>>")
   lbt.log('read', "")
   local pc = lbt.fn.parsed_content(c)
-  lbt.log('parse', 'Parsed content below')
+  if pc.pragmas.ignore then
+    lbt.log(3, '  * IGNORE pragma detected - no further action for eID %d', eid)
+    return
+  end
+  lbt.log('parse', 'Parsed content below. eID=%d', eid)
   lbt.log('parse', pp(pc))
   lbt.fn.validate_parsed_content(pc)
   lbt.log(3, '  * template:       %s', lbt.fn.pc.template_name(pc))
   local l  = lbt.fn.latex_expansion(pc)
-  lbt.log(3, '  * latex expansion complete')
-  tex.print([[\begingroup]])
-  tex.print(l)
-  tex.print([[\endgroup]])
+  local output = lbt.util.normalise_latex_output(l)
+  lbt.log(3, '  * latex expansion complete (eid=%d)', eid)
+  tex.print(output)
+  lbt.fn.write_debug_expansion_file_if_necessary(c, pc, output)
   lbt.fn.reset_log_channels_if_necessary()
 end
 
@@ -235,4 +241,8 @@ lbt.api.set_log_channels = function (csv)
     lbt.system.log_channels:append(c)
   end
   lbt.log(0, 'Log channels set to: %s', lbt.system.log_channels)
+end
+
+lbt.api.query_log_channels = function(c)
+  return lbt.system.log_channels:contains(c) or lbt.system.log_channels:contains('all')
 end

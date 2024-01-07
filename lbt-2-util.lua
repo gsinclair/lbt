@@ -37,6 +37,29 @@ lbt.util.latex_expand_content_list = function (key, pc, tr, sr)
   return lines:concat("\n")
 end
 
+-- `x` may be a string or a table.
+-- To 'normalise' the output for these purposes, we want:
+--  * a single string
+--  * with no whitespace at the beginning of each line
+--
+-- The second requirement could be contentious in some circumstances, like
+-- verbatim printing or code listings. We can revisit it later. Hopefully it
+-- is not necessary. But I am having trouble getting accurate output at the
+-- moment and need to make things as tight as possible.
+lbt.util.normalise_latex_output = function (x)
+  if type(x) == 'table' then
+    x = x:concat('\n')
+  elseif type(x) == 'string' then
+    -- noop
+  else
+    lbt.err.E419_invalid_argument_normalise_latex(x)
+  end
+  local y = {[[\begingroup]], x, [[\endgroup]]}
+  y = table.concat(y, '\n')
+  y = y:gsub('\n%s+', '\n')
+  return y
+end
+
 lbt.util.content_meta = function (pc, key)
   local meta = lbt.fn.pc.meta(pc)
   return meta[key]

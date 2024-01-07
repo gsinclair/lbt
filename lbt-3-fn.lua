@@ -589,6 +589,30 @@ lbt.fn.reset_log_channels_if_necessary = function ()
   end
 end
 
+lbt.fn.current_expansion_id = function ()
+  return lbt.system.expansion_id
+end
+
+lbt.fn.next_expansion_id = function ()
+  lbt.system.expansion_id = lbt.system.expansion_id + 1
+  return lbt.system.expansion_id
+end
+
+lbt.fn.write_debug_expansion_file_if_necessary = function (content, pc, latex)
+  if lbt.api.query_log_channels('emit') then
+    pl.dir.makepath('dbg-tex')
+    local eid = lbt.fn.current_expansion_id()
+    local filename = F('dbg-tex/%d.tex', eid)
+    local content = nil
+    if type(latex) == 'string' then
+      content = latex
+    elseif type(latex) == 'table' then
+      content = latex:concat('\n')
+    end
+    pl.file.write(filename, content)
+  end
+end
+
 -- }}}
 
 --------------------------------------------------------------------------------

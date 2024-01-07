@@ -88,6 +88,10 @@ lbt.init.init_system = function ()
   lbt.system.draft_mode       = false
   -- By default, we log only channels 1-3 (ERROR, WARN, INFO)
   lbt.system.log_channels     = pl.List{1,2,3}
+  -- Each expansion has an autoincrementing ID so that log messages can be
+  -- coherent and debug files can be written. We start at 100 so it is a
+  -- three-digit number.
+  lbt.system.expansion_id = 100
 end
 
 -- Reset the lbt.system table to a clean but workable state.
