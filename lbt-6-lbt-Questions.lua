@@ -34,15 +34,11 @@ f.QQ = function(n, args, s)
   local qq = lbt.api.counter_inc('qq')
   local label_style = [[\textcolor{blue}{(\alph*)}]]
   local template = [[
-    \begin{enumerate}[align=left, topsep=3pt, start=%d, left=3mm .. 13mm]
+    \begin{enumerate}[align=left, topsep=3pt, start=%d, label=%s, left=3mm .. 13mm]
       \item %s
     \end{enumerate}
   ]]
-  return F(template, qq, args[1])
-end
-
-f.QQ = function(n, args, s)
-  return F([[\hspace{1cm} QQ %s]], args[1])
+  return F(template, qq, label_style, args[1])
 end
 
 return {

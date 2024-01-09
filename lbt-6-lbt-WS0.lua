@@ -27,6 +27,9 @@ s.WS0 = { title_color = 'CadetBlue', teacher_notes_color = 'blue' }
 local function template_text(tn_color)
   lbt.log('dev', 'WS0 template_text <%s>', tn_color)
   return F([[
+\setlength{\parindent}{0em}
+\setlength{\parskip}{6pt plus 2pt minus 2pt}
+
 \newpage
 
 TEACHERNOTES
@@ -43,21 +46,21 @@ TITLELINE
 BODY
 
 \clearpage
-  ]], tn_color, tn_color)
+  ]])
 end
 
-local function teacher_notes(text, color)
+local function teacher_notes(title, text, color)
   return F([[
 \begingroup
-\setlength{\parindent}{0em}
-\setlength{\parskip}{6pt plus 2pt minus 2pt}
-\fbox{\color{CadetBlue} Teacher's notes on \textbf{Network hardware, IDE, digital currency}}
+\color{%s}
+\fbox{Teacher's notes on \textbf{%s}}
+
 \vspace{18pt}
 
-\color{CadetBlue}
-This is the first piece of work for 2023. Network hardware is sort of revision. IDE is new. Digital currency: we watched a video right at the end of 2022 but didn't write notes. \par \lipsum[1] \par \lipsum[3]
+%s
+
 \endgroup
-  ]])
+  ]], color, title, text)
 end
 
 local function title_line(title, course, color)
@@ -85,7 +88,7 @@ local function expand(pc, tr, sr)
   -- DEBUGGER()
 
   -- Substitute KEY WORDS in the template text for their actual values.
-  result = result:gsub('TEACHERNOTES', teacher_notes(tnotes, tncol))
+  result = result:gsub('TEACHERNOTES', teacher_notes(title, tnotes, tncol))
   result = result:gsub('TITLESINGLE', title)
   result = result:gsub('TITLELINE', title_line(title, course, tcol))
 

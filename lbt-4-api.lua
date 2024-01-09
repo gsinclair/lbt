@@ -105,7 +105,7 @@ lbt.api.author_content_emit_latex = function()
   local l  = lbt.fn.latex_expansion(pc)
   local output = lbt.util.normalise_latex_output(l)
   lbt.log(3, '  * latex expansion complete (eid=%d)', eid)
-  tex.print(output)
+  lbt.util.print_tex_lines(output)
   lbt.fn.write_debug_expansion_file_if_necessary(c, pc, output)
   lbt.fn.reset_log_channels_if_necessary()
 end

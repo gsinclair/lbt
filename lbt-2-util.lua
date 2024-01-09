@@ -15,7 +15,7 @@ end
 
 -- Print each line in `str` with a separate call to `tex.print`.
 function lbt.util.print_tex_lines(str)
-  assert_string(1, str)
+  pl.utils.assert_string(1, str)
   for line in str:lines() do
     tex.print(line)
   end
@@ -56,7 +56,7 @@ lbt.util.normalise_latex_output = function (x)
   end
   local y = {[[\begingroup]], x, [[\endgroup]]}
   y = table.concat(y, '\n')
-  y = y:gsub('\n%s+', '\n')
+  y = y:gsub('\n +', '\n')
   return y
 end
 
