@@ -169,6 +169,10 @@ lbt.api.data_set = function(key, value)
   lbt.var.data[key] = value
 end
 
+lbt.api.data_delete = function (key)
+  lbt.var.data[key] = nil
+end
+
 -- This is slightly hacky because this general lbt code shouldn't have knowledge of
 -- specific counters. An alternative could be a table that specifies counters to be
 -- reset upon a new chapter, or part, or section, or...

@@ -132,6 +132,34 @@ f.ENUMERATE = function (n, args)
   return result
 end
 
+-- Columns (because why not? And because multicols doesn't let you do 1 col)
+a.COLUMNS = 1
+f.COLUMNS = function(n, args)
+  local ncols = tonumber(args[1])
+  if ncols == nil or n < 1 then
+    return { error = 'COLUMNS argument must be a positive integer' }
+  elseif ncols == 1 then
+    lbt.api.data_set('Basic.ncols', 1)
+    return ''
+  else
+    lbt.api.data_set('Basic.ncols', ncols)
+    return F([[\begin{multicols}{%d}]], ncols)
+  end
+end
+
+a.ENDCOLUMNS = 0
+f.ENDCOLUMNS = function (n, args)
+  local ncols = lbt.api.data_get('Basic.ncols')
+  lbt.api.data_delete('Basic.ncols')
+  if ncols == nil then
+    return { error = 'ENDCOLUMNS without COLUMNS' }
+  elseif ncols == 1 then
+    return ''
+  else
+    return [[\end{multicols}]]
+  end
+end
+
 ----- f.HEADING = function(text)
 -----   local args = split(text, '::')
 -----   if #args == 2 then
