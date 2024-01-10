@@ -3,6 +3,54 @@
 This is not an appending journal. It is a live document with a place to design and/or document features. Ultimately the information either withers or ends up in proper documentation.
 
 
+## Macros such as defint and myvec
+
+The old GSC code had wonderful Lua-implemented macros for (in)definite integrals and vectors. I made heavy use of them. They were implemented along these lines:
+
+    # Lua
+    GSC.macros.myvec = function(text)
+      ...
+    end
+
+    # Latex
+    \newcommand{\myvec}[1]{\lua{GSC.macros.myvec{'#1'}}}
+
+This was fine when GSC was a single-document concern and I could tailor it to do whatever I want. But now it is generalising and I need to think about whether and how to achieve this desirable functionality without assuming every user wants it and without trampling on the global namespace.
+
+One solution is as follows. Say I have a content template called `Math`. It defines some tokens like ALIGN and whatever else. And perhaps it can define some macros like `indefint` and `defint` and `myvec`. These are defined using `lbt.api.define_macro('Math', 'defint', function(text) ... end)`. Or are they declared in the template table? (Yeah, probably.)
+
+OK, so how are they used? For a start, they can only be used in a LBT environment. The author might write
+
+    \begin{lbt}
+        @META
+            TEMPLATE   lbt.WS0
+            SOURCES    Math
+            MACROS     defint,indefint,myvec
+        +BODY
+            TEXT Consider the vector \myvec{PQ} where ...
+            Q Evaluate \indefint{e^{2x},dx}.
+    \end{lbt}
+
+So what is happening here?
+
+By declaring `MACROS  defint,indefint,myvec`, the three Latex commands `\defint` etc. are being created *only in this expansion* (because of `\(begin|end)group`) and can be freely used. The definition, behind the scenes, is simple:
+
+    \newcommand{\myvec}[1]{\luaexec{lbt.api.run_macro('Math', 'myvec', '#1')}}
+
+This seems like a pretty good design and not hard to implement.
+
+An author could decide to use `\myvec` freely in the document with a command:
+
+    \lbtMacroDefine{\myvec}{Math}{myvec}
+    \lbtMacroDefine{\myvec}{Math.myvec}      {better if it's possible}
+    \lbtMacroDefine{\myvec=Math.myvec}       {best?}
+    \lbtMacroDefine{\myvec=lbt.Math:vector}          {even better?}
+
+So what does this mean for an author writing their own templates? It means it's not hard to squeeze in some extra Lua functions to define macros, and it's not too hard to access them. They are already invested in saving template files on their computer and letting LBT know where to look. That hard work is done, and now they can write Lua functions without thinking about how to manage them.
+
+As a first pass, I think I will skip the `MACROS` bit and go straight to `\lbtMacroDefine`. It's simpler and kind of reasonable and might be all I need.
+
+
 ## Error messages
 
 Error messages are all coded in `lbt.err`, one function per error. An example is `lbt.err.E203_no_META_defined`. Each one calls the local function `E`, which prints the error message to screen and logfile and debug file, then exists the process.

@@ -119,6 +119,13 @@ function lbt.util.comma_split(text)
   return pl.List(result)
 end
 
+-- When expanding an LBT macro like lbt.Math.myvec, an error might occur.
+-- This function helps you format a red flag for the Latex output.
+function lbt.util.latex_macro_error(errormsg)
+  local format = [[{\color{red}\bfseries LBT Latex macro error occurred: %s}]]
+  return F(format, errormsg)
+end
+
 --------------------------------------------------------------------------------
 
 -- Roman numerals code, slightly adapted from

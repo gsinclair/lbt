@@ -613,6 +613,22 @@ lbt.fn.write_debug_expansion_file_if_necessary = function (content, pc, latex)
   end
 end
 
+-- Input: \myvec=lbt.Math:vector
+-- Output:  myvec,       lbt.Math,      vector
+--         (latex macro, template name, function name)
+--             lm           tn             fn
+-- Error: if the text does not follow the correct format
+lbt.fn.parse_macro_define_argument = function (text)
+  local ERR = lbt.err.E109_invalid_macro_define_spec
+  local lm, tn, fn = text:match('^(%a+*?)=([%w.]+):(%w+)')
+  if not (lm and tn and fn) then
+    ERR(text)
+  end
+  if not tn:match('^%a') then
+    ERR(text)
+  end
+  return lm, tn, fn
+end
 -- }}}
 
 --------------------------------------------------------------------------------

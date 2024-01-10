@@ -29,6 +29,7 @@
   end
 
   register_builtin('lbt-6-lbt-Basic')
+  register_builtin('lbt-6-lbt-Math')
   register_builtin('lbt-6-lbt-Questions')
   register_builtin('lbt-6-lbt-WS0')
   register_builtin('lbt-6-lbt-WS1')
@@ -54,5 +55,7 @@
 \newcommand{\lbtStyles}[1]{\directlua{lbt.api.add_styles("#1")}} 
 
 \newcommand{\lbtLogChannels}[1]{\directlua{lbt.api.set_log_channels("#1")}} 
+
+\newcommand{\lbtDefineLatexMacro}[1]{\directlua{lbt.api.macro_define("#1")}} 
 
 % \newcommand{\lbtResetChapterCounters}{\luaexec{lbt.api.reset_chapter_counters()}}

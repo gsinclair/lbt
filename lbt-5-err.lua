@@ -6,10 +6,10 @@ lbt.err.quit_with_error = function (msg, ...)
   local message = string.format(msg, ...)
   local text = pl.stringio.create()
   text:write('\n\n\n')
-  text:write('************************************************************\n')
+  text:write('******************************************************* LBT \n')
   text:write('  An error has occurred -- details below\n')
   text:write('  The process will exit\n')
-  text:write('************************************************************\n')
+  text:write('******************************************************* LBT \n')
   text:write('\n\n\n')
   text:write(message)
   text:write('\n\n\n')
@@ -22,6 +22,7 @@ lbt.err.quit_with_error = function (msg, ...)
 end
 
 local E = lbt.err.quit_with_error
+local F = string.format
 
 --------------------------------------------------------------------------------
 
@@ -110,4 +111,11 @@ end
 lbt.err.E402_invalid_alphabet = function (alph)
   E("E402: Invalid alphabet <%s> for conversion.\n"..
     "      Options are latin | Latin | roman | Roman", alph)
+end
+
+
+lbt.err.E159_macro_run_error = function (format, ...)
+  local details = F(format, ...)
+  local errormsg = F('Failed to run a macro (presumably defined with \\lbtDefineLatexMacro)\nDetails: %s', details)
+  E(errormsg)
 end
