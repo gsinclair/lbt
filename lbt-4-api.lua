@@ -273,7 +273,7 @@ lbt.api.macro_define = function (text)
     lbt.err.E158_macro_define_error(
       "Template %s has macro 'function' %s that's not actually a function", tn, fn)
   else
-    local latex_cmd = F([[\newcommand{\%s}[1]{\luaexec{lbt.api.macro_run('%s', '%s', '#1')}}]],
+    local latex_cmd = F([=[\newcommand{\%s}[1]{\luaexec{lbt.api.macro_run('%s', '%s', [[#1]])}}]=],
                         lm, tn, fn)
     tex.print(latex_cmd)
     lbt.log(3, [[Defined Latex macro \%s to %s.%s]], lm, tn, fn)
@@ -297,4 +297,13 @@ lbt.api.macro_run = function (tn, fn, arg)
   end
   local latex_code = f(arg)
   lbt.util.print_tex_lines(latex_code)
+end
+
+-- This is designed for use only in macro expansion.
+lbt.api.get_style = function (key)
+  local sr = lbt.const.style_resolver
+  if sr == nil then
+    lbt.err.E001_internal_logic_error('lbt.const.style_resolver not available')
+  end
+  return sr(key)
 end

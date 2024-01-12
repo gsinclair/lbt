@@ -2,6 +2,8 @@
 \ProvidesPackage{lbt}[2023/12/01 Lua-based templates]
 
 \RequirePackage{luacode}   % and luatextras, luacodeloader etc.?
+\RequirePackage{esvect}    % to get \vv for vectors with arrows
+\RequirePackage{accents}   % to get \underaccent{\tilde} for vectors
 
 \begin{luacode*}
   -- Load penlight libraries from vendor directory.

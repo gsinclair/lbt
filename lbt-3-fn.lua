@@ -158,6 +158,8 @@ lbt.fn.latex_expansion = function (parsed_content)
   local t = lbt.fn.pc.template_object(pc)
   -- Obtain token and style resolvers so that expansion can occur.
   local tr, sr = lbt.fn.token_and_style_resolvers(pc)
+  -- Store the style resolver for potential use by other functions.
+  lbt.const.style_resolver = sr
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!

@@ -10,53 +10,140 @@ local pp = pl.pretty.write
 
 local f = {}   -- functions
 local a = {}   -- number of arguments
+local s = {}   -- styles
 local m = {}   -- macros
 
--- myvec is a flexible vector renderer. Here are examples of the arguments it
--- can handle. Arguments are space-separated. Remember they are text.
+--------------------------------------------------------------------------------
+
+-- _vector_ is a flexible vector renderer. Here are examples of the arguments
+-- it can handle. Arguments are space-separated. Remember they are text.
 --
---   a                 default italic undertilde
---   bold a
---   tilde a
+--   a                 use style 'vector.format' to choose (bold) | arrow | tilde
 --
---   AB                italic overarrow (no other option)
+--   AB                italic overarrow
 --
 --   2 -5              column vector
 --   1 6 -4
 --   row 3 8 1         can force row
 --   col 3 8 1         but column is the default
+--
+--  The macros vecbold, vecarrow and vectilde are provided to force a style
+--  if needed.
 
-m.myvec = function (text)
-  local args = lbt.util.comma_split(text)
-  if args:len() ~= 1 or not args[1]:match('^%l$') then
-    return lbt.util.latex_macro_error('Math.myvec: single lower-case argument only (for now)')
+local function vector_pronumeral(x)
+  local format = lbt.api.get_style('vector.format')
+  if format == 'bold' then
+    return F([[\ensuremath{\mathbf{%s}}]], x)
+  elseif format == 'arrow' then
+    -- Use \vv from 'esvect' package
+    return F([[\ensuremath{\vv{%s}}]], x)
+  elseif format == 'tilde' then
+    -- Use \underaccent from 'accents' package
+    return F([[\ensuremath{\underaccent{\tilde}{%s}}]], x)
+  else
+    local errormsg1 = F('Invalid style value for vector.format: <%s>', format)
+    local errormsg2 = 'Valid options: boldrm | boldit | arrow | tilde'
+    return lbt.util.latex_macro_error(errormsg1 .. '\n' .. errormsg2)
   end
-  return F([[\ensuremath{\underaccent{\tilde}{%s}}]], args[1])
-  -- The rest is old implementation for later.
-  -- if args[1] == "row" then
-  --   -- We render the contents as a row vector (same as a point).
-  --   table.remove(args, 1)
-  --   local innards = table.concat(args, ',')
-  --   local output = [[\ensuremath{\left( %s \right)}]]
-  --   tex.sprint(F(output, innards))
-  -- elseif #args == 1 then
-  --   local arg = args[1]
-  --   if #arg == 1 then
-  --     -- We render the pronumeral (say, v) as a vector with an undertilde.
-  --     local output = [[\ensuremath{\underaccent{\tilde}{%s}}]]
-  --     tex.sprint(F(output, arg))
-  --   elseif #arg == 2 then
-  --     -- We render the interval (say, AB) as a vector with an overarrow.
-  --     local output = [[\ensuremath{\vv{%s}}]]
-  --     tex.sprint(F(output, arg))
-  --   end
-  -- else
-  --   -- We render a column vector with the (presumably) two or three values
-  --   local contents = table.concat(args, [[ \\ ]])
-  --   local output = [[\ensuremath{\begin{pmatrix}%s\end{pmatrix}}]]
-  --   tex.sprint(F(output, contents))
-  -- end
 end
+
+local function vector_segment(ab)
+  return F([[\ensuremath{\vv{%s}}]], ab)
+end
+
+s.vector = { format = 'bold' }
+m.vector = function (text)
+  local args = lbt.util.space_split(text)
+  local n = #args
+  if n == 1 then
+    -- It is either a pronumeral like 'p' or a segment like 'AB'.
+    local arg = args[1]
+    if arg:match('^%l$') or arg == '0' then
+      return vector_pronumeral(arg)
+    elseif arg:match('^%u%u$') then
+      return vector_segment(arg)
+    else
+      return lbt.util.latex_macro_error('Invalid sole arg to vector macro: ' .. arg)
+    end
+  elseif n > 1 then
+    -- It is a row or column vector.
+    if args[1] == 'row' then
+      args:remove(1)
+      local contents = table.concat(args, ',')
+      return F([[\ensuremath{\left( %s \right)}]], contents)
+    elseif args[1] == 'col' then
+      args:remove(1)
+      local contents = table.concat(args, [[ \\ ]])
+      return F([[\ensuremath{\begin{pmatrix} %s \end{pmatrix}}]], contents)
+    else
+      -- col is default
+      local contents = table.concat(args, [[ \\ ]])
+      return F([[\ensuremath{\begin{pmatrix} %s \end{pmatrix}}]], contents)
+    end
+  else
+    return lbt.util.latex_macro_error('Math:vector -- at least one argument needed')
+  end
+end
+
+-- Input: a pronumeral like 'a' or 'v' or the value zero '0'.
+-- Output: that letter/zero rendered as a bold vector.
+-- Comment: this allows author to force a desired style.
+m.vecbold = function (x)
+  return F([[\ensuremath{\mathbf{%s}}]], x)
+end
+
+-- Input: a pronumeral like 'a' or 'v' or the value zero '0'.
+-- Output: that letter/zero rendered as a vector with arrow overhead.
+-- Comment: this allows author to force a desired style.
+m.vecarrow = function (x)
+  return F([[\ensuremath{\vv{%s}}]], x)
+end
+
+-- Input: a pronumeral like 'a' or 'v' or the value zero '0'.
+-- Output: that letter/zero rendered as a vector with tilde underneath.
+-- Comment: this allows author to force a desired style.
+m.vectilde = function (x)
+  return F([[\ensuremath{\underaccent{\tilde}{%s}}]], x)
+end
+
+--------------------------------------------------------------------------------
+
+-- Integrals: definite and indefinite
+--
+-- Arguments are comma separated. Space is optional.
+--
+--   \Int{x^2 \sin x, dx}                     indefinite
+--   \Int{0,1,x^2 sin x,dx}                   definite
+--   \Int{ds,\tan\theta,d\theta}              indefinite, force displaystyle
+--   \Int{ds,0,\pi/4,\tan\theta,d\theta}      definite, force displaystyle
+
+m.integral = function (text)
+  local args = lbt.util.comma_split(text)
+  local displaystyle = false
+  if args[1] == 'ds' then
+    displaystyle = true
+    args:remove(1)
+  end
+  local integral = nil
+  if #args == 2 then
+    -- Indefinite
+    integral = F([[\int %s\,%s]], args[1], args[2])
+  elseif #args == 4 then
+    -- Definite
+    integral = F([[\int_{%s}^{%s} %s\,%s]], args[1], args[2], args[3], args[4])
+  else
+    local emsg = 'Math:integral requires 2 or 4 args with optional ds.'
+    lbt.log(1, emsg)
+    lbt.log(1, 'The invalid argument to Math:integral was "%s"', text)
+    return lbt.util.latex_macro_error(emsg)
+  end
+  if displaystyle then
+    integral = F([[\displaystyle %s]], integral)
+  end
+  return F([[\ensuremath{%s}]], integral)
+end
+
+--------------------------------------------------------------------------------
 
 return {
   name      = 'lbt.Math',
@@ -66,6 +153,7 @@ return {
   expand    = nil,
   functions = f,
   arguments = a,
+  styles    = s,
   macros    = m,
 }
 

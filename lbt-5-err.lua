@@ -119,3 +119,9 @@ lbt.err.E159_macro_run_error = function (format, ...)
   local errormsg = F('Failed to run a macro (presumably defined with \\lbtDefineLatexMacro)\nDetails: %s', details)
   E(errormsg)
 end
+
+lbt.err.E158_macro_define_error = function (format, ...)
+  local details = F(format, ...)
+  local errormsg = F('Failed to define a macro (presumably defined with \\lbtDefineLatexMacro)\nDetails: %s', details)
+  E(errormsg)
+end
