@@ -3,6 +3,25 @@
 This is not an appending journal. It is a live document with a place to design and/or document features. Ultimately the information either withers or ends up in proper documentation.
 
 
+## Some renaming of concepts
+
+I have decided that "tokens" will be renamed "commands". That applies to the objects themselves and to the functions that implement them and the functions that work with them.
+
+The documentation will explain why they are called commands, and note the difference in programming languages between commands and functions, and note that LBT "macros" act as functions, but they are closely tied to Latex macros so the name "macro" is used.
+
+In template files we will then have:
+
+    return {
+        ...
+        commands = c,
+        arguments = a,
+        styles = s,
+        macros = m
+    }
+
+I will be pleased when this change is made.
+
+
 ## Macros such as defint and myvec
 
 The old GSC code had wonderful Lua-implemented macros for (in)definite integrals and vectors. I made heavy use of them. They were implemented along these lines:
