@@ -160,6 +160,34 @@ f.ENDCOLUMNS = function (n, args)
   end
 end
 
+-- Math environments like ALIGN(*) -- probably need to add others.
+
+-- TODO think about the design of align. Could it take one argument per line?
+-- Could it take some options, like spreadlines?
+-- For example
+--   ALIGN*   opt: spreadlines=1em      [or some other signifier for options]
+--    » :: a^2 + b^2 &= c^2
+--    » :: E &= mc^2
+--    » :: F = ma
+
+a.ALIGN = 1
+f.ALIGN = function(n, args)
+  return F([[
+\begin{align}
+  %s
+\end{align}
+  ]], args[1])
+end
+
+a['ALIGN*'] = 1
+f['ALIGN*'] = function(n, args)
+  return F([[
+\begin{align*}
+  %s
+\end{align*}
+  ]], args[1])
+end
+
 ----- f.HEADING = function(text)
 -----   local args = split(text, '::')
 -----   if #args == 2 then

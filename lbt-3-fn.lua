@@ -35,7 +35,7 @@ end
 lbt.fn.author_content_append = function(line)
   line_list = lbt.const.author_content
   line = line:strip()
-  if line == "" then return end
+  if line == "" or line:startswith('%') then return end
   if line:sub(1,2) == "»" then
     -- Continuation of previous line
     prev_line = line_list:pop()

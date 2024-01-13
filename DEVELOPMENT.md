@@ -3,6 +3,15 @@
 This is not an appending journal. It is a live document with a place to design and/or document features. Ultimately the information either withers or ends up in proper documentation.
 
 
+## Some aids to debugging a document
+
+* Place an 'x' at the beginning of a command name to cause it to be ignored. For instance, replace TEXT with xTEXT.
+
+* Have a control signal to stop reading content for this expansion, like `CTRL stop-reading` or something.
+
+* Perhaps easiest, simply recognise Latex comment '%' at the beginning of the line!
+
+
 ## Some renaming of concepts
 
 I have decided that "tokens" will be renamed "commands". That applies to the objects themselves and to the functions that implement them and the functions that work with them.
