@@ -21,6 +21,7 @@ local F = string.format
 local f = {}
 local s = {}
 local a = {}
+local m = {}
 
 s.WS0 = { title_color = 'CadetBlue', teacher_notes_color = 'blue' }
 
@@ -100,6 +101,50 @@ local function expand(pc, tr, sr)
   return result
 end
 
+local function heading_and_text_indent(color, heading, text)
+  return F([[
+\textcolor{%s}{\textbf{%s}} \par
+\begin{adjustwidth}{1cm}{}
+  %s
+\end{adjustwidth}
+  ]], color, heading, text)
+end
+
+-- EXAMPLE and NOTE -----------------------------------------------------------
+
+local function heading_and_text_inline(color, heading, text)
+  return F([[ \textcolor{%s}{\textbf{%s}} \quad %s ]], color, heading, text)
+end
+
+s.EXAMPLE = { color = 'blue' }
+a.EXAMPLE = 1
+f.EXAMPLE = function (n, args, sr)
+  return heading_and_text_indent(sr('EXAMPLE.color'), 'Example', args[1])
+end
+
+a['EXAMPLE*'] = 1
+f['EXAMPLE*'] = function (n, args, sr)
+  return heading_and_text_inline(sr('EXAMPLE.color'), 'Example', args[1])
+end
+
+s.NOTE = { color = 'Mahogany' }
+a.NOTE = 1
+f.NOTE = function (n, args, sr)
+  return heading_and_text_indent(sr('NOTE.color'), 'Note', args[1])
+end
+
+a['NOTE*'] = 1
+f['NOTE*'] = function (n, args, sr)
+  return heading_and_text_inline(sr('NOTE.color'), 'Note', args[1])
+end
+
+-- smallnote macro ------------------------------------------------------------
+
+m.smallnote = function(text)
+  return F([[\textcolor{CadetBlue}{\small %s} ]], text)
+end
+
+
 return {
   name      = 'lbt.WS0',
   desc      = 'A worksheet with title, course, teacher notes',
@@ -108,6 +153,7 @@ return {
   expand    = expand,
   functions = f,
   styles    = s,
-  arguments = a
+  arguments = a,
+  macros    = m,
 }
 
