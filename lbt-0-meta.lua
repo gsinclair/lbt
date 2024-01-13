@@ -22,17 +22,12 @@ modules['lbt'] = {
 
 local logfile = io.open("lbt.log", "w")
 
-local channel_subscribed = function (ch)
-  local x = lbt.system.log_channels
-  return ch == 0 or x:contains(ch) or x:contains('all')
-end
-
 local channel_name = { [0] = 'ANN',  [1] = 'ERROR', [2] = 'WARN',
                        [3] = 'INFO', [4] = 'TRACE' }
 
 lbt.log = function (channel, format, ...)
   assert(lbt.system.log_channels:len() >= 0)
-  if channel_subscribed(channel) then
+  if lbt.api.query_log_channels(channel) then
     local message = F(format, ...)
     local name = channel_name[channel] or channel
     local line = F('[#%-10s] %s\n', name, message)

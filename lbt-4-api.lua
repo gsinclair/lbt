@@ -247,8 +247,19 @@ lbt.api.set_log_channels = function (csv)
   lbt.log(0, 'Log channels set to: %s', lbt.system.log_channels)
 end
 
-lbt.api.query_log_channels = function(c)
-  return lbt.system.log_channels:contains(c) or lbt.system.log_channels:contains('all')
+lbt.api.query_log_channels = function (ch)
+  local x = lbt.system.log_channels
+  if ch == 0 or ch == 1 or ch == 2 or ch == 3 then
+    return true
+  elseif x:contains('all') then
+    return true
+  elseif x:contains('allbuttrace') and ch ~= 4 then
+    return true
+  elseif x:contains(ch) then
+    return true
+  else
+    return false
+  end
 end
 
 -- Usage: macro_define('\myvec=lbt.Math.myvec')
