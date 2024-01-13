@@ -273,11 +273,11 @@ lbt.api.macro_define = function (text)
     lbt.err.E158_macro_define_error(
       "Template %s has macro 'function' %s that's not actually a function", tn, fn)
   else
-    local latex_cmd = F([=[\newcommand{\%s}[1]{\luaexec{lbt.api.macro_run('%s', '%s', [[#1]])}}]=],
+    local latex_cmd = F([=[\newcommand{\%s}[1]{\directlua{lbt.api.macro_run('%s', '%s', [[\unexpanded{#1}]])}}]=],
                         lm, tn, fn)
     tex.print(latex_cmd)
     lbt.log(3, [[Defined Latex macro \%s to %s.%s]], lm, tn, fn)
-    lbt.log(3, latex_cmd)
+    lbt.log(3, ' ~> %s', latex_cmd)
   end
 end
 
