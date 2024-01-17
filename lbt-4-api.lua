@@ -135,7 +135,10 @@ lbt.api.get_debug_mode = function()
   return lbt.system.debug_mode
 end
 
--- Counters are auto-created, so this will always return a value. The initial will be zero.
+-- Counters are auto-created, so this will always return a value. The initial
+-- value will be zero.
+-- Normal counters are stored in lbt.var because they are variable and they get
+-- cleared at the start of each expansion.
 lbt.api.counter_value = function(c)
   lbt.var.counters[c] = lbt.var.counters[c] or 0
   return lbt.var.counters[c]
@@ -152,6 +155,27 @@ end
 lbt.api.counter_inc = function(c)
   local v = lbt.api.counter_value(c)
   lbt.api.counter_set(c, v+1)
+  return v+1
+end
+
+-- Persistent counters are like normal counters, but are stored in lbt.system
+-- so they don't get cleared.
+lbt.api.persistent_counter_value = function(c)
+  lbt.system.persistent_counters[c] = lbt.system.persistent_counters[c] or 0
+  return lbt.system.persistent_counters[c]
+end
+
+lbt.api.persistent_counter_set = function(c, v)
+  lbt.system.persistent_counters[c] = v
+end
+
+lbt.api.persistent_counter_reset = function(c)
+  lbt.system.persistent_counters[c] = 0
+end
+
+lbt.api.persistent_counter_inc = function(c)
+  local v = lbt.api.persistent_counter_value(c)
+  lbt.api.persistent_counter_set(c, v+1)
   return v+1
 end
 
@@ -173,25 +197,30 @@ lbt.api.data_delete = function (key)
   lbt.var.data[key] = nil
 end
 
--- This is slightly hacky because this general lbt code shouldn't have knowledge of
--- specific counters. An alternative could be a table that specifies counters to be
--- reset upon a new chapter, or part, or section, or...
--- That alternative is not worth pursuing at the moment.
--- TODO pursue this!
-lbt.api.reset_chapter_counters = function()
-  lbt.api.counter_reset('worksheet')
-  lbt.api.counter_reset('quiz')
+-- Persistent data is just like normal data but it is not cleared out at
+-- the start of every expansion. Good for chapter abbreviations in the
+-- lbt.Quiz template.
+lbt.api.persistent_data_get = function(key, initval)
+  if lbt.system.persistent_data[key] == nil then
+    lbt.system.persistent_data[key] = initval
+  end
+  return lbt.system.persistent_data[key]
 end
 
--- TODO Reconsider whether chapter abbreviation is a legitimate concept for the package.
---      A better alternative might be arbitrary data that can be set outside of an expansion,
---      like \lbtStore{chapterAbbreviation=Integration by parts}
-lbt.api.set_chapter_abbreviation = function (x)
-  lbt.var.chapter_abbreviation = x
+lbt.api.persistent_data_set = function(key, value)
+  lbt.system.persistent_data[key] = value
 end
 
-lbt.api.get_chapter_abbreviation = function ()
-  return lbt.var.chapter_abbreviation
+lbt.api.persistent_data_set_keyval = function(text)
+  local key, value = pl.utils.splitv(text, '=', 2)
+  if key == nil or value == nil then
+    lbt.err.E999_lbt_command_failed([[\lbtPersistentDataSet: %s]], text)
+  end
+  lbt.api.persistent_data_set(key, value)
+end
+
+lbt.api.persistent_data_delete = function (key)
+  lbt.system.persistent_data[key] = nil
 end
 
 -- Template initialisation is a chance to set required state like counters.

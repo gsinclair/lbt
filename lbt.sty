@@ -35,6 +35,7 @@
   register_builtin('lbt-6-lbt-Math')
   register_builtin('lbt-6-lbt-Questions')
   register_builtin('lbt-6-lbt-WS0')
+  register_builtin('lbt-6-lbt-Quiz')
   register_builtin('lbt-6-lbt-WS1')
   register_builtin('lbt-6-lbt-Play')
   register_builtin('lbt-6-lbt-Letter')
@@ -60,5 +61,8 @@
 \newcommand{\lbtLogChannels}[1]{\directlua{lbt.api.set_log_channels("#1")}} 
 
 \newcommand{\lbtDefineLatexMacro}[1]{\directlua{lbt.api.macro_define("#1")}} 
+
+\newcommand{\lbtPersistentCounterReset}[1]{\directlua{lbt.api.persistent_counter_reset('#1')}} 
+\newcommand{\lbtPersistentDataSet}[1]{\directlua{lbt.api.persistent_data_set_keyval('#1')}} 
 
 % \newcommand{\lbtResetChapterCounters}{\luaexec{lbt.api.reset_chapter_counters()}}

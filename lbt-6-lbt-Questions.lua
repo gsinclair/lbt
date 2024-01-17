@@ -41,6 +41,28 @@ f.QQ = function(n, args, s)
   return F(template, qq, label_style, args[1])
 end
 
+local MC_impl = function(xs)
+end
+
+-- MC lays out vertically as many options as are given using A, B, C, ...
+a.MC = '1+'
+s.MC = { format = '(A)' }
+f.MC = function(n, args, sr)
+  -- We emply an enumerate environment with one line1, many line2 and one line3.
+  local line1 = [[ \begin{enumerate}[%s, topsep=3pt, left=13mm .. 23mm] ]]
+  local line2 = [[   \item %s ]]
+  local line3 = [[ \end{enumerate} ]]
+  local result = pl.List()
+  result:append(F(line1, sr('MC.format')))
+  for x in args:iter() do
+    result:append(F(line2, x))
+  end
+  result:append(line3)
+  return result:join('\n')
+end
+
+
+
 return {
   name      = 'lbt.Questions',
   desc      = 'Questions, hints, answers for worksheet, exam, course notes',

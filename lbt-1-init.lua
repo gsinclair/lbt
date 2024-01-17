@@ -13,7 +13,8 @@
 -- It is reset using lbt.init.reset_system() once during \usepackage{lbt}.
 --
 -- In here, we keep track of all templates that are available for use, and
--- any styles the author wants to override globally.
+-- any styles the author wants to override globally. And persistent counters
+-- and data.
 --
 -- Furthermore, we know whether draft mode is enabled, and which log channels
 -- are to be included in the logfile.
@@ -86,6 +87,9 @@ lbt.init.init_system = function ()
   -- will be expanded.
   -- Set via \lbtDraftMode{true}
   lbt.system.draft_mode       = false
+  -- Persistent counters and data.
+  lbt.system.persistent_counters = {}
+  lbt.system.persistent_data = {}
   -- By default, we log only channels 1-3 (ERROR, WARN, INFO)
   lbt.system.log_channels     = pl.List{1,2,3}
   -- Each expansion has an autoincrementing ID so that log messages can be
@@ -96,6 +100,7 @@ end
 
 -- Reset the lbt.system table to a clean but workable state.
 --  * clear document-wide styles
+--  * clear persistent counters and data
 --  * leave builtin templates alone but remove any others
 --  * leave draft mode as it was
 --  * set log channels to the default 1,2,3
@@ -110,6 +115,8 @@ lbt.init.soft_reset_system = function ()
     end
   end
   lbt.system.log_channels = pl.Set{1,2,3}
+  lbt.system.persistent_counters = {}
+  lbt.system.persistent_data = {}
 end
 
 lbt.init.reset_const = function ()

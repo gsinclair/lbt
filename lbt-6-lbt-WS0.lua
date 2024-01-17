@@ -79,9 +79,9 @@ end
 
 -- Input: (pc) parsed content   (tr) token resolver   (sr) style resolver
 local function expand(pc, tr, sr)
-  local title  = lbt.util.content_meta(pc, 'TITLE') or '(no title)'
-  local course = lbt.util.content_meta(pc, 'COURSE') or nil
-  local tnotes  = lbt.util.content_meta(pc, 'TEACHERNOTES') or "(none specified)"
+  local title  = lbt.util.content_meta_or_nil(pc, 'TITLE') or '(no title)'
+  local course = lbt.util.content_meta_or_nil(pc, 'COURSE')
+  local tnotes  = lbt.util.content_meta_or_nil(pc, 'TEACHERNOTES') or '(none specified)'
   local tcol   = sr('WS0.title_color')
   local tncol  = sr('WS0.teacher_notes_color')
   local result = template_text(tcol)

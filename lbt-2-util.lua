@@ -60,9 +60,17 @@ lbt.util.normalise_latex_output = function (x)
   return y
 end
 
-lbt.util.content_meta = function (pc, key)
+lbt.util.content_meta_or_nil = function (pc, key)
   local meta = lbt.fn.pc.meta(pc)
   return meta[key]
+end
+
+lbt.util.content_meta_or_error = function (pc, key)
+  local value = lbt.util.content_meta_or_nil(pc, key)
+  if value == nil then
+    lbt.err.E998_content_meta_value_missing(key)
+  end
+  return value
 end
 
 function lbt.util.wrap_braces(x)
@@ -125,6 +133,12 @@ function lbt.util.latex_macro_error(errormsg)
   local emsg1 = F('LBT Latex macro error occurred: %s', errormsg)
   local emsg2 = F([[\textrm{\color{red}\bfseries %s}]], emsg1)
   return emsg2
+end
+
+function lbt.util.template_error_quit(errormsg, ...)
+  local emsg1 = 'Error occurred while expanding template: \n  '
+  local emsg2 = F(errormsg, ...)
+  lbt.err.quit_with_error(emsg1 .. emsg2)
 end
 
 --------------------------------------------------------------------------------

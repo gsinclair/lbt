@@ -164,7 +164,9 @@ lbt.fn.latex_expansion = function (parsed_content)
   t.init()
   -- And...go!
   lbt.log(4, 'About to latex-expand template <%s>', lbt.fn.pc.template_name(pc))
-  return t.expand(pc, tr, sr)
+  local result = t.expand(pc, tr, sr)
+  lbt.log(4, ' ~> result has %d bytes', #result)
+  return result
 end
 
 -- Return List of strings, each containing Latex for a line of author content.
