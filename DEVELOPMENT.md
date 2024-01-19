@@ -3,6 +3,33 @@
 This is not an appending journal. It is a live document with a place to design and/or document features. Ultimately the information either withers or ends up in proper documentation.
 
 
+## Options argument
+
+Currently for an enumerated list we can do
+
+    ENUMERATE [topsep=0pt] :: item1 :: item2 :: item3
+
+The first argument is an (optional) "options" argument. Unpacking it is supported by `lbt.util.extract_option_argument`. Some things to consider:
+
+* Should it be "option_argument" or "options_argument"?
+
+* The caller should be able to specify the position in which it occurs. In the enumeration example above, it occurs (if at all) in position 1, and that would be fairly normal. However, it is possible that options might appear in position 2, such as (not currently supported) `BEGIN listings :: [python]`.
+
+* Indicating an options argument with `[...]` seems like it could be fragile. No better idea immediately comes to mind, but... `[opt:...]` ?
+
+* Put some thought into how options are specified and separated. My first thought is that ideally they must be set tight (no spaces) like `key=value key=value key=value`, and then commas between then can be optional. This scheme appears somewhere else (I forget where) and consistency would be good.
+
+
+## Separate lists and dictionaries in parsed content object
+
+I've had this idea for a while and just noted it in a TODO in util.
+
+    -- TODO I think it would be good for content lists and dictionaries to go
+    -- in separate slots. So we would have pc.META and pc.list.BODY and
+    -- pc.dict.INTRO, for example.
+
+This would allow us to have the same name in both camps (not the best idea) and have better error messages when something doesn't exist (that's better).
+
 ## Some aids to debugging a document
 
 * Place an 'x' at the beginning of a command name to cause it to be ignored. For instance, replace TEXT with xTEXT.

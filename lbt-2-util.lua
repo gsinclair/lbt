@@ -29,7 +29,7 @@ end
 --  * tr:          token resolver (passed to the `expand` function)
 --  * sr:          style resolver (passed to the `expand` function)
 lbt.util.latex_expand_content_list = function (key, pc, tr, sr)
-  local list = lbt.fn.pc.content_list(pc, key)
+  local list = lbt.fn.pc.content_list_or_nil(pc, key)
   if list == nil then
     lbt.err.E302_content_list_not_found(key)
   end
@@ -69,8 +69,34 @@ lbt.util.content_meta_or_error = function (pc, key)
   local value = lbt.util.content_meta_or_nil(pc, key)
   if value == nil then
     lbt.err.E998_content_meta_value_missing(key)
+    -- TODO ^^^ consider using lbt.util.template_error_quit instead,
+    -- to better convey the idea that the error occurred inside expansion
+    -- code.
   end
   return value
+end
+
+lbt.util.content_dictionary_or_nil = function (pc, key)
+  -- TODO I think it would be good for content lists and dictionaries to go
+  -- in separate slots. So we would have pc.META and pc.list.BODY and
+  -- pc.dict.INTRO, for example.
+  local dict = lbt.fn.pc.content_dictionary_or_nil(pc, key)
+  return dict
+end
+
+lbt.util.content_dictionary_or_error = function (pc, key)
+  local dict = lbt.util.content_dictionary_or_nil(pc, key)
+  if dict == nil then
+    lbt.err.E997_content_dictionary_missing(key)
+    -- TODO ^^^ consider using lbt.util.template_error_quit instead,
+    -- to better convey the idea that the error occurred inside expansion
+    -- code.
+  end
+  return dict
+end
+
+lbt.util.combine_latex_fragments = function (...)
+  return table.concat({...}, '\n\n')
 end
 
 function lbt.util.wrap_braces(x)

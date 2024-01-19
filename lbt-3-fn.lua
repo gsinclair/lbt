@@ -382,19 +382,13 @@ lbt.fn.pc.template_object = function (pc)
   return t
 end
 
-lbt.fn.pc.content_dictionary = function (pc, key)
+lbt.fn.pc.content_dictionary_or_nil = function (pc, key)
   local d = pc[key]
-  if d == nil then
-    lbt.err.E303_content_dictinary_not_found(pc, key)
-  end
   return d
 end
 
-lbt.fn.pc.content_list = function (pc, key)
+lbt.fn.pc.content_list_or_nil = function (pc, key)
   local l = pc[key]
-  if l == nil then
-    lbt.err.E302_content_list_not_found(pc, key)
-  end
   return l
 end
 
