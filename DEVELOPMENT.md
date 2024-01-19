@@ -3,6 +3,28 @@
 This is not an appending journal. It is a live document with a place to design and/or document features. Ultimately the information either withers or ends up in proper documentation.
 
 
+## Some notes from a recent commit
+
+These help to guide a code review that needs to happen soon!
+
+    * lbt.fn.pc.content_list(pc, key) -->
+      lbt.fn.pc.content_list_or_nil(pc, key)
+    
+    * same with content dictionary
+    
+    * lbt.util.content_dictionary_or_{nil,error}
+    
+      - I kind of have duplicate functionality in fn and util. Reason being:
+        fn is for internal use; util is for use within template code. A code
+        review will help to sort this out if necessary. In particular,
+        consider how errors from template code are reported. I am
+        inconsistent at the moment. Should I call lbt.err.xyz? Should I call
+        lbt.util.template_error(...)? Or should I return { error = ... }.
+    
+    * lbt.sty: require package 'tabularray'. I am going all in on this one.
+      It's 2024 for goodness sake. Anyway, still to come: TABLE command in
+      lbt.Basic.
+
 ## Options argument
 
 Currently for an enumerated list we can do
