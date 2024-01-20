@@ -430,6 +430,8 @@ end
 lbt.fn.expand_directory = function (path)
   if path:startswith("PWD") then
     return path:replace("PWD", os.getenv("PWD"), 1)
+  elseif path:startswith("HOME") then
+    return path:replace("HOME", os.getenv("HOME"), 1)
   elseif path:startswith("TEXMF") then
     lbt.err.E001_internal_logic_error("not implemented")
   else
