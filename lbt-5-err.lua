@@ -130,3 +130,8 @@ lbt.err.E109_invalid_macro_define_spec = function (arg)
   local errormsg = F('LBT attempt to define a Latex macro failed: %s', arg)
   E(errormsg)
 end
+
+lbt.err.E998_content_meta_value_missing = function (key)
+  local errormsg = F("Expected to find key '%s' in META, but didn't", arg)
+  E(errormsg)
+end
