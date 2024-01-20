@@ -138,6 +138,17 @@ f['NOTE*'] = function (n, args, sr)
   return heading_and_text_inline(sr('NOTE.color'), 'Note', args[1])
 end
 
+s.CHALLENGE = { color = 'Plum' }
+a.CHALLENGE = 1
+f.CHALLENGE = function (n, args, sr)
+  return heading_and_text_indent(sr('CHALLENGE.color'), 'Challenge', args[1])
+end
+
+a['CHALLENGE*'] = 1
+f['CHALLENGE*'] = function (n, args, sr)
+  return heading_and_text_inline(sr('CHALLENGE.color'), 'Challenge', args[1])
+end
+
 -- smallnote macro ------------------------------------------------------------
 
 m.smallnote = function(text)

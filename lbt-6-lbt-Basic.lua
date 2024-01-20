@@ -252,13 +252,33 @@ end
 -----   end
 ----- end
 ----- 
------ f.RIGHT = function (text)
------   return F([[
------     \begin{flushright}
------       %s
------     \end{flushright}
------   ]], text)
------ end
+
+a.FLUSHLEFT = 1
+f.FLUSHLEFT = function (n, args)
+  return F([[
+    \begin{flushleft}
+      %s
+    \end{flushleft}
+  ]], args[1])
+end
+
+a.FLUSHRIGHT = 1
+f.FLUSHRIGHT = function (n, args)
+  return F([[
+    \begin{flushright}
+      %s
+    \end{flushright}
+  ]], args[1])
+end
+
+a.CENTER = 1
+f.CENTER = function (n, args)
+  return F([[
+    \begin{centering}
+      %s
+    \end{centering}
+  ]], args[1])
+end
 
 -- +---------------------------------------+
 -- | Then we call `lbt.api.make_template`. |
