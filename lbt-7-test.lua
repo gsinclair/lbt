@@ -2,7 +2,6 @@
 -- We act on the global table `lbt` and populate its subtable `lbt.test`.
 --
 
-local pp = pl.pretty.write
 local EQ = pl.test.asserteq
 local nothing = "<nil>"
 

@@ -3,16 +3,7 @@
 --
 
 -- {{{ Preamble: local conveniences
-local assert_string = pl.utils.assert_string
-local assert_bool = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
-local assert_table = function(n,x) pl.utils.assert_arg(n,x,'table') end
-
-local P = lbt.util.tex_print_formatted
-
 local F = string.format
-
--- alias for pretty-printing a table
-local pp = pl.pretty.write
 
 local ENI = function()
   error("Not implemented", 3)
@@ -67,7 +58,7 @@ end
 --   {token:'BEGIN' nargs:2, args:List('multicols','2') raw:'multicols 2'}
 --
 lbt.fn.parsed_content = function (content_lines)
-  assert_table(1, content_lines)
+  lbt.assert_table(1, content_lines)
   -- Obtain pragmas (set) and non-pragma lines (list), and set up result table.
   local pragmas, lines = lbt.fn.impl.pragmas_and_other_lines(content_lines)
   local result = { pragmas = pragmas }
@@ -365,15 +356,19 @@ end
 lbt.fn.pc = {}
 
 lbt.fn.pc.meta = function (pc)
-  return pc.META
+  local meta = pc.META
+  if meta == nil then
+    lbt.err.E976_no_META_field(pc)
+  end
+  return meta
 end
 
 lbt.fn.pc.title = function (pc)
-  return pc.META.TITLE or "(no title)"
+  return lbt.fn.pc.meta(pc).TITLE or "(no title)"
 end
 
 lbt.fn.pc.template_name = function (pc)
-  return pc.META.TEMPLATE
+  return lbt.fn.pc.meta(pc).TEMPLATE
 end
 
 lbt.fn.pc.template_object = function (pc)
@@ -882,11 +877,11 @@ lbt.fn.impl.template_styles_specification = function (styles)
 end
 
 lbt.fn.impl.latex_message_token_not_resolved = function (token)
-  return F([[\textcolor{red}{\textbf{Token %s not resolved}}]], token)
+  return F([[{\color{red}\bfseries Token \verb|%s| not resolved}]], token)
 end
 
 lbt.fn.impl.latex_message_token_raised_error = function (token, err)
-  return F([[\textcolor{red}{textbf{Token %s raised error: \emph{%s}} }]], token, err)
+  return F([[{\color{red}\bfseries Token \verb|%s| raised error: \emph{%s}}]], token, err)
 end
 
 lbt.fn.impl.assign_register = function (line)

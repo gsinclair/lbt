@@ -3,11 +3,6 @@
 --
 
 local F = string.format
-local pp = pl.pretty.write
-
-local assert_string = pl.utils.assert_string
-local assert_bool = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
-local assert_table = function(n,x) pl.utils.assert_arg(n,x,'table') end
 
 -- Reset all global data but leave the following things alone:
 --  * builtin templates
@@ -99,7 +94,7 @@ lbt.api.author_content_emit_latex = function()
     return
   end
   lbt.log('parse', 'Parsed content below. eID=%d', eid)
-  lbt.log('parse', pp(pc))
+  lbt.log('parse', lbt.pp(pc))
   lbt.fn.validate_parsed_content(pc)
   lbt.log(3, '  * template:       %s', lbt.fn.pc.template_name(pc))
   local l  = lbt.fn.latex_expansion(pc)
@@ -116,7 +111,7 @@ end
 -- If true, populate_content will short-circuit to (nearly) a no-op unless the
 -- content contains a `!DRAFT` pragma. This will speed up compilation.
 lbt.api.set_draft_mode = function(x)
-  assert_bool(1,x)
+  lbt.assert_bool(1,x)
   lbt.system.draft_mode = x
 end
 
@@ -127,7 +122,7 @@ end
 -- Debug mode allows for extra debug information to be generated only
 -- where it is needed.
 lbt.api.set_debug_mode = function(x)
-  assert_bool(1,x)
+  lbt.assert_bool(1,x)
   lbt.system.debug_mode = x
 end
 
@@ -258,7 +253,7 @@ end
 lbt.api.add_styles = function (text)
   local map = lbt.fn.style_string_to_map(text)
   lbt.log(3, 'Document-wide styles are being updated:')
-  lbt.log(3, pp(map))
+  lbt.log(3, lbt.pp(map))
   lbt.system.document_wide_styles:update(map)
   return nil
 end

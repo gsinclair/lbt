@@ -87,6 +87,7 @@ lbt.err.E301_default_expand_failed_no_body = function()
 end
 
 lbt.err.E302_content_list_not_found = function (pc, key)
+  lbt.assert_table(1, pc)
   E([[E302: While expanding a template, an attempt was made to access a
 content list, but it doesn't exist.
   Template:     %s
@@ -132,6 +133,11 @@ lbt.err.E109_invalid_macro_define_spec = function (arg)
 end
 
 lbt.err.E998_content_meta_value_missing = function (key)
-  local errormsg = F("Expected to find key '%s' in META, but didn't", arg)
+  local errormsg = F("Expected to find key '%s' in META, but didn't", key)
+  E(errormsg)
+end
+
+lbt.err.E976_no_META_field = function (pc)
+  local errormsg = F("No META field in current parsed content", key)
   E(errormsg)
 end

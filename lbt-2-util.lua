@@ -15,7 +15,7 @@ end
 
 -- Print each line in `str` with a separate call to `tex.print`.
 function lbt.util.print_tex_lines(str)
-  pl.utils.assert_string(1, str)
+  lbt.assert_string(1, str)
   for line in str:lines() do
     tex.print(line)
   end
@@ -31,10 +31,12 @@ end
 lbt.util.latex_expand_content_list = function (key, pc, tr, sr)
   local list = lbt.fn.pc.content_list_or_nil(pc, key)
   if list == nil then
-    lbt.err.E302_content_list_not_found(key)
+    lbt.log(2, "Asked to expand content list '%s' but it is not included in the content", key)
+    -- TODO ^^^ add contextual information
+    return ''
   end
   lines = lbt.fn.parsed_content_to_latex_multi(list, tr, sr)
-  return lines:concat("\n")
+  return lines:concat('\n')
 end
 
 -- `x` may be a string or a table.
@@ -66,6 +68,7 @@ lbt.util.content_meta_or_nil = function (pc, key)
 end
 
 lbt.util.content_meta_or_error = function (pc, key)
+  lbt.assert_string(2, key)
   local value = lbt.util.content_meta_or_nil(pc, key)
   if value == nil then
     lbt.err.E998_content_meta_value_missing(key)

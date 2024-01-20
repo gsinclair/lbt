@@ -3,7 +3,6 @@
 -- +---------------------------------------+
 
 local F = string.format
-local pp = pl.pretty.write
 
 local f = {}   -- functions
 local a = {}   -- number of arguments

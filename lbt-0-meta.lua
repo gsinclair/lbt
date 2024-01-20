@@ -36,7 +36,13 @@ lbt.log = function (channel, format, ...)
   end
 end
 
-local pp = pl.pretty.write
+-- Some essential functions that are defined here so they don't have to be
+-- local to just about every file.
+
+lbt.pp            = pl.pretty.write
+lbt.assert_string = pl.utils.assert_string
+lbt.assert_bool   = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
+lbt.assert_table  = function(n,x) pl.utils.assert_arg(n,x,'table') end
 
 -- A useful function during periods of active development.
 -- Comment out when not in use, to avoid polluting the global namespace.
@@ -48,10 +54,10 @@ local pp = pl.pretty.write
 local INSPECT_impl = function(text1, text2)
   if text2 then
     print("\n\n\n\n ↓ ↓ ↓ ↓ <INSPECT>   " .. text1 .. "\n\n")
-    print(pp(text2))
+    print(lbt.pp(text2))
   else
     print("\n\n\n\n ↓ ↓ ↓ ↓ <INSPECT>\n\n")
-    print(pp(text1))
+    print(lbt.pp(text1))
   end
 end
 INSPECT = function(text1, text2)
