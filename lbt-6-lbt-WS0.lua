@@ -101,52 +101,76 @@ local function expand(pc, tr, sr)
   return result
 end
 
-local function heading_and_text_indent(color, heading, text)
+-- EXAMPLE and NOTE and CHALLENGE and general headings ------------------------
+
+local function heading_and_text_indent(heading, color, text)
+  local colorsetting = ''
+  if color then colorsetting = F([[\color{%s}]], color) end
   return F([[
-\textcolor{%s}{\textbf{%s}} \par
-\begin{adjustwidth}{1cm}{}
+{%s \bfseries %s} \par
+\begin{adjustwidth}{2em}{}
   %s
-\end{adjustwidth}
-  ]], color, heading, text)
+\end{adjustwidth} \par
+  ]], colorsetting, heading, text)
 end
 
--- EXAMPLE and NOTE -----------------------------------------------------------
-
-local function heading_and_text_inline(color, heading, text)
-  return F([[ \textcolor{%s}{\textbf{%s}} \quad %s ]], color, heading, text)
+local function heading_and_text_inline(heading, color, text)
+  local colorsetting = ''
+  if color then colorsetting = F([[\color{%s}]], color) end
+  return F([[ {%s \bfseries %s} \quad %s \par ]], colorsetting, heading, text)
 end
 
 s.EXAMPLE = { color = 'blue' }
 a.EXAMPLE = 1
 f.EXAMPLE = function (n, args, sr)
-  return heading_and_text_indent(sr('EXAMPLE.color'), 'Example', args[1])
+  return heading_and_text_indent('Example', sr('EXAMPLE.color'), args[1])
 end
 
 a['EXAMPLE*'] = 1
 f['EXAMPLE*'] = function (n, args, sr)
-  return heading_and_text_inline(sr('EXAMPLE.color'), 'Example', args[1])
+  return heading_and_text_inline('Example', sr('EXAMPLE.color'), args[1])
 end
 
 s.NOTE = { color = 'Mahogany' }
 a.NOTE = 1
 f.NOTE = function (n, args, sr)
-  return heading_and_text_indent(sr('NOTE.color'), 'Note', args[1])
+  return heading_and_text_indent('Note', sr('NOTE.color'), args[1])
 end
 
 a['NOTE*'] = 1
 f['NOTE*'] = function (n, args, sr)
-  return heading_and_text_inline(sr('NOTE.color'), 'Note', args[1])
+  return heading_and_text_inline('Note', sr('NOTE.color'), args[1])
 end
 
 s.CHALLENGE = { color = 'Plum' }
 a.CHALLENGE = 1
 f.CHALLENGE = function (n, args, sr)
-  return heading_and_text_indent(sr('CHALLENGE.color'), 'Challenge', args[1])
+  lbt.api.counter_reset('qq')
+  return heading_and_text_indent('Challenge', sr('CHALLENGE.color'), args[1])
 end
 
 a['CHALLENGE*'] = 1
 f['CHALLENGE*'] = function (n, args, sr)
-  return heading_and_text_inline(sr('CHALLENGE.color'), 'Challenge', args[1])
+  lbt.api.counter_reset('qq')
+  return heading_and_text_inline('Challenge', sr('CHALLENGE.color'), args[1])
+end
+
+a.HEADING = '2-3'
+f.HEADING = function(n, args)
+  if n == 2 then
+    return heading_and_text_indent(args[1], nil, args[2])
+  elseif n == 3 then
+    return heading_and_text_indent(args[1], args[2], args[3])
+  end
+end
+
+a['HEADING*'] = '2-3'
+f['HEADING*'] = function(n, args)
+  if n == 2 then
+    return heading_and_text_inline(args[1], nil, args[2])
+  elseif n == 3 then
+    return heading_and_text_inline(args[1], args[2], args[3])
+  end
 end
 
 -- smallnote macro ------------------------------------------------------------

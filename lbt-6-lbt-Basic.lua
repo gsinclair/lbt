@@ -87,19 +87,14 @@ end
 -- \newcommand
 
 a.NEWCOMMAND = 3
-f.NEWCOMMAND = function(text)
-  local args = split(text, '::')
-  if #args ~= 3 then
-    return GSC.utils.tex_error("Three arguments required for newcommand: name, number, implementation")
+f.NEWCOMMAND = function(n, args)
+  local name, number, implementation = table.unpack(args)
+  if number == '0' then
+    return F([[\newcommand{\%s}{%s}]], name, implementation)
+  elseif #number == 1 and number >= '1' and number <= '9' then
+    return F([[\newcommand{\%s}[%s]{%s}]], name, number, implementation)
   else
-    local name, number, implementation = table.unpack(args)
-    if number == '0' then
-      return F([[\newcommand{\%s}{%s}]], name, implementation)
-    elseif #number == 1 and number >= '1' and number <= '9' then
-      return F([[\newcommand{\%s}[%d]{%s}]], name, number, implementation)
-    else
-      return GSC.util.tex_error("Invalid argument for parameter 'number' in NEWCOMMAND")
-    end
+    return { error = "Invalid argument for parameter 'number' in NEWCOMMAND" }
   end
 end
 
@@ -234,23 +229,62 @@ end
 -----   end
 ----- end
 ----- 
------ f.FIGURE = function (text)
------   local args = split(text, '::')
------   if #args == 2 then
------     local content, caption = table.unpack(args)
------     local template = [[
------       \begin{figure}[bhpt]
------         \centering
------         %s
------         \caption{%s}
------       \end{figure}
------     ]]
------     return F(template, content, caption)
------   else
------     return GSC.util.tex_error('FIGURE requires two arguments separated by ::')
------   end
------ end
------ 
+
+-- FIGURE* for no caption
+
+local function figure_options(options_str)
+  local extract = function(list, x)
+    local i = list:index(x)
+    if i == nil then
+      return nil
+    else
+      list:remove(i)
+      return x
+    end
+  end
+  if options_str == nil then
+    return { valid = true, centering = true }
+  end
+  local opts = lbt.util.comma_split(options_str)
+  local centering, position = true, nil
+  if extract(opts, 'nocentre') or extract(opts, 'nocenter') or extract(opts, 'nocentering') then
+    centering = false
+  end
+  if opts:len() == 0 then
+    return { valid = true, centering = centering }
+  elseif opts:len() == 1 then
+    return { valid = true, centering = centering, position = opts[1] }
+  else
+    return { valid = false }
+  end
+end
+
+-- Options: bhtp, nocentre (or nocentering)
+-- Arguments: [options] :: content :: caption
+-- Centering is applied by default; specify nocenter if you want to.
+a.FIGURE = '2-3'
+f.FIGURE = function (n, args, sr)
+  local options, args = lbt.util.extract_option_argument(args)
+  local opts = { centering = true }
+  local opts = figure_options(options)
+  local content, caption = table.unpack(args)
+  if opts.valid == false then
+    return { error = F("Invalid figure options: '%s'", options)}
+  else
+    local position_str, centering_str = '', ''
+    if opts.centering then centering_str = [[\centering]] end
+    if opts.position  then position_str  = F('[%s]', opts.position) end
+    local template = [[
+      \begin{figure}%s
+        %s
+        %s
+        \caption{%s}
+      \end{figure}
+    ]]
+    return F(template, position_str, centering_str, content, caption)
+  end
+end
+
 
 a.FLUSHLEFT = 1
 f.FLUSHLEFT = function (n, args)

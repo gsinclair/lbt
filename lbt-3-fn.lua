@@ -879,11 +879,11 @@ lbt.fn.impl.template_styles_specification = function (styles)
 end
 
 lbt.fn.impl.latex_message_token_not_resolved = function (token)
-  return F([[{\color{red}\bfseries Token \verb|%s| not resolved}]], token)
+  return F([[{\color{red}\bfseries Token \verb|%s| not resolved} \par]], token)
 end
 
 lbt.fn.impl.latex_message_token_raised_error = function (token, err)
-  return F([[{\color{red}\bfseries Token \verb|%s| raised error: \emph{%s}}]], token, err)
+  return F([[{\color{red}\bfseries Token \verb|%s| raised error: \emph{%s}} \par]], token, err)
 end
 
 lbt.fn.impl.assign_register = function (line)

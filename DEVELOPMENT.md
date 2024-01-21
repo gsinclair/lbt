@@ -3,6 +3,13 @@
 This is not an appending journal. It is a live document with a place to design and/or document features. Ultimately the information either withers or ends up in proper documentation.
 
 
+## Set draft mode
+
+The current way to do it is `\lbtDraftModeOn`.
+
+But what I really want to do is enable `\usepackage[(no)draft]{lbt}`. Happy to keep the on/off commands as well.
+
+
 ## Some notes from a recent commit
 
 These help to guide a code review that needs to happen soon!
@@ -24,6 +31,7 @@ These help to guide a code review that needs to happen soon!
     * lbt.sty: require package 'tabularray'. I am going all in on this one.
       It's 2024 for goodness sake. Anyway, still to come: TABLE command in
       lbt.Basic.
+
 
 ## Options argument
 
