@@ -39,6 +39,10 @@ lbt.err.E100_invalid_token = function(line)
   E("E100: Invalid token encountered in content line:\n  <<%s>>", line)
 end
 
+lbt.err.E102_invalid_pragma = function(line)
+  E("E100: Invalid pragma encountered in content line:\n  <<%s>>", line)
+end
+
 lbt.err.E101_line_out_of_place = function(line)
   E("E101: Line out of place (not contained in @META or +BODY or similar):\n  <<%s>>", line)
 end

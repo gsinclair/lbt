@@ -92,6 +92,18 @@ lbt.api.author_content_emit_latex = function()
   if pc.pragmas.ignore then
     lbt.log(3, '  * IGNORE pragma detected - no further action for eID %d', eid)
     return
+  elseif pc.pragmas.skip then
+    lbt.log(3, '  * SKIP pragma detected - no further action for eID %d', eid)
+    local skipmsg = F([[{\noindent\color{red}\bfseries Explicitly instructed to skip content (eID=%d).
+      Title is `%s` }]], eid, lbt.fn.pc.title(pc))
+    tex.print(skipmsg)
+    return
+  elseif pc.pragmas.draft == false and lbt.api.get_draft_mode() == true then
+    local draftskipmsg = F([[{\noindent\color{red}\bfseries Skipping non-draft content (eID=%d).
+      Title is `%s' }]], eid, lbt.fn.pc.title(pc))
+    tex.print(draftskipmsg)
+    lbt.log(3, '  * DRAFT pragma _not_ detected - no further action for eID %d', eid)
+    return
   end
   lbt.log('parse', 'Parsed content below. eID=%d', eid)
   lbt.log('parse', lbt.pp(pc))
@@ -113,6 +125,11 @@ end
 lbt.api.set_draft_mode = function(x)
   lbt.assert_bool(1,x)
   lbt.system.draft_mode = x
+  if x then
+    lbt.log(3, 'Draft mode is enabled (only content with !DRAFT will be rendered)')
+  else
+    lbt.log(3, 'Draft mode is disabled (all content will be rendered)')
+  end
 end
 
 lbt.api.get_draft_mode = function()

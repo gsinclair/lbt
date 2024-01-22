@@ -642,6 +642,8 @@ local update_pragma_set = function(pragmas, line)
   p = line:match("!(%u+)$")
   if     p == 'DRAFT'    then pragmas.draft  = true
   elseif p == 'NODRAFT'  then pragmas.draft  = false
+  elseif p == 'SKIP'     then pragmas.skip   = true
+  elseif p == 'NOSKIP'   then pragmas.skip   = false
   elseif p == 'IGNORE'   then pragmas.ignore = true
   elseif p == 'NOIGNORE' then pragmas.ignore = false
   elseif p == 'DEBUG'    then pragmas.debug  = true
