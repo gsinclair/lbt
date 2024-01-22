@@ -25,80 +25,67 @@ local m = {}
 
 s.WS0 = { title_color = 'CadetBlue', teacher_notes_color = 'blue' }
 
-local function template_text(tn_color)
-  lbt.log('dev', 'WS0 template_text <%s>', tn_color)
-  return F([[
-\setlength{\parindent}{0em}
-\setlength{\parskip}{6pt plus 2pt minus 2pt}
-
-\newpage
-
-TEACHERNOTES
-
-\newpage
-
-\addcontentsline{toc}{section}{TITLESINGLE}
-
-TITLELINE
-\rule{\textwidth}{0.4pt}
-
-\vspace{24pt}
-
-BODY
-
-\clearpage
-  ]])
-end
-
-local function teacher_notes(title, text, color)
-  return F([[
-\begingroup
-\color{%s}
-\fbox{Teacher's notes on \textbf{%s}}
-
-\vspace{18pt}
-
-%s
-
-\endgroup
-  ]], color, title, text)
-end
-
-local function title_line(title, course, color)
-  lbt.log('dev', 'WS0 title_line <%s> <%s <%s>', title, course, color)
-  if course then
-    return F([[\textbf{%s} \hfill {\color{%s}\itshape %s}]], title, color, course)
-  else
-    return F([[\textbf{%s}]], title)
-  end
-end
-
 local function init()
-  -- lbt.api.counter_reset('q')   -- Needed? I think not.
 end
 
 -- Input: (pc) parsed content   (tr) token resolver   (sr) style resolver
 local function expand(pc, tr, sr)
-  local title  = lbt.util.content_meta_or_nil(pc, 'TITLE') or '(no title)'
-  local course = lbt.util.content_meta_or_nil(pc, 'COURSE')
-  local tnotes  = lbt.util.content_meta_or_nil(pc, 'TEACHERNOTES') or '(none specified)'
-  local tcol   = sr('WS0.title_color')
-  local tncol  = sr('WS0.teacher_notes_color')
-  local result = template_text(tcol)
+  local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
+  local course   = lbt.util.content_meta_or_error(pc, 'COURSE')
+  local tnotes   = lbt.util.content_meta_or_nil(pc, 'TEACHERNOTES') or '(none specified)'
+  local titlecol = sr('WS0.title_color')
+  local tncol    = sr('WS0.teacher_notes_color')
 
-  -- DEBUGGER()
+  -- 1. Preamble
+  local a = [[
+    \setlength{\parindent}{0em}
+    \setlength{\parskip}{6pt plus 2pt minus 2pt}
+    \newcommand{\TitleSet}[2]{{\bfseries\color{#1}#2}}
+    \newcommand{\CourseSet}[1]{{\color{Gray}\itshape #1}}
+  ]]
 
-  -- Substitute KEY WORDS in the template text for their actual values.
-  result = result:gsub('TEACHERNOTES', teacher_notes(title, tnotes, tncol))
-  result = result:gsub('TITLESINGLE', title)
-  result = result:gsub('TITLELINE', title_line(title, course, tcol))
+  -- 2. Teacher notes
+  local b = F([[
+    \newpage
+    \begingroup
+    \color{%s}
+    \fbox{Teacher's notes on \textbf{%s}}
+    \vspace{2.5em}
 
-  -- Evaluate the BODY and substitute it in.
-  -- Most structural templates will need code very much like this.
-  local body_latex = lbt.util.latex_expand_content_list('BODY', pc, tr, sr)
-  result = result:gsub('BODY', body_latex)
+    %s
 
-  return result
+    \endgroup
+  ]], tncol, title, tnotes)
+
+  -- 3. New page and table-of-contents addition
+  local c = F([[
+    \newpage
+    \addcontentsline{toc}{section}{Worksheet: %s}
+  ]], title)
+
+  -- 4. Worksheet title and horizontal rule
+  local d = nil
+  if course == nil then
+    d = F([[
+      \TitleSet{%s}{%s}
+      \rule[8pt]{\textwidth}{0.4pt}
+    ]], titlecol, title, course)
+  else
+    d = F([[
+      \TitleSet{%s}{%s} \hfill \CourseSet{%s}
+      \rule[8pt]{\textwidth}{0.4pt}
+    ]], titlecol, title, course)
+  end
+
+  -- 5. General body
+  local e = F([[
+    \bigskip
+
+    %s
+  ]], lbt.util.latex_expand_content_list('BODY', pc, tr, sr))
+
+  -- Put it all together!
+  return lbt.util.combine_latex_fragments(a,b,c,d,e)
 end
 
 -- EXAMPLE and NOTE and CHALLENGE and general headings ------------------------

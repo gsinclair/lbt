@@ -38,6 +38,9 @@ local m = {}
 
 s.WS1 = { title_color = 'MidnightBlue', teacher_notes_color = 'blue' }
 
+-- Set styles to headings in WS0.   (Consering this...)
+-- s.WS0 = { heading_color = 'MidnightBlue' }
+
 local function init()
 end
 
@@ -78,7 +81,7 @@ end
 
 -- Input: (pc) parsed content   (tr) token resolver   (sr) style resolver
 local function expand(pc, tr, sr)
-  local n        = lbt.api.counter_inc('WS1-worksheet')
+  local n        = lbt.api.persistent_counter_inc('WS1-worksheet')
   local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
   local course   = lbt.util.content_meta_or_error(pc, 'COURSE')
   local tnotes   = lbt.util.content_meta_or_nil(pc, 'TEACHERNOTES') or '(none specified)'
@@ -99,9 +102,11 @@ local function expand(pc, tr, sr)
 
   -- 2. Teacher notes
   local b = F([[
-    \newpage \begingroup \color{%s}
+    \newpage
+    \begingroup
+    \color{%s}
     \fbox{Teacher's notes on \textbf{%d. %s}}
-    \vspace{18pt}
+    \vspace{2.5em}
 
     %s
 
@@ -117,7 +122,7 @@ local function expand(pc, tr, sr)
   -- 4. Worksheet title and horizontal rule
   local d = F([[
     \TitleSet{%s}{%d}{%s} \hfill \CourseSet{%s}
-    \rule{\textwidth}{0.4pt}
+    \rule[8pt]{\textwidth}{0.4pt}
   ]], titlecol, n, title, course)
 
   -- 5. Intro box (problem, solution, why, note)
@@ -126,7 +131,7 @@ local function expand(pc, tr, sr)
 
   -- 6. General body
   local f = F([[
-    \vspace{2em}
+    \bigskip
 
     %s
   ]], lbt.util.latex_expand_content_list('BODY', pc, tr, sr))
