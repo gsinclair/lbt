@@ -145,3 +145,8 @@ lbt.err.E976_no_META_field = function (pc)
   local errormsg = F("No META field in current parsed content", key)
   E(errormsg)
 end
+
+lbt.err.E318_invalid_register_assignment_nargs = function (x)
+  E('When calling STO to set a register, you need to give three arguments:\n'..
+    '  name, ttl, definition')
+end

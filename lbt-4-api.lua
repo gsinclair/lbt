@@ -350,12 +350,3 @@ lbt.api.macro_run = function (tn, fn, arg)
   local latex_code = f(arg)
   lbt.util.print_tex_lines(latex_code)
 end
-
--- This is designed for use only in macro expansion.
-lbt.api.get_style = function (key)
-  local sr = lbt.const.style_resolver
-  if sr == nil then
-    lbt.err.E001_internal_logic_error('lbt.const.style_resolver not available')
-  end
-  return sr(key)
-end

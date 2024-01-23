@@ -149,7 +149,8 @@ lbt.fn.latex_expansion = function (parsed_content)
   local t = lbt.fn.pc.template_object(pc)
   -- Obtain token and style resolvers so that expansion can occur.
   local tr, sr = lbt.fn.token_and_style_resolvers(pc)
-  -- Store the style resolver for potential use by other functions.
+  -- Store the token and style resolvers for potential use by other functions.
+  lbt.const.token_resolver = sr
   lbt.const.style_resolver = sr
   -- Allow the template to initialise counters, etc.
   t.init()
@@ -242,7 +243,7 @@ lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
   --    We are not necessarily in mathmode, hence false.
   args = args:map(lbt.fn.impl.expand_register_references, false)
   -- 6. Call the token function and return 'ok', ... or 'error', ...
-  result = token_function(nargs, args, sr)
+  local result = token_function(nargs, args, sr)
   if type(result) == 'string' then
     lbt.log('emit', '    --> %s', result)
     return 'ok', result

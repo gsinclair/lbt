@@ -39,6 +39,16 @@ lbt.util.latex_expand_content_list = function (key, pc, tr, sr)
   return lines:concat('\n')
 end
 
+-- This is designed for use only in macro expansion, and only rarely.
+-- Commands should use the resolver passed to them.
+lbt.util.get_style = function (key)
+  local sr = lbt.const.style_resolver
+  if sr == nil then
+    lbt.err.E001_internal_logic_error('lbt.const.style_resolver not available')
+  end
+  return sr(key)
+end
+
 -- `x` may be a string or a table.
 -- To 'normalise' the output for these purposes, we want:
 --  * a single string

@@ -3,6 +3,13 @@
 This is not an appending journal. It is a live document with a place to design and/or document features. Ultimately the information either withers or ends up in proper documentation.
 
 
+## Worksheet groups (was: chapter abbreviations)
+
+I think I will reintroduce worksheet groups for WS0 and WS1. It is implemented for WS1, I think. And I think I'll introduce worksheet numbering to WS0. So basically, WS1 will stop being special in this regard, but I will format it differently (just because I can).
+
+I will consider a META flag NUMBERED (set to true/false -- default true).
+
+
 ## Set draft mode
 
 The current way to do it is `\lbtDraftModeOn`.

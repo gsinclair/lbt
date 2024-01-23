@@ -12,6 +12,8 @@ local a = {}   -- number of arguments
 local s = {}   -- styles
 local m = {}   -- macros
 
+s.vector = { format = 'bold' }
+
 --------------------------------------------------------------------------------
 
 -- _vector_ is a flexible vector renderer. Here are examples of the arguments
@@ -30,7 +32,7 @@ local m = {}   -- macros
 --  if needed.
 
 local function vector_pronumeral(x)
-  local format = lbt.api.get_style('vector.format')
+  local format = lbt.util.get_style('vector.format')
   if format == 'bold' then
     return F([[\ensuremath{\mathbf{%s}}]], x)
   elseif format == 'arrow' then
@@ -103,6 +105,31 @@ end
 -- Comment: this allows author to force a desired style.
 m.vectilde = function (x)
   return F([[\ensuremath{\underaccent{\tilde}{%s}}]], x)
+end
+
+m.vectorijk = function (text)
+  local force_sign = function (x)
+    if x:startswith('+') or x:startswith('-') or x == '0' then
+      return x
+    else
+      return '+'..x
+    end
+  end
+  local terms = lbt.util.space_split(text):map(force_sign)
+  if #terms < 2 or #terms > 3 then
+    return lbt.util.latex_macro_error('expect 2-3 args to vectorijk' .. arg)
+  else
+    local i, j, k = m.vector('i'), m.vector('j'), m.vector('k')
+    local unitvectors = {i,j,k}
+    local result = pl.List()
+    for i = 1,#terms do
+      if terms[i] ~= '0' then
+        local t = terms[i] .. unitvectors[i]
+        result:append(t)
+      end
+    end
+    return result:join(' ')
+  end
 end
 
 --------------------------------------------------------------------------------

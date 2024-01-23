@@ -120,6 +120,7 @@ lbt.init.soft_reset_system = function ()
 end
 
 lbt.init.reset_const = function ()
+  lbt.const = {}
   -- Every line between \begin{lbt} and \end{lbt} goes into this list for
   -- processing by lbt.fn.parsed_content(). Line continuation with » is handled
   -- by the code that populates this list.
@@ -127,6 +128,7 @@ lbt.init.reset_const = function ()
 end
 
 lbt.init.reset_var = function ()
+  lbt.var = {}
   -- Just like normal Latex, templates often need access to counters, for
   -- question numbers, sub-question numbers, etc.
   -- lbt.api.reset_counter('q') etc.
