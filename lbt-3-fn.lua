@@ -894,7 +894,11 @@ lbt.fn.impl.assign_register = function (line)
     lbt.err.E318_invalid_register_assignment_nargs(line)
   end
   local regname, ttl, defn = table.unpack(line.args)
-  local regname, mathmode = lbt.fn.impl.register_name_and_mathmode(regname)
+  local mathmode = false
+  if defn:startswith('$') and defn:endswith('$') then
+    mathmode = true
+    defn = defn:sub(2,-2)
+  end
   local value = lbt.fn.impl.expand_register_references(defn, mathmode)
   local record = { name     = regname,
                    exp      = lbt.fn.impl.current_token_count() + ttl,
@@ -966,24 +970,6 @@ lbt.fn.impl.register_value = function (name)
     return 'stale', nil
   else
     return 'ok', re.value, re.mathmode
-  end
-end
-
--- $Delta    ->   Delta, true
--- fn1       ->   fn1, false
-lbt.fn.impl.register_name_and_mathmode = function (text)
-  local name = nil
-  local mathmode = false
-  if text:startswith('$') then
-    mathmode = true
-    name = text:sub(2)
-  else
-    name = text
-  end
-  if name:match('^[A-z][A-z0-9]*$') then
-    return name, mathmode
-  else
-    lbt.err.E309_invalid_register_name(name)
   end
 end
 

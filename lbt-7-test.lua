@@ -98,10 +98,10 @@ local good_input_6 = content_lines([[
   @META
     TEMPLATE lbt.Basic
   +BODY
-    STO $Delta :: 4 :: b^2 - 4ac
-    STO $Num   :: 4 :: -b \pm \sqrt{◊Delta}
-    STO $Den   :: 4 :: 2a
-    STO $QF    :: 1000 :: x = \frac{◊Num}{◊Den}
+    STO Delta :: 4 :: $b^2 - 4ac$
+    STO Num   :: 4 :: $-b \pm \sqrt{◊Delta}$
+    STO Den   :: 4 :: $2a$
+    STO QF    :: 1000 :: $x = \frac{◊Num}{◊Den}$
     TEXT The quadratic formula is \[ ◊QF. \]
     STO fn1    :: 1 :: Hello Bolivia!
     TEXT Viewers of Roy and HG's \emph{The Dream}\footnote{◊fn1} \dots
@@ -192,13 +192,13 @@ local function T_expand_Basic_template_2()
   local pc = lbt.fn.parsed_content(bad_input_1)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
-  assert(l[1]:lfind("Token TEXT raised error"))
-  assert(l[1]:lfind("0 args given but 1-2 expected"))
-  assert(l[2]:lfind("Token TEXT raised error"))
-  assert(l[2]:lfind("3 args given but 1-2 expected"))
-  assert(l[3]:lfind("Token ITEMIZE raised error"))
-  assert(l[3]:lfind("0 args given but 1+ expected"))
-  assert(l[4]:lfind("Token XYZ not resolved"))
+  assert(l[1]:lfind([[Token \verb|TEXT| raised error]]))
+  assert(l[1]:lfind([[0 args given but 1-2 expected]]))
+  assert(l[2]:lfind([[Token \verb|TEXT| raised error]]))
+  assert(l[2]:lfind([[3 args given but 1-2 expected]]))
+  assert(l[3]:lfind([[Token \verb|ITEMIZE| raised error]]))
+  assert(l[3]:lfind([[0 args given but 1+ expected]]))
+  assert(l[4]:lfind([[Token \verb|XYZ| not resolved]]))
 end
 
 local function T_util()
@@ -207,7 +207,7 @@ local function T_util()
   EQ(lbt.util.double_colon_split('a :: b :: c'), {'a', 'b', 'c'})
   EQ(lbt.util.space_split('a b c'),    {'a', 'b', 'c'})
   EQ(lbt.util.space_split('a b c', 2), {'a', 'b c'})
-  EQ(comma_split('one,two   ,     three'), {'one','two','three'})
+  EQ(lbt.util.comma_split('one,two   ,     three'), {'one','two','three'})
 end
 
 local function T_template_styles_specification()

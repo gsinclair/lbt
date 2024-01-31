@@ -26,7 +26,6 @@ local channel_name = { [0] = 'ANN',  [1] = 'ERROR', [2] = 'WARN',
                        [3] = 'INFO', [4] = 'TRACE' }
 
 lbt.log = function (channel, format, ...)
-  assert(lbt.system.log_channels:len() >= 0)
   if lbt.api.query_log_channels(channel) then
     local message = F(format, ...)
     local name = channel_name[channel] or channel

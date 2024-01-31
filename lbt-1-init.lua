@@ -90,8 +90,8 @@ lbt.init.init_system = function ()
   -- Persistent counters and data.
   lbt.system.persistent_counters = {}
   lbt.system.persistent_data = {}
-  -- By default, we log only channels 1-3 (ERROR, WARN, INFO)
-  lbt.system.log_channels     = pl.List{1,2,3}
+  -- We subscribe to default channels, which don't need to be specified.
+  lbt.system.log_channels     = pl.List{}
   -- Each expansion has an autoincrementing ID so that log messages can be
   -- coherent and debug files can be written. We start at 100 so it is a
   -- three-digit number.
@@ -103,7 +103,7 @@ end
 --  * clear persistent counters and data
 --  * leave builtin templates alone but remove any others
 --  * leave draft mode as it was
---  * set log channels to the default 1,2,3
+--  * set log channels to the default empty list
 lbt.init.soft_reset_system = function ()
   lbt.system.document_wide_styles = pl.Map()
   for name, t in lbt.system.template_register:iter() do
@@ -114,7 +114,7 @@ lbt.init.soft_reset_system = function ()
       lbt.system.template_register[name] = nil
     end
   end
-  lbt.system.log_channels = pl.Set{1,2,3}
+  lbt.system.log_channels = pl.List{}
   lbt.system.persistent_counters = {}
   lbt.system.persistent_data = {}
 end
