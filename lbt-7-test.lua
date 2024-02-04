@@ -337,9 +337,22 @@ local function T_simplemath()
   -- assert_math([[\lim_{n to infty} 1/n = 0]], [[\lim_{n \to \infty} 1/n = 0]])
   -- ^^^ Doesn't work because infty is not a whole space-separated word.
   --     A stetch goal would be to parse out {...} first and make this work.
+  assert_math([[alpha, beta, gamma]], [[\alpha, \beta, \gamma]])
+  assert_math([[xxx]], [[xxx]])
+  assert_math([[xxx]], [[xxx]])
   assert_math([[xxx]], [[xxx]])
   assert_math([[xxx]], [[xxx]])
 end
+
+-- local function EXP_sip()
+--   local compile = pl.sip.compile
+--   local text = [[forall n in \Real, n^2 > n \text{and} sin2th equiv 1 - cos2th]]
+--   local p1 = compile('\\%a')
+--   local res = {}
+--   if p1(text,res) then
+--     IX(res)
+--   end
+-- end
 
 --------------------------------------------------------------------------------
 
@@ -371,6 +384,7 @@ local function RUN_TESTS(flag)
   T_styles_in_test_question_template_5b()
   T_register_expansion()
   T_simplemath()
+  -- EXP_sip()
 
   if flag == 1 then
     print("======================= </TESTS> (exiting)")
