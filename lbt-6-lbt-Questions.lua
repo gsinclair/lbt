@@ -41,9 +41,6 @@ f.QQ = function(n, args, s)
   return F(template, qq, label_style, args[1])
 end
 
-local MC_impl = function(xs)
-end
-
 -- MC lays out vertically as many options as are given using A, B, C, ...
 a.MC = '1+'
 s.MC = { format = '(A)' }
