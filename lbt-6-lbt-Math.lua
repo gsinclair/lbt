@@ -171,6 +171,100 @@ end
 
 --------------------------------------------------------------------------------
 
+-- simplemath macro -- get rid of a lot of backslashes, and potentially more
+--
+-- Turn 'sin2x + cos2x equiv 1' into '\sin^2 x + \cos^2 x \equiv 1'
+-- Turn 'costh = 0.72' into '\cos\theta = 0.72'
+
+do
+  local makeset = function (text)
+    return pl.Set(lbt.util.space_split(text))
+  end
+  local makemap = function (text)
+    local bits = lbt.util.space_split(text)
+    local map  = pl.Map()
+    for i = 1,#bits,2 do
+      local key = bits[i]
+      local val = bits[i+1]
+      map[key] = val
+    end
+    return map
+  end
+  local trig = makeset'sin cos tan sec csc cot'
+  local other = makeset[[equiv forall exists implies to in]]
+  local alpha = makeset[[alpha beta gamma delta epsilon theta pi phi omega]]
+  local abbrev = makemap[[al alpha be beta ga gamma de delta th theta]]
+
+  local process_abbrev = function (word)
+    if abbrev[word] then
+      return '\\'..abbrev[word]
+    else
+      return word
+    end
+  end
+
+  local process_alpha = function (word)
+    if alpha[word] then
+      return '\\'..word
+    else
+      return word
+    end
+  end
+
+  local process_trig = function (word)
+    local res      = {}
+    local pattern1 = '$a{stem}$d{index}$a{var}'
+    local pattern2 = '$a{stem}$d{index}'
+    local m        = pl.sip.match
+    if m(pattern1, word, res) or m(pattern2, word, res) then
+      -- we have matched something like cos2th or tan5x or just sin3
+      -- but beware: it could be rubbish like abcde7def or xyz47 or sinvbg3u
+      lbt.log('dev', 'Pattern match on %s was successful', word)
+      lbt.log('dev', 'res: %s', lbt.pp(res))
+      local stem, index, var = res.stem, res.index, res.var
+      if trig[stem] and var then
+        -- cos2th or tan5B
+        return F([[\%s^{%s} %s]], stem, index, process_abbrev(var))
+      elseif trig[stem] then
+        -- sin3 or csc2
+        return F([[\%s^{%s}]], stem, index)
+      else
+        return word
+      end
+    else
+      -- we have not matched anything we can process
+      return word
+    end
+  end
+
+  local process = function (word)
+    lbt.log('dev', 'process: %s', word)
+    if trig[word] or alpha[word] or other[word] then
+      lbt.log('dev', 'process A')
+      return '\\'..word
+    elseif #word > 3 and trig[word:sub(1,3)] then
+      lbt.log('dev', 'process B')
+      return process_trig(word)
+    else
+      lbt.log('dev', 'process C')
+      return process_abbrev(word)
+    end
+  end
+
+  m.simplemath = function (text)
+    local words = lbt.util.space_split(text)
+    local tokens = pl.List()
+    for word in words:iter() do
+      local substitute = process(word)
+      tokens:append(substitute)
+    end
+    return F([[\ensuremath{%s}]], tokens:concat(' '))
+  end
+
+end
+
+--------------------------------------------------------------------------------
+
 return {
   name      = 'lbt.Math',
   desc      = 'Specific support for mathematical typesetting',

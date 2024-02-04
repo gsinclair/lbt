@@ -3,6 +3,7 @@
 --
 
 local EQ = pl.test.asserteq
+local F = string.format
 local nothing = "<nil>"
 
 --------------------------------------------------------------------------------
@@ -318,6 +319,28 @@ local function T_register_expansion()
   EQ(l[5], [[◊abc and $\ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}$ \par]])
 end
 
+local function T_simplemath()
+  lbt.api.set_log_channels('allbuttrace')
+  -- Gain backdoor access to the simplemath macro
+  local t = lbt.fn.template_object_or_error('lbt.Math')
+  local m = t.macros.simplemath
+  local assert_math = function(input, expected)
+    local actual = m(input)
+    local expected = F([[\ensuremath{%s}]], expected)
+    EQ(actual, expected)
+  end
+  assert_math([[sin2th = 0.32]], [[\sin^{2} \theta = 0.32]])
+  assert_math([[cot32b]], [[\cot^{32} b]])
+  assert_math([[cot32B]], [[\cot^{32} B]])
+  assert_math([[a^2 + b^2 = c^2]], [[a^2 + b^2 = c^2]])
+  assert_math([[forall n in \nat, n+1 > n]], [[\forall n \in \nat, n+1 > n]])
+  -- assert_math([[\lim_{n to infty} 1/n = 0]], [[\lim_{n \to \infty} 1/n = 0]])
+  -- ^^^ Doesn't work because infty is not a whole space-separated word.
+  --     A stetch goal would be to parse out {...} first and make this work.
+  assert_math([[xxx]], [[xxx]])
+  assert_math([[xxx]], [[xxx]])
+end
+
 --------------------------------------------------------------------------------
 
 -- flag:
@@ -347,6 +370,7 @@ local function RUN_TESTS(flag)
   T_styles_in_test_question_template_5a()
   T_styles_in_test_question_template_5b()
   T_register_expansion()
+  T_simplemath()
 
   if flag == 1 then
     print("======================= </TESTS> (exiting)")
