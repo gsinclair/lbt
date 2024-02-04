@@ -141,6 +141,22 @@ function lbt.util.extract_option_argument (args)
   end
 end
 
+-- Input:   cols=3, vspace=2pt
+-- Output:  { cols = '3', vspace = 2pt }
+function lbt.util.parse_options(text)
+  local result = pl.Map()
+  local bits   = lbt.util.comma_split(text)
+  for x in bits:iter() do
+    local t = {}
+    if pl.sip.match('$v{key} = $S{value}', x, t) then
+      result[t.key] = t.value
+    else
+      return nil
+    end
+  end
+  return result
+end
+
 -- double_colon_split('a :: b :: c')    -> {a,b,c}
 function lbt.util.double_colon_split(text)
   local result = pl.utils.split(text, '%s+::%s+')

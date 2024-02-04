@@ -34,11 +34,55 @@ f.QQ = function(n, args, s)
   local qq = lbt.api.counter_inc('qq')
   local label_style = [[\textcolor{blue}{(\alph*)}]]
   local template = [[
-    \begin{enumerate}[align=left, topsep=3pt, start=%d, label=%s, left=3mm .. 13mm]
+    \begin{enumerate}[align=left, topsep=3pt, start=%d, label=%s, left=1em .. 3.2em]
       \item %s
     \end{enumerate}
   ]]
   return F(template, qq, label_style, args[1])
+end
+
+a['QQ*'] = '2+'
+f['QQ*'] = function(n, args, s)
+  -- 1. Parse options to get ncols and vspace.
+  local options, args = lbt.util.extract_option_argument(args)
+  local errormsg = [[First argument to QQ* must specify the number of columns (e.g. \verb|[ncols=3, vspace=20pt]|)]]
+  if options == nil then
+    return { error = errormsg }
+  end
+  options = lbt.util.parse_options(options)
+  if options == nil or options.ncols == nil then
+    return { error = errormsg }
+  end
+  local ncols = options.ncols
+  local vspace = options.vspace or '0pt'
+  -- 2. Set up result list and function to add to it.
+  local label_style = [[\textcolor{blue}{(\alph*)}]]
+  local result = pl.List()
+  local add = function(line, ...)
+    result:append(F(line, ...))
+  end
+  -- 3. Table header.
+  add([[\begin{tblr}{colspec = {%s},]], string.rep('X[1,l]', options.ncols))
+  add([[  measure=vbox, stretch=-1]])
+  add([[}]])
+  -- 4. Table body.
+  local question_template = [[
+    \begin{enumerate}[align=left, topsep=0pt, start=%d, label=%s, left=1em .. 3.2em]
+      \item %s
+    \end{enumerate} ]]
+  for i = 1,#args do
+    local qtext = args[i]
+    add(question_template, i, label_style, qtext)
+    if i % ncols == 0 or i == #args then
+      add([[\\[%s] ]], vspace)
+    else
+      add([[ & ]])
+    end
+  end
+  -- 5. Table footer.
+  add([[\end{tblr}]])
+  -- 6. Return value.
+  return result:concat('\n')
 end
 
 -- MC lays out vertically as many options as are given using A, B, C, ...
