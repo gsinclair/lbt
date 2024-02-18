@@ -154,6 +154,19 @@ f.ENDCOLUMNS = function (n, args)
   end
 end
 
+a.INDENT = 2
+f.INDENT = function (n, args)
+  local x     = lbt.util.comma_split(args[1])
+  local left  = x[1]
+  local right = x[2] or ''
+  local text  = args[2]
+  return F([[
+    \begin{adjustwidth}{%s}{%s}
+      %s
+    \end{adjustwidth}
+  ]], left, right, text)
+end
+
 -- Math environments like ALIGN(*) -- probably need to add others.
 
 -- TODO think about the design of align. Could it take one argument per line?

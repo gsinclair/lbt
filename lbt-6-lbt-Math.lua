@@ -12,8 +12,6 @@ local a = {}   -- number of arguments
 local s = {}   -- styles
 local m = {}   -- macros
 
-s.vector = { format = 'bold' }
-
 --------------------------------------------------------------------------------
 
 -- _vector_ is a flexible vector renderer. Here are examples of the arguments
@@ -191,10 +189,19 @@ do
     return map
   end
   local trig = makeset'sin cos tan sec csc cot'
-  local other = makeset[[equiv forall exists implies to in]]
-  local alpha = makeset[[alpha beta gamma delta epsilon theta pi phi omega]]
-  local abbrev = makemap[[al alpha be beta ga gamma de delta th theta]]
-
+  local other = makeset[[equiv forall exists nexists implies to in notin mid nmid
+                         quad le ge ne iff sqrt frac tfrac dfrac not neg
+                         subset subseteq nsubseteq superset superseteq nsuperseteq
+                         sum infty prod
+                         ]]
+  local alpha = makeset[[alpha beta gamma delta epsilon zeta eta theta iota
+                         kappa lambda mu nu xi omicron pi rho sigma tau
+                         upsilon phi chi psi omega
+                         Alpha Beta Gamma Delta Epsilon Zeta Eta Theta Iota
+                         Kappa Lambda Mu Nu Xi Omicron Pi Rho Sigma Tau
+                         Upsilon Phi Chi Psi Omega]]
+  local abbrev = makemap[[al alpha be beta ga gamma de delta ep epsilon th theta la lambda
+                          Al Alpha Be Beta Ga Gamma De Delta Ep Epsilon Th Theta La Lambda]]
   local process_abbrev = function (word)
     if abbrev[word] then
       return '\\'..abbrev[word]
@@ -232,23 +239,32 @@ do
         return word
       end
     else
-      -- we have not matched anything we can process
-      return word
+      -- it could just be 'sinx' or 'cosal' or something
+      local stem = word:sub(1,3)
+      local rest = word:sub(4)
+      if trig[stem] then
+        return F([[\%s %s]], stem, process_abbrev(rest))
+      else
+        return word
+      end
     end
   end
 
   local process = function (word)
-    lbt.log('dev', 'process: %s', word)
+    lbt.log('dev', 'lbt.Math macro simplemath: %s', word)
+    local result = nil
     if trig[word] or alpha[word] or other[word] then
       lbt.log('dev', 'process A')
-      return '\\'..word
+      result = '\\'..word
     elseif #word > 3 and trig[word:sub(1,3)] then
       lbt.log('dev', 'process B')
-      return process_trig(word)
+      result = process_trig(word)
     else
       lbt.log('dev', 'process C')
-      return process_abbrev(word)
+      result = process_abbrev(word)
     end
+    lbt.log('dev', '   ~> result: %s', result)
+    return result
   end
 
   m.simplemath = function (text)

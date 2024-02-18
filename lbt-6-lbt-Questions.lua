@@ -43,9 +43,9 @@ end
 
 a['QQ*'] = '2+'
 f['QQ*'] = function(n, args, s)
-  -- 1. Parse options to get ncols and vspace.
+  -- 1. Parse options to get ncols and vspace and hpack.
   local options, args = lbt.util.extract_option_argument(args)
-  local errormsg = [[First argument to QQ* must specify the number of columns (e.g. \verb|[ncols=3, vspace=20pt]|)]]
+  local errormsg = [[First argument to QQ* must specify the number of columns (e.g. \Verb|[ncols=3, vspace=20pt]|)]]
   if options == nil then
     return { error = errormsg }
   end
@@ -53,36 +53,61 @@ f['QQ*'] = function(n, args, s)
   if options == nil or options.ncols == nil then
     return { error = errormsg }
   end
-  local ncols = options.ncols
+  local ncols  = options.ncols
   local vspace = options.vspace or '0pt'
+  local hpack  = options.hpack or 'column'
   -- 2. Set up result list and function to add to it.
-  local label_style = [[\textcolor{blue}{(\alph*)}]]
   local result = pl.List()
   local add = function(line, ...)
     result:append(F(line, ...))
   end
-  -- 3. Table header.
-  add([[\begin{tblr}{colspec = {%s},]], string.rep('X[1,l]', options.ncols))
-  add([[  measure=vbox, stretch=-1]])
-  add([[}]])
-  -- 4. Table body.
-  local question_template = [[
-    \begin{enumerate}[align=left, topsep=0pt, start=%d, label=%s, left=1em .. 3.2em]
-      \item %s
-    \end{enumerate} ]]
-  for i = 1,#args do
-    local qtext = args[i]
-    add(question_template, i, label_style, qtext)
-    if i % ncols == 0 or i == #args then
-      add([[\\[%s] ]], vspace)
-    else
-      add([[ & ]])
+  --
+  -- We now decide whether to lay this out in equal-width columns using a table
+  -- or with even spacing using \hfill (only suitable if there is just one line).
+  --
+  if hpack == 'column' then
+    local label_style = [[\textcolor{blue}{(\alph*)}]]
+    -- 3. Table header.
+    add([[\begin{tblr}{colspec = {%s},]], string.rep('X[1,l]', options.ncols))
+    add([[  colsep={0pt}, measure=vbox, stretch=-1]])
+    add([[}]])
+    -- 4. Table body.
+    local question_template = [[
+      \begin{enumerate}[align=left, topsep=0pt, start=%d, label=%s, left=1em .. 3.2em]
+        \item %s
+      \end{enumerate} ]]
+    for i = 1,#args do
+      local qtext = args[i]
+      add(question_template, i, label_style, qtext)
+      if i % ncols == 0 or i == #args then
+        add([[\\[%s] ]], vspace)
+      else
+        add([[ & ]])
+      end
+      lbt.api.counter_inc('qq')    -- in case we want to put a normal QQ after this
     end
+    -- 5. Table footer.
+    add([[\end{tblr} \par]])
+    -- 6. Return value.
+    return result:concat('\n')
+  elseif hpack == 'hfill' then
+    -- We are using \hfill to lay out the bits, but we need to match the initial spacing
+    -- of the layout strategy above. It was not easy to get this code right, but at least
+    -- it is short. Main difficulty is avoiding unwanted spaces; hence 'template' is
+    -- tightly packed.
+    for i = 1,#args do
+      local qtext = args[i]
+      add([[\hspace{1em}]])
+      local qq = lbt.api.counter_inc('qq')
+      local marker = lbt.util.number_in_alphabet(qq, 'latin')
+      local template = [[\parbox{2.2em}{\color{blue}(%s)}%s\hfill{}]]
+      add(template, marker, qtext)
+    end
+    add([[\par]])
+    return result:concat('')
+  else
+    return { error = F([[Invalid value for QQ* option \Verb|hpack| -- use \Verb|column| or |hfill|]]) }
   end
-  -- 5. Table footer.
-  add([[\end{tblr}]])
-  -- 6. Return value.
-  return result:concat('\n')
 end
 
 -- MC lays out vertically as many options as are given using A, B, C, ...
@@ -90,15 +115,19 @@ a.MC = '1+'
 s.MC = { format = '(A)' }
 f.MC = function(n, args, sr)
   -- We emply an enumerate environment with one line1, many line2 and one line3.
-  local line1 = [[ \begin{enumerate}[%s, topsep=3pt, left=13mm .. 23mm] ]]
+  local line0 = [[ \begin{adjustwidth}{1em}{}]]
+  local line1 = [[ \begin{enumerate}[%s, align=left, topsep=3pt, left=1em .. 3.5em] ]]
   local line2 = [[   \item %s ]]
   local line3 = [[ \end{enumerate} ]]
+  local line4 = [[ \end{adjustwidth} ]]
   local result = pl.List()
+  result:append(line0)
   result:append(F(line1, sr('MC.format')))
   for x in args:iter() do
     result:append(F(line2, x))
   end
   result:append(line3)
+  result:append(line4)
   return result:join('\n')
 end
 
