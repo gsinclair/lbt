@@ -257,7 +257,7 @@ lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
     lbt.log('emit', '    --> %s', result)
     return 'ok', result
   else
-    lbt.E325_invalid_return_from_template_function(result)
+    lbt.err.E325_invalid_return_from_template_function(token, result)
   end
 end
 

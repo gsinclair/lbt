@@ -150,3 +150,7 @@ lbt.err.E318_invalid_register_assignment_nargs = function (x)
   E('When calling STO to set a register, you need to give three arguments:\n'..
     '  name, ttl, definition')
 end
+
+lbt.err.E325_invalid_return_from_template_function = function (token, result)
+  E('When calling function for token %s, the result was invalid\nResult: %s', token, lbt.pp(result))
+end
