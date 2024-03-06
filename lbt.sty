@@ -68,4 +68,13 @@
 \newcommand{\lbtPersistentCounterReset}[1]{\directlua{lbt.api.persistent_counter_reset('#1')}} 
 \newcommand{\lbtPersistentDataSet}[1]{\directlua{lbt.api.persistent_data_set_keyval('#1')}} 
 
+% This command (actually, setting) is best described with an example.
+% In lbt.WS0, the worksheet is manually added to the table of contents.
+% This command means it is added at the section level.
+% If you want it added at the subsection level, for instance, redefine this command.
+% Likely usage: redefine it in a \begingroup .. \endgroup so it reverts afterwards.
+% While in general I prefer settings to be in Lua rather than in Latex, in this case
+% it makes sense to use Latex so that it can be in a group, as described above.
+\newcommand{\lbtCurrentContentsLevel}{section} 
+
 % \newcommand{\lbtResetChapterCounters}{\luaexec{lbt.api.reset_chapter_counters()}}
