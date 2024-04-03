@@ -193,6 +193,8 @@ do
                          quad le ge ne iff sqrt frac tfrac dfrac not neg
                          subset subseteq nsubseteq superset superseteq nsuperseteq
                          sum infty prod
+                         dots cdots ldots
+                         log ln
                          ]]
   local alpha = makeset[[alpha beta gamma delta epsilon zeta eta theta iota
                          kappa lambda mu nu xi omicron pi rho sigma tau

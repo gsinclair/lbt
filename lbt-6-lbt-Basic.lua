@@ -6,6 +6,7 @@ local F = string.format
 
 local f = {}   -- functions
 local a = {}   -- number of arguments
+local m = {}   -- macros
 
 -- Text (TEXT puts a paragraph after, TEXT* does not)
 
@@ -324,6 +325,25 @@ f.CENTER = function (n, args)
       %s
     \end{centering}
   ]], args[1])
+end
+
+a.VERBATIM = '1+'
+f.VERBATIM = function (n, args)
+  local lines = args:concat('\n')
+  return F([[
+    \begin{verbatim}
+      %s
+    \end{verbatim}
+  ]], lines)
+end
+
+-- +---------------------------------------+
+-- | Macros                                |
+-- +---------------------------------------+
+
+-- e.g. \diagram{align=centre,width=0.6,media/cat-image-014.png}
+-- e.g. \diagram{align=left,indent=3cm,width=11cm,media/cat-image-015.png}
+m.diagram = function(text)
 end
 
 -- +---------------------------------------+
