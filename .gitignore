@@ -1,5 +1,6 @@
 tmp
 *.pdf
+*.png
 *.toc
 *.out
 *.log
