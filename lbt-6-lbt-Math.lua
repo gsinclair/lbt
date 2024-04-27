@@ -195,6 +195,7 @@ do
                          sum infty prod
                          dots cdots ldots
                          log ln
+                         pm
                          ]]
   local alpha = makeset[[alpha beta gamma delta epsilon zeta eta theta iota
                          kappa lambda mu nu xi omicron pi rho sigma tau
