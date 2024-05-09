@@ -100,10 +100,13 @@ end
 lbt.util.content_dictionary_or_error = function (pc, key)
   local dict = lbt.util.content_dictionary_or_nil(pc, key)
   if dict == nil then
-    lbt.err.E997_content_dictionary_missing(key)
+    -- lbt.err.E997_content_dictionary_missing(key)
     -- TODO ^^^ consider using lbt.util.template_error_quit instead,
     -- to better convey the idea that the error occurred inside expansion
     -- code.
+    --
+    -- Acting on that TODO below:
+    lbt.util.template_error_quit('Content dictionary has no value for key: %s', key)
   end
   return dict
 end

@@ -6,7 +6,7 @@ local EQ = pl.test.asserteq
 local F = string.format
 local nothing = "<nil>"
 
---------------------------------------------------------------------------------
+----------------------------------------------------------------------
 
 local function content_lines(text)
   return pl.List(pl.utils.split(text, "\n")):map(string.strip)
@@ -17,7 +17,7 @@ local T = function(t, n, a, r)
   return { token = t, nargs = n, args = pl.List(a), raw = r }
 end
 
---------------------------------------------------------------------------------
+----------------------------------------------------------------------
 
 -- For testing parsed_content
 local good_input_1 = content_lines([[
@@ -110,7 +110,7 @@ local good_input_6 = content_lines([[
     TEXT Never was defined: ◊abc
     TEXT ◊abc and $◊QF$]])
 
---------------------------------------------------------------------------------
+----------------------------------------------------------------------
 
 local function T_pragmas_and_other_lines()
   lbt.api.reset_global_data()
@@ -337,7 +337,8 @@ local function T_simplemath()
   -- assert_math([[\lim_{n to infty} 1/n = 0]], [[\lim_{n \to \infty} 1/n = 0]])
   -- ^^^ Doesn't work because infty is not a whole space-separated word.
   --     A stetch goal would be to parse out {...} first and make this work.
-  assert_math([[alpha, beta, gamma]], [[\alpha, \beta, \gamma]])
+  assert_math([[x ge alpha]], [[x \ge \alpha]])
+  assert_math([[alpha beta gamma]], [[\alpha \beta \gamma]])
   assert_math([[xxx]], [[xxx]])
   assert_math([[xxx]], [[xxx]])
   assert_math([[xxx]], [[xxx]])
@@ -354,7 +355,7 @@ end
 --   end
 -- end
 
---------------------------------------------------------------------------------
+----------------------------------------------------------------------
 
 -- flag:
 --   0: don't run tests (but continue the program)

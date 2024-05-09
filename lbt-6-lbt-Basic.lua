@@ -99,6 +99,18 @@ f.NEWCOMMAND = function(n, args)
   end
 end
 
+-- Paragraph
+
+a.PARAGRAPH = 2
+f.PARAGRAPH = function(n, args, sr)
+  return F([[\paragraph{%s}{%s} \par]], args[1], args[2])
+end
+
+a['PARAGRAPH*'] = 2
+f['PARAGRAPH*'] = function(n, args, sr)
+  return F([[\paragraph{%s}{%s}]], args[1], args[2])
+end
+
 -- Itemize and enumerate
 
 a.ITEMIZE = '1+'
@@ -335,6 +347,30 @@ f.VERBATIM = function (n, args)
       %s
     \end{verbatim}
   ]], lines)
+end
+
+-- Table (using tabularray)
+a.TABLE = '2+'
+f.TABLE = function(n, args, sr)
+  -- \begin{tblr}{ ... specification (first argument) ...}
+  --   arg 2 \\
+  --   arg 3 \\         note that if the argument is \hline then there is no \\
+  --   arg 4 \\
+  --   ...
+  -- \end{tblr}
+  local x = pl.List()
+  x:append(F([[\begin{tblr}{%s}]], args[1]))
+  for i = 2,n do
+    line = args[i]
+    if pl.stringx.lfind(line, [[\hline]]) then
+      -- we do not put a \\ on this line
+      x:append(line)
+    else
+      x:append(line .. [[ \\]])
+    end
+  end
+  x:append([[\end{tblr}]])
+  return x:concat('\n')
 end
 
 -- +---------------------------------------+

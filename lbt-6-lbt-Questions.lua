@@ -102,10 +102,6 @@ end
 
 -- Questions, subquestions ----------------------------------------------------
 
-f.Q = function(n, args)
-  return F([[\textbf{Question }%d\enspace %s]], lbt.api.counter_inc('q'), args[1])
-end
-
 a.Q = 1
 s.Q = { vspace = '6pt', color = 'blue' }
 f.Q = function(n, args, s)
@@ -196,7 +192,7 @@ a['MC*'] = '1+'
 s['MC*'] = {}        -- think about format = (A)
 f['MC*'] = function (n, args, sr)
   -- 1. Parse options to get ncols and vspace and hpack.
-  local t = get_options_ncols_vspace_hpack('QQ*', args)
+  local t = get_options_ncols_vspace_hpack('MC*', args)
   local options
   if t[1] == 'error' then
     return { error = t[2] }
@@ -221,8 +217,66 @@ f['MC*'] = function (n, args, sr)
                        counter = 'mc' }
     return layout_qq_hfill(args, settings)
   else
-    return { error = F([[Invalid value for QQ* option \Verb|hpack| -- use \Verb|column| or |hfill|]]) }
+    return { error = F([[Invalid value for MC* option \Verb|hpack| -- use \Verb|column| or |hfill|]]) }
   end
+end
+
+
+-- Hints and answers ----------------------------------------------------------
+
+
+a.HINT = 1
+f.HINT = function(n, args, sr)
+  local q = lbt.api.counter_value("q")
+  local hints = lbt.api.data_get("hints", pl.OrderedMap())
+  hints[q] = args[1]
+  return "{}"
+end
+
+a.ANSWER = 1
+f.ANSWER = function(n, args, sr)
+  local q = lbt.api.counter_value("q")
+  local answers = lbt.api.data_get("answers", pl.OrderedMap())
+  answers[q] = args[1]
+  return "{}"
+end
+
+a.SHOWHINTS = 0
+f.SHOWHINTS = function(n, args, sr)
+  local text = pl.List()
+  local hints = lbt.api.data_get("hints", pl.OrderedMap())
+  table.insert(text, [[\begin{small}]])
+  for q, h in hints:iter() do
+    local x = F([[\par\textcolor{Mulberry}{\textbf{%d}} \enspace \textcolor{darkgray}{%s}]], q, h)
+    text:append(x)
+  end
+  text:append([[\end{small}]])
+  return text:concat()
+end
+
+a.SHOWANSWERS = 0
+f.SHOWANSWERS = function(n, args, sr)
+  local text = pl.List()
+  local answers = lbt.api.data_get("answers", pl.OrderedMap())
+  table.insert(text, [[\begin{small}]])
+  for q, a in hints:iter() do
+    local x = F([[\par\textcolor{Mulberry}{\textbf{%d}} \enspace \textcolor{darkgray}{%s}]], q, a)
+    text:append(x)
+  end
+  text:append([[\end{small}]])
+  return text:concat()
+end
+
+a.HINTRESET = 0
+f.HINTRESET = function(n, args, sr)
+  lbt.api.data_set("hints", pl.OrderedMap())
+  return '{}'
+end
+
+a.ANSWERRESET = 0
+f.ANSWERRESET = function(n, args, sr)
+  lbt.api.data_set("answers", pl.OrderedMap())
+  return '{}'
 end
 
 
