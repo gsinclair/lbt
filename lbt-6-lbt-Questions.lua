@@ -259,7 +259,7 @@ f.SHOWANSWERS = function(n, args, sr)
   local text = pl.List()
   local answers = lbt.api.data_get("answers", pl.OrderedMap())
   table.insert(text, [[\begin{small}]])
-  for q, a in hints:iter() do
+  for q, a in answers:iter() do
     local x = F([[\par\textcolor{Mulberry}{\textbf{%d}} \enspace \textcolor{darkgray}{%s}]], q, a)
     text:append(x)
   end
