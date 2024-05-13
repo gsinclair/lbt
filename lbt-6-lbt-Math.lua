@@ -193,6 +193,7 @@ do
                          quad le ge ne iff sqrt frac tfrac dfrac not neg
                          subset subseteq nsubseteq superset superseteq nsuperseteq
                          sum infty prod
+                         cdot times divide
                          dots cdots ldots
                          log ln
                          pm
