@@ -1,0 +1,41 @@
+% !lualatex --shell-escape %
+
+\documentclass[11pt]{article}
+
+\usepackage[a3paper,margin=0.8in]{geometry}
+
+\usepackage[dvipsnames]{xcolor}
+\usepackage{fontspec}
+\usepackage{multicol}
+\usepackage{amsmath}
+\usepackage{tcolorbox}
+\usepackage{minted}
+\usepackage{mdframed}     % assist minted
+
+\begin{document}
+
+\newcommand{\codesection}[1]{
+  \clearpage
+  \section{#1}
+
+  \inputminted[linenos=true]{lua}{#1}
+}
+
+\codesection{lbt-0-meta.lua}
+\codesection{lbt-1-init.lua}
+\codesection{lbt-2-util.lua}
+\codesection{lbt-3-fn.lua}
+\codesection{lbt-4-api.lua}
+\codesection{lbt-5-err.lua}
+\codesection{lbt-6-lbt-Basic.lua}
+\codesection{lbt-6-lbt-CourseNotes.lua}
+\codesection{lbt-6-lbt-Letter.lua}
+\codesection{lbt-6-lbt-Math.lua}
+\codesection{lbt-6-lbt-Play.lua}
+\codesection{lbt-6-lbt-Questions.lua}
+\codesection{lbt-6-lbt-Quiz.lua}
+\codesection{lbt-6-lbt-WS0.lua}
+\codesection{lbt-6-lbt-WS1.lua}
+\codesection{lbt-7-test.lua}
+
+\end{document}
