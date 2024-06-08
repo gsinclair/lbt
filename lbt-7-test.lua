@@ -7,6 +7,458 @@ local F = string.format
 local nothing = "<nil>"
 
 ----------------------------------------------------------------------
+-- vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+--      Experimental code: using lpeg to parse lbt document
+-- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+local lpeg = require 'lpeg'
+
+local P = lpeg.P   -- pattern   P'hello'
+local S = lpeg.S   -- set       S'aeiou'            /[aeiou]/
+local R = lpeg.R   -- range     R('af','AF','09')   /[a-fA-F0-9]/
+-- P(3) matches 3 characters unconditionally
+-- P(3) * 'hi' matches 3 characters followed by 'hi'
+local loc = lpeg.locale()
+-- loc.space^0 * loc.alpha^1      /\s*\w+/
+-- P'-'^-1 * R'0-9'^3             /-?\d{3,}/
+-- (P'ab' + 'a') * 'c'            /(ab|a)c/
+local C = lpeg.C   -- simple capture
+-- loc.space^0 * C(loc.alpha^1)   /\s*(\w+)/     capture word
+-- C(C(2) * 1 * C(2)) match "hello"  --> hello  he  lo
+local Cp = lpeg.Cp -- position capture
+-- sp = loc.space^0
+-- word = loc.alpha^1
+-- (sp * Cp() * word)^0   match  "one three two"  --> 1  5  11"
+local Ct = lpeg.Ct -- table capture
+-- TODO examples
+
+local D = pl.pretty.dump
+
+
+local T_parse_commands_lpeg = function()
+  -- -P'a' matches anything except an a, and does not consume
+  --       anything and cannot produce a capture
+  -- -P'1' refuses to match anything, so can detect the end of string
+  -- Put this together and we can search for a pattern p
+  --   vowel = P'aeiou'
+  --   const = loc.alpha - vowel
+  --   needle = const * vowel * const
+  --   haystack = 'I saw bob the other day'
+  --   searchP = (1-needle)^0 * Cp() * needle
+  -- Parse an assignment list like 'name=Tina, age =   42, married,'
+  --   sp    = loc.space^0
+  --   char  = loc.alpha + '_' + loc.digit
+  --   word  = C(loc.alpha * char^0) * sp
+  --   eq    = '=' * sp
+  --   comma = ';' * sp
+  --   assn  = word * (eq * word)^-1    // assignment
+  --   list  = assn * (comma * assn)^0
+  --   list  = sp * list^-1
+  T_lpeg_5()
+end
+
+T_lpeg_1 = function()
+  local sp = loc.space^0
+  local char = loc.alpha + '_' + loc.digit
+  local word = C(loc.alpha * char^0) * sp
+  local words2 = word * word
+  local words3 = word * word * word
+  local eq    = '=' * sp
+  local comma = ',' * sp
+  -- local assn  = word * (eq * word)^-1    // assignment
+  -- local list  = assn * (comma * assn)^0
+  -- list  = sp * list^-1
+  DEBUGGER()
+end
+
+T_lpeg_2 = function()
+  local inbox = {}
+
+  local sp    = loc.space^0
+  local space = loc.space^1
+  -- token
+  local cmd_char = loc.upper + loc.digit + S'-_*+=<>'
+  local command = C(loc.upper * cmd_char^0)
+  -- separator requires surrounding whitespace
+  local separator = space * '::' * space
+  -- general argument: leave the surrounding space for the separator
+  local arg = (1 - separator)^1
+  local argument = C(arg)
+
+  local examples = pl.List()
+  examples:append 'ITEMIZE one :: two :: three four five'
+  examples:append 'ITEMIZE :: one :: two :: three four five'
+  examples:append 'ITEMIZE :: one :: two :: three four five ::'
+  examples:append 'ITEMIZE :: one :: two :: three four five :: ()'
+
+  local command_line = command * (separator * argument)^0 * -1
+
+  local n = 0
+  for example in examples:iter() do
+    n = n + 1
+    print()
+    print('Example ' .. n)
+    print(example)
+    local captures = { command_line:match(example) }
+    D(captures)
+  end
+
+  -- DEBUGGER()
+end
+
+T_lpeg_3 = function()
+  local sp    = loc.space^0
+  local space = loc.space^1
+  -- opcode
+  local op_char = loc.upper + loc.digit + S'-_*+=<>'
+  local opcode = C(loc.upper * op_char^0)
+  -- separator requires surrounding whitespace
+  local separator = space * '::' * (space + -1)
+  -- general argument: leave the surrounding space for the separator
+  local argument = C( (1 - separator)^1 )
+
+  -- A command with no arguments is a plain opcode.
+  local command0 = opcode * -1
+  -- A command with one argument contains an optional separator.
+  local command1 = opcode * separator^-1 * sp * argument * -1
+  -- A command with n arguments has the optional separator, then
+  -- the first argument, then at least one separator-argument pair
+  local commandn = opcode * separator^-1 * sp * argument *
+                     (separator * argument)^1 * -1
+
+  local command = command0 + command1 + commandn
+
+  local examples = pl.List()
+  examples:append 'VFILL'
+  examples:append 'VFILL :: '
+  examples:append 'VFILL :: ()'
+  examples:append 'CMD bigskip'
+  examples:append 'CMD :: bigskip'
+  examples:append 'ITEMIZE one :: two :: three four five'
+  examples:append 'ITEMIZE :: one :: two :: three four five'
+  examples:append 'ITEMIZE :: one :: two :: three four five ::'
+  examples:append 'ITEMIZE :: one :: two :: three four five :: ()'
+
+  local n = 0
+  for example in examples:iter() do
+    n = n + 1
+    print()
+    print('Example ' .. n)
+    print(example)
+    local captures = { command:match(example) }
+    D(captures)
+  end
+
+end
+
+T_lpeg_4 = function()
+  -- `inbox` is where we collect data as we parse
+  inbox = {}
+
+  -- functions that collect data
+  process_opcode = function(x)
+    return { opcode = x }
+  end
+  process_options = function(x)
+    return { options = x }
+  end
+  process_kwarg = function(k, v)
+    return { kwarg = {k,v} }
+  end
+  process_arg = function(x)
+    if x == '()' then
+      return nil
+    else
+      return { arg = x }
+    end
+  end
+
+  -- sp = optional space; space = compulsory space
+  local sp    = loc.space^0
+  local space = loc.space^1
+  -- list: name = john, age= 42 , red,11
+  --   --> { kw = { name = 'john', age = '42' }, pos = { 'red', '11' } }
+
+  -- opcode
+  local op_char = loc.upper + loc.digit + S'-_*+=<>'
+  local opcode = (loc.upper * op_char^0) / process_opcode
+  -- separator requires surrounding whitespace
+  local separator = space * '::' * (space + -1)
+  -- general argument: leave the surrounding space for the separator
+  local argument_text = (1 - separator)^1 
+  local argument = argument_text / process_arg
+  -- options (also called styles) can be specified in three equivalent
+  -- ways: .o {list}  or .s {list}  or  [{list}]
+  local options1 = P'.o' * space * (argument_text / process_options)
+  local options2 = P'.s' * space * (argument_text / process_options)
+  local options3 = P'[' * (argument_text / process_options) * ']'
+  local options  = options1 + options2 + options3
+  -- a keyword argument is specified like the following example.
+  --     FIGURE .o centre
+  --       :: .a (filename) media/7/primenumbers.png
+  --       :: .a (width)    0.8
+  --       :: .a (caption)  The numbers 1 to 100, with primes circled
+  local key = '(' * C(loc.alpha^1) * ')'
+  local value = C(argument_text)
+  local kw_arg = P'.a' * space * (key * value) / process_kwarg
+
+  -- A command with no arguments is a plain opcode.
+  local command0 = opcode * -1
+  -- A command with one argument contains an optional separator.
+  local command1 = opcode * separator^-1 * sp * argument * -1
+  -- A command with n arguments has the optional separator, then perhaps an
+  -- "options" argument, then at least one separator-argument pair.
+  local commandn = opcode * separator^-1 * sp *
+                     (options * separator)^-1 *
+                     argument * (separator * argument)^1 * -1
+  local commandn = opcode * separator^-1 * sp *
+                     (options * separator)^-1 *
+                     (kw_arg * sep) *
+                     argument * (separator * argument)^1 * -1
+
+  local command = command0 + command1 + commandn
+
+  local examples = pl.List()
+  -- examples:append 'VFILL'
+  -- examples:append 'VFILL :: '
+  -- examples:append 'VFILL :: ()'
+  -- examples:append 'CMD bigskip'
+  -- examples:append 'CMD :: bigskip'
+  examples:append 'ITEMIZE one :: two :: three four five'
+  examples:append 'ITEMIZE :: one :: two :: three four five'
+  examples:append 'ITEMIZE :: one :: two :: three four five ::'
+  examples:append 'ITEMIZE :: one :: two :: three four five :: ()'
+  examples:append 'ITEMIZE :: .o compact :: one :: two'
+  examples:append 'FIGURE .o centre :: .a (filename) media/7/primenumbers.png :: .a (width)    0.8 :: .a (caption)  The numbers 1 to 100, with primes circled :: normal argument'
+
+  local n = 0
+  for example in examples:iter() do
+    n = n + 1
+    print()
+    print('Example ' .. n)
+    print(example)
+    local captures = { command:match(example) }
+    D(captures)
+  end
+
+end
+
+T_lpeg_5 = function()
+  -- `cmd` is where we collect data as we parse
+  cmd = {}
+
+  -- functions that collect data
+  process_opcode = function(x)
+    cmd['opcode'] = x
+    cmd['cmdtype'] = 'command'
+    if x[1] == '+' then cmd['cmdtype'] = 'env-open' end
+    if x[1] == '-' then cmd['cmdtype'] = 'env-close' end
+    if x[1] == '+' or x[1] == '-' then cmd['env'] = sub(x,2) end
+    return nil
+  end
+  process_options = function(x)
+    return { options = x }
+  end
+  process_kwarg = function(k, v)
+    return { kwarg = {k,v} }
+  end
+  process_arg = function(x)
+    if x == '()' then
+      return nil
+    else
+      return { arg = x }
+    end
+  end
+
+  -- sp = optional space; space = compulsory space
+  local sp    = loc.space^0
+  local space = loc.space^1
+  -- opcode
+  local op_char = loc.upper + loc.digit + S'-_*+=<>'
+  local opcode = ((S'+-')^-1 * loc.upper * op_char^0) / process_opcode
+  -- separator requires surrounding whitespace
+  local sep = space * '::' * (space + -1)
+  -- non-separator text is a building block for capturing various arguments
+  local textnonsep = C((1 - sep)^1 )
+
+  -- A command with no arguments is a plain opcode.
+  local command0 = opcode * -1
+  -- A command with at least one argument has an optional separator
+  -- to begin with.
+  local commandn = opcode * (sep + space) * C(P(1)^1) * -1
+
+  -- parse_command_1 extracts opcode and argtext, and that is all.
+  -- The argtext is guaranteed not to start with a separator.
+  -- Returns (true, opcode, argtext) or (false, nil, nil).
+  local parse_command_1 = function(line)
+    local op_char = loc.upper + loc.digit + S'-_*+=<>'
+    local opcode = C((S'+-')^-1 * loc.upper * op_char^0)
+    local rest = C(P(1)^1)
+    local command1 = opcode * sp * -1
+    local commandn = opcode * sep^-1 * sp * rest * -1
+    local command = command1 + commandn
+    local captures = {command:match(line)}
+    if captures[1] then
+      return true, captures[1], captures[2]
+    else
+      return false, nil, nil
+    end
+  end
+
+  -- parse_command_2 processes the argtext into options, kwargs, posargs.
+  -- It returns a collection of tables like the following:
+  --   { type = 'options', value = 'compact, format=(i)' }
+  --   { type = 'kwarg',   key = 'filename', value = 'media/xyz.png' }
+  --   { type = 'posarg',  value = 'In this article we examine...'}
+  -- The options need further processing. Delaying that until later allows
+  -- for better error messages.
+  local parse_command_2 = function(argtext)
+    if argtext == nil then
+      return pl.List({})
+    end
+
+    -- First prepend a separator to argtext so that it is in a standard
+    -- format.
+    argtext = ' :: ' .. argtext
+
+    local proc_opt = function(x)
+      return { type = 'options', value = x }
+    end
+    local proc_kwarg = function(k, v)
+      return { type = 'kwarg', key = k, value = v }
+    end
+    local proc_posarg = function(x)
+      if x == '()' then return nil end
+      return { type = 'posarg', value = x }
+    end
+
+    -- options (also called styles) can be specified in three equivalent
+    -- ways: .o {list}  or .s {list}  or  [{list}]
+    local options1 = P'.o' * space * textnonsep
+    local options2 = P'.s' * space * textnonsep
+    local options3 = P'[' * textnonsep * ']'
+    local options  = (options1 + options2 + options3) / proc_opt
+
+    -- a keyword argument is specified like the following example.
+    --     FIGURE .o centre
+    --       :: .a (filename) media/7/primenumbers.png
+    --       :: .a (width)    0.8
+    --       :: .a (caption)  The numbers 1 to 100, with primes circled
+    local key = '(' * C(loc.alpha^1) * ')' * space
+    local value = C(textnonsep)
+    local kw_arg = ( P'.a' * space * (key * value) ) / proc_kwarg
+    --
+    -- general (positional) argument has no particular format
+    local argument = textnonsep / proc_posarg
+
+    -- arguments must appear in a certain order
+    -- local arguments = (sep * options)^-1 * (sep * kw_arg)^0 * (sep * argument)^0 * -1
+    -- 
+    -- Actually, I decided it's better to just accept argument types in any
+    -- order, and deal with errors later.
+    local arguments = (sep * (options + kw_arg + argument))^1
+
+    local results = { arguments:match(argtext) }
+    return pl.List(results)
+  end
+
+  -- parse_command_3 takes the output of _2, plus the opcode, and creates a
+  -- full command object. Example output:
+  --
+  --   { cmdtype = 'command'
+  --     opcode  = 'FIGURE'
+  --     options = { 'center',
+  --                 center = true, border = '1pt',
+  --                 _text = 'centre, border=1pt' }
+  --     args    = { 'a positional argument'
+  --                 filename = 'media/xyz.png'
+  --                 width    = '0.8'
+  --                 caption  = 'A male seal with his cubs' } }
+  --
+  local parse_command_3 = function(opcode, argdetails)
+    local command = {}
+    command.cmdtype = 'command'  -- may be overwritten to 'env-{open,close}'
+    command.opcode  = opcode
+    command.options = pl.OrderedMap()
+    command.args    = pl.List()
+    if opcode[1] == '+' then
+      command.cmdtype = 'env-open'
+    elseif opcode[1] == '-' then
+      command.cmdtype = 'env-close'
+    end
+    local errors = pl.List()
+    local seen_opt, seen_kw, seen_pos = false, false, false
+    for a in argdetails:iter() do
+      if a.type == 'options' then
+        if seen_opt then
+          errors:append('more than one options argument')
+        elseif seen_kw or seen_pos then
+          errors:append('options argument must appear first')
+        else
+          command.options.text_ = a.value
+          -- TODO now parse the option argument, flag any errors, and
+          -- update the command object
+        end
+        seen_opt = true
+      end
+      if a.type == 'kwarg' then
+        if seen_pos then
+          errors:append('keyword argument appears after positional argument')
+        else
+          command.args[a.key] = a.value
+        end
+        seen_kw = true
+      end
+      if a.type == 'posarg' then
+        command.args:append(a.value)
+        seen_pos = true
+      end
+    end
+    -- TODO return errors and command
+    return errors, command
+  end
+
+  local examples = pl.List()
+  examples:append 'VFILL'
+  examples:append 'VFILL    '
+  examples:append 'VFILL :: '
+  examples:append 'VFILL :: ()'
+  examples:append 'CMD bigskip'
+  examples:append 'CMD :: bigskip'
+  examples:append 'ITEMIZE one :: two :: three four five'
+  examples:append 'ITEMIZE :: one :: two :: three four five'
+  examples:append 'ITEMIZE :: one :: two :: three four five ::'
+  examples:append 'ITEMIZE :: one :: two :: three four five :: ()'
+  examples:append 'ITEMIZE :: .o compact :: one :: two'
+  examples:append 'FIGURE .o centre :: .a (filename) media/7/primenumbers.png :: .a (width)    0.8 :: .a (caption)  The numbers 1 to 100, with primes circled :: normal argument'
+  examples:append 'FIGURE .o centre :: .a (filename) media/7/primenumbers.png :: .a (width)    0.8 :: positional argument :: .a (caption)  The numbers 1 to 100, with primes circled'
+
+  local n = 0
+  for example in examples:iter() do
+    n = n + 1
+    print()
+    print('Example ' .. n)
+    print(example)
+    local ok, opcode, argtext = parse_command_1(example)
+    if not ok then
+      print('failed parse_command_1')
+      goto continue
+    end
+    local argdetails = parse_command_2(argtext)
+    local errors, command = parse_command_3(opcode, argdetails)
+    if #errors == 0 then
+      D(command)
+    else
+      print 'Error(s) encountered while processing arguments:'
+      for e in errors:iter() do
+        print('  * ' .. e)
+      end
+    end
+    ::continue::
+  end
+
+end
+
+----------------------------------------------------------------------
 
 local function content_lines(text)
   return pl.List(pl.utils.split(text, "\n")):map(string.strip)
@@ -385,6 +837,7 @@ local function RUN_TESTS(flag)
   T_styles_in_test_question_template_5b()
   T_register_expansion()
   T_simplemath()
+  T_parse_commands_lpeg()
   -- EXP_sip()
 
   if flag == 1 then
