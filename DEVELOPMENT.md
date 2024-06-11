@@ -428,3 +428,40 @@ We don't bother to clear out expired registers; we just check whether they are e
     CTRL dump-state filename.txt
 
 This would be a good way to give the user the ability to exercise some control over things without greatly expanding the number of tokens used.  
+
+
+## Major updates: lpeg parsing, option and keyword args, flexible linebreaks
+
+(June 2024) I have been running some lpeg tests in lbt-7-test.lua to get the hang of it, and it is good. Now I have made a new branch 'lpeg-parsing' to implement the following:
+ * Each command will automatically support option arguments and keyword arguments, in addition to the normal positional arguments. For example:
+```
+     TABLE .o float, pos=htbp
+       :: (colspec) llX
+       :: (rows[1]) font=bold
+       :: (hlines) 1
+       :: (caption) Employees at at June 2023
+       :: (label) table: employees june 2023
+       :: Name & Years of service & Division
+       :: Terry & 11 & Finance
+       :: Joan & 7 & Marketing
+       ::    ...
+```
+ * Flexible newlines in commands, with little or no need for ». This is demonstrated above, with `::` starting each line. You can also end a line with `::`. Therefore, » should almost never be necessary.
+ * lpeg parsing of individual commands into an intermediate structure.
+ * command functions have signature like `c.TABLE = function(n, args, o, kw)`. 
+ * Maybe, lpeg-assisted parsing of the whole lbt document. Perhaps one line at a time to better isolate errors. We'll see.
+ * `[[ ... ]]` for verbatim argument text. Good for code listing. For example:
+```
+      MINTED .o lineno=true :: python :: [[
+        for name in names:
+            print(name)
+      ]]
+```
+ * (This is one reason lpeg could be good to parse out commands.)
+ * No more "styles" -- call them "options" instead. When a command resolves an option, it looks here, in order:
+    - In the command itself, like `QQ [color=blue] :: How many ways...?`
+    - A `CRTL` command \[discussed in another development note, but not yet implemented\], like `CTRL .o QQ.color=green`. This code will set the QQ.color option until overriden with another such command, or until deactivated with `CTRL .o ~QQ.color`.
+    - The document's `META` settings: `OPTIONS QQ.color=gray`.
+    - Globally-applied options in Latex code: `\lbtSetOption{QQ.color=navy}`.
+    - Defaults set up in the command code: `o.QQ = { vspace = '6pt', color = 'blue'}`.
+ * Implementation of *lbt environments* using a syntax like `+COLUMNS 2` and `-COLUMNS`. Unfortunately this clashes with `+BODY` and that can't be overlooked. An alternative might be `[+COLUMNS 2]` and `[-COLUMNS]`. Or maybe reverse it, so that lbt documents have `[@META]` and `[+BODY]` and that means we can use `+COLUMNS 2` and `-COLUMNS` as originally hoped. I think I like that idea. A lot of documents will have to be updated, but that's OK.

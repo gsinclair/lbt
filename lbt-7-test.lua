@@ -53,7 +53,7 @@ local T_parse_commands_lpeg = function()
   --   assn  = word * (eq * word)^-1    // assignment
   --   list  = assn * (comma * assn)^0
   --   list  = sp * list^-1
-  T_lpeg_5()
+  T_lpeg_6_parse_several_commands()
 end
 
 T_lpeg_1 = function()
@@ -242,6 +242,14 @@ T_lpeg_4 = function()
 
 end
 
+-- (9 June 2024) T_lpeg_5 is a successful experiment in parsing commands. There
+-- is some finessing to do, like using .k instead of .a for keyword arguments, and
+-- using .a for positional arguments. But T_lpeg_5 carried on with the assumption,
+-- present since forever, that a command will always be presented as a single
+-- line (i.e. the source will use » if multiple lines are desired, but lbt will
+-- take care of that before command processing). I now want to experiment with
+-- using lpeg to detect whole multi-line commands, and allow multi-line arguments
+-- with `[[ ... ]]`.
 T_lpeg_5 = function()
   -- `cmd` is where we collect data as we parse
   cmd = {}
@@ -454,6 +462,263 @@ T_lpeg_5 = function()
       end
     end
     ::continue::
+  end
+
+end
+
+-- (9 June 2024) See comment for T_lpeg_5.
+T_lpeg_6_parse_several_commands = function()
+  -- {{{
+  -- `cmd` is where we collect data as we parse
+  cmd = {}
+
+  -- functions that collect data
+  process_opcode = function(x)
+    cmd['opcode'] = x
+    cmd['cmdtype'] = 'command'
+    if x[1] == '+' then cmd['cmdtype'] = 'env-open' end
+    if x[1] == '-' then cmd['cmdtype'] = 'env-close' end
+    if x[1] == '+' or x[1] == '-' then cmd['env'] = sub(x,2) end
+    return nil
+  end
+  process_options = function(x)
+    return { options = x }
+  end
+  process_kwarg = function(k, v)
+    return { kwarg = {k,v} }
+  end
+  process_arg = function(x)
+    if x == '()' then
+      return nil
+    else
+      return { arg = x }
+    end
+  end
+
+  -- sp = optional space; space = compulsory space
+  local sp    = loc.space^0
+  local space = loc.space^1
+  -- opcode
+  local op_char = loc.upper + loc.digit + S'-_*+=<>'
+  local opcode = ((S'+-')^-1 * loc.upper * op_char^0) / process_opcode
+  -- separator requires surrounding whitespace
+  local sep = space * '::' * (space + -1)
+  -- non-separator text is a building block for capturing various arguments
+  local textnonsep = C((1 - sep)^1 )
+
+  -- A command with no arguments is a plain opcode.
+  local command0 = opcode * -1
+  -- A command with at least one argument has an optional separator
+  -- to begin with.
+  local commandn = opcode * (sep + space) * C(P(1)^1) * -1
+
+  -- parse_command_1 extracts opcode and argtext, and that is all.
+  -- The argtext is guaranteed not to start with a separator.
+  -- Returns (true, opcode, argtext) or (false, nil, nil).
+  local parse_command_1 = function(line)
+    local op_char = loc.upper + loc.digit + S'-_*+=<>'
+    local opcode = C((S'+-')^-1 * loc.upper * op_char^0)
+    local rest = C(P(1)^1)
+    local command1 = opcode * sp * -1
+    local commandn = opcode * sep^-1 * sp * rest * -1
+    local command = command1 + commandn
+    local captures = {command:match(line)}
+    if captures[1] then
+      return true, captures[1], captures[2]
+    else
+      return false, nil, nil
+    end
+  end
+
+  -- parse_command_2 processes the argtext into options, kwargs, posargs.
+  -- It returns a collection of tables like the following:
+  --   { type = 'options', value = 'compact, format=(i)' }
+  --   { type = 'kwarg',   key = 'filename', value = 'media/xyz.png' }
+  --   { type = 'posarg',  value = 'In this article we examine...'}
+  -- The options need further processing. Delaying that until later allows
+  -- for better error messages.
+  local parse_command_2 = function(argtext)
+    if argtext == nil then
+      return pl.List({})
+    end
+
+    -- First prepend a separator to argtext so that it is in a standard
+    -- format.
+    argtext = ' :: ' .. argtext
+
+    local proc_opt = function(x)
+      return { type = 'options', value = x }
+    end
+    local proc_kwarg = function(k, v)
+      return { type = 'kwarg', key = k, value = v }
+    end
+    local proc_posarg = function(x)
+      if x == '()' then return nil end
+      return { type = 'posarg', value = x }
+    end
+
+    -- options (also called styles) can be specified in three equivalent
+    -- ways: .o {list}  or .s {list}  or  [{list}]
+    local options1 = P'.o' * space * textnonsep
+    local options2 = P'.s' * space * textnonsep
+    local options3 = P'[' * textnonsep * ']'
+    local options  = (options1 + options2 + options3) / proc_opt
+
+    -- a keyword argument is specified like the following example.
+    --     FIGURE .o centre
+    --       :: .a (filename) media/7/primenumbers.png
+    --       :: .a (width)    0.8
+    --       :: .a (caption)  The numbers 1 to 100, with primes circled
+    local key = '(' * C(loc.alpha^1) * ')' * space
+    local value = C(textnonsep)
+    local kw_arg = ( P'.a' * space * (key * value) ) / proc_kwarg
+    --
+    -- general (positional) argument has no particular format
+    local argument = textnonsep / proc_posarg
+
+    -- arguments must appear in a certain order
+    -- local arguments = (sep * options)^-1 * (sep * kw_arg)^0 * (sep * argument)^0 * -1
+    -- 
+    -- Actually, I decided it's better to just accept argument types in any
+    -- order, and deal with errors later.
+    local arguments = (sep * (options + kw_arg + argument))^1
+
+    local results = { arguments:match(argtext) }
+    return pl.List(results)
+  end
+
+  -- parse_command_3 takes the output of _2, plus the opcode, and creates a
+  -- full command object. Example output:
+  --
+  --   { cmdtype = 'command'
+  --     opcode  = 'FIGURE'
+  --     options = { 'center',
+  --                 center = true, border = '1pt',
+  --                 _text = 'centre, border=1pt' }
+  --     args    = { 'a positional argument'
+  --                 filename = 'media/xyz.png'
+  --                 width    = '0.8'
+  --                 caption  = 'A male seal with his cubs' } }
+  --
+  local parse_command_3 = function(opcode, argdetails)
+    local command = {}
+    command.cmdtype = 'command'  -- may be overwritten to 'env-{open,close}'
+    command.opcode  = opcode
+    command.options = pl.OrderedMap()
+    command.args    = pl.List()
+    if opcode[1] == '+' then
+      command.cmdtype = 'env-open'
+    elseif opcode[1] == '-' then
+      command.cmdtype = 'env-close'
+    end
+    local errors = pl.List()
+    local seen_opt, seen_kw, seen_pos = false, false, false
+    for a in argdetails:iter() do
+      if a.type == 'options' then
+        if seen_opt then
+          errors:append('more than one options argument')
+        elseif seen_kw or seen_pos then
+          errors:append('options argument must appear first')
+        else
+          command.options.text_ = a.value
+          -- TODO now parse the option argument, flag any errors, and
+          -- update the command object
+        end
+        seen_opt = true
+      end
+      if a.type == 'kwarg' then
+        if seen_pos then
+          errors:append('keyword argument appears after positional argument')
+        else
+          command.args[a.key] = a.value
+        end
+        seen_kw = true
+      end
+      if a.type == 'posarg' then
+        command.args:append(a.value)
+        seen_pos = true
+      end
+    end
+    -- TODO return errors and command
+    return errors, command
+  end
+  -- }}}
+
+  -- parse6: split text into commands. Return a simple list of command texts.
+  local parse6 = function (text)
+    -- -- sp = optional space; space = compulsory space
+    -- local sp    = loc.space^0
+    -- local space = loc.space^1
+    -- -- opcode
+    -- local op_char = loc.upper + loc.digit + S'-_*+=<>'
+    -- local opcode = ((S'+-')^-1 * loc.upper * op_char^0)
+    -- -- separator requires surrounding whitespace
+    -- local sep = space * '::' * (space + -1)
+    -- -- non-separator text is a building block for capturing various arguments
+    -- local textnonsep = C((1 - sep)^1 )
+    --
+    -- -- A command with no arguments is a plain opcode.
+    -- local command0 = opcode * -1
+    -- -- A command with at least one argument has an optional separator
+    -- -- to begin with.
+    -- local commandn = opcode * (sep + space) * C(P(1)^1) * -1
+
+    local sp = (S' \t')^0
+    local space = (S' \t')^1
+    local nl = P'\n'
+    local opcode = sp * (loc.upper^1 * (P'*')^-1)    -- simple opcode for now
+    local sep = space * '::' * space
+    -- end of command: a newline with no separator following
+    local endofcmd = sp * (nl - #sep)
+    -- argument: all text until either a separator or endofcmd
+    local argument = (1 - (sep + endofcmd))^1
+    local command0 = opcode * endofcmd
+    local command1 = opcode * argument * endofcmd
+    local commandn = opcode * (sep * argument)^1 * endofcmd
+    local command = commandn + command1 + commandn
+    local commands = command^1
+    DEBUGGER()
+    return commands:match(text)
+  end
+
+  local examples = pl.List()
+  examples:append [[
+    CLEARPAGE
+    VSPACE 3em
+    FIGURE .o centre
+      :: (filename) media/7/primenumbers.png
+      :: (width)    0.8
+      :: .a (caption)  The numbers 1 to 100, with primes circled
+      :: normal argument
+    CMD bigskip
+    TEXT .o vspace=12pt :: Hello one two three.
+     » Four five six.
+    ]]
+
+  local n = 0
+  for example in examples:iter() do
+    n = n + 1
+    print()
+    print('Example ' .. n)
+    print(example)
+    local t = parse6(example)
+    D(t)
+    -- local ok, opcode, argtext = parse_command_1(example)
+    -- if not ok then
+    --   print('failed parse_command_1')
+    --   goto continue
+    -- end
+    -- local argdetails = parse_command_2(argtext)
+    -- local errors, command = parse_command_3(opcode, argdetails)
+    -- if #errors == 0 then
+    --   D(command)
+    -- else
+    --   print 'Error(s) encountered while processing arguments:'
+    --   for e in errors:iter() do
+    --     print('  * ' .. e)
+    --   end
+    -- end
+    -- ::continue::
   end
 
 end
@@ -821,22 +1086,22 @@ local function RUN_TESTS(flag)
 
   -- IX(lbt.system.template_register)
 
-  T_pragmas_and_other_lines()
-  T_parsed_content_1()
-  T_extra_sources()
-  T_add_template_directory()
-  T_expand_Basic_template_1()
-  T_expand_Basic_template_2()
-  T_util()
-  T_template_styles_specification()
-  T_number_in_alphabet()
-  T_style_string_to_map()
-  T_style_resolver_1a()
-  T_style_resolver_1b()
-  T_styles_in_test_question_template_5a()
-  T_styles_in_test_question_template_5b()
-  T_register_expansion()
-  T_simplemath()
+  -- T_pragmas_and_other_lines()
+  -- T_parsed_content_1()
+  -- T_extra_sources()
+  -- T_add_template_directory()
+  -- T_expand_Basic_template_1()
+  -- T_expand_Basic_template_2()
+  -- T_util()
+  -- T_template_styles_specification()
+  -- T_number_in_alphabet()
+  -- T_style_string_to_map()
+  -- T_style_resolver_1a()
+  -- T_style_resolver_1b()
+  -- T_styles_in_test_question_template_5a()
+  -- T_styles_in_test_question_template_5b()
+  -- T_register_expansion()
+  -- T_simplemath()
   T_parse_commands_lpeg()
   -- EXP_sip()
 
@@ -850,4 +1115,4 @@ local function RUN_TESTS(flag)
   end
 end
 
-RUN_TESTS(0)
+RUN_TESTS(1)
