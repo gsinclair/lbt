@@ -29,6 +29,7 @@ local Cp = lpeg.Cp -- position capture
 -- word = loc.alpha^1
 -- (sp * Cp() * word)^0   match  "one three two"  --> 1  5  11"
 local Ct = lpeg.Ct -- table capture
+local Cs = lpeg.Cs -- string capture [read more about this]
 -- TODO examples
 
 local D = pl.pretty.dump
@@ -53,7 +54,8 @@ local T_parse_commands_lpeg = function()
   --   assn  = word * (eq * word)^-1    // assignment
   --   list  = assn * (comma * assn)^0
   --   list  = sp * list^-1
-  T_lpeg_6_parse_several_commands()
+  -- T_lpeg_6_parse_several_commands()
+  T_lpeg_7_line_continuations()
 end
 
 T_lpeg_1 = function()
@@ -672,7 +674,7 @@ T_lpeg_6_parse_several_commands = function()
     local endofcmd = sp * (nl - #sep)
     -- argument: all text until either a separator or endofcmd
     local argument = (1 - (sep + endofcmd))^1
-    local command0 = opcode * endofcmd
+    local command0 = C(opcode) * endofcmd
     local command1 = opcode * argument * endofcmd
     local commandn = opcode * (sep * argument)^1 * endofcmd
     local command = commandn + command1 + commandn
@@ -682,45 +684,162 @@ T_lpeg_6_parse_several_commands = function()
   end
 
   local examples = pl.List()
+  -- 1
+  examples:append [[
+    CLEARPAGE
+  ]]
+  -- 2
+  examples:append [[
+    VSPACE 3em
+  ]]
+  -- 3
+  examples:append [[
+    VSPACE 3em :: Hello :: Goodbye
+  ]]
+  -- 4
+  examples:append [[
+    TEXT
+      :: Hello
+  ]]
+  -- 5
+  examples:append [[
+    ITEMIZE
+      :: The rain in Spain falls mainly on the plane.
+      :: The quick brown fox jumps over the lazy dog.
+      :: Now is the time for all good men to come to the aid of the party.
+  ]]
+  -- 6
+  examples:append [[
+    ITEMIZE .o compact, topsep=12pt
+      :: The rain in Spain falls mainly on the plane.
+      :: The quick brown fox jumps over the lazy dog.
+      :: Now is the time for all good men to come to the aid of the party.
+  ]]
+  -- 7
+  examples:append [[
+    CLEARPAGE
+    VSPACE 3em
+  ]]
+  -- 8
   examples:append [[
     CLEARPAGE
     VSPACE 3em
     FIGURE .o centre
       :: (filename) media/7/primenumbers.png
       :: (width)    0.8
-      :: .a (caption)  The numbers 1 to 100, with primes circled
+      :: .k (caption)  The numbers 1 to 100, with primes circled
       :: normal argument
     CMD bigskip
     TEXT .o vspace=12pt :: Hello one two three.
      » Four five six.
     ]]
 
-  local n = 0
-  for example in examples:iter() do
-    n = n + 1
+  -- <experiment>
+  local tag = function(type)
+    return function(x)
+      return { type = type, value = x }
+    end
+  end
+  local pos = Cp() / tag('position')
+  local sp = (S' \t')^0
+  local allsp = (S' \t\n')^0
+  local space = (S' \t')^1
+  local allspace = (S' \t\n')^1
+  local nl = P'\n'
+  local opcode = C(loc.upper^1 * (P'*')^-1) / tag('opcode')
+  local sep = allspace * '::' * space
+  -- end of command: a newline with no separator following
+  local endofcmd = sp * (nl * -#sep)
+  -- argument: all text until either a separator or endofcmd (just nl for now)
+  local notarg   = sep + nl
+  local argument = C((1 - notarg)^1) / tag('rawarg')
+  local command0 = Ct(sp * opcode * endofcmd * pos)
+  local command1 = Ct(sp * opcode * (sep + space) * argument * endofcmd * pos)
+  local commandn = Ct(sp * opcode * (sep + space) * (argument * sep)^1 * argument * endofcmd * pos)
+  local process_cmd = function(data)
+    local result = { rawargs = pl.List() }
+    for _, x in pairs(data) do
+      if x.type == 'opcode' then
+        result.opcode = x.value
+      elseif x.type == 'rawarg' then
+        result.rawargs:append(x.value)
+      elseif x.type == 'position' then
+        result.position = x.value
+      end
+    end
+    return result
+  end
+  local command = ((commandn + command1 + command0)) / process_cmd
+  local commands = Ct(command^1)
+
+  local patterns = { command0 = command0, command1 = command1, commandn = commandn, command = command, commands = commands }
+  local e1, e2, e3, e4, e5, e6, e7, e8 = table.unpack(examples)
+
+  local test = function(pattern_name, text)
     print()
-    print('Example ' .. n)
-    print(example)
-    local t = parse6(example)
-    D(t)
-    -- local ok, opcode, argtext = parse_command_1(example)
-    -- if not ok then
-    --   print('failed parse_command_1')
-    --   goto continue
-    -- end
-    -- local argdetails = parse_command_2(argtext)
-    -- local errors, command = parse_command_3(opcode, argdetails)
-    -- if #errors == 0 then
-    --   D(command)
-    -- else
-    --   print 'Error(s) encountered while processing arguments:'
-    --   for e in errors:iter() do
-    --     print('  * ' .. e)
-    --   end
-    -- end
-    -- ::continue::
+    print('------- ' .. pattern_name)
+    print(text)
+    local m = patterns[pattern_name]:match(text)
+    D(m)
   end
 
+  -- local p = Ct(sp * opcode * pos )
+  -- D(p:match(e1))
+
+  test('command', e1)
+  test('command', e2)
+  test('command', e3)
+  test('command', e4)
+  test('command', e5)
+  test('command', e6)
+
+  -- Now for multiple commands
+  print('============================================================')
+  local extract_commands = function(text)
+    local length = #text
+    local position = 1
+    local result = pl.List()
+    local done = false
+    repeat
+      local cmd = command:match(text, position)
+      if cmd ~= nil then
+        result:append(cmd)
+        position = cmd.position
+      else
+        done = true
+      end
+    until done
+    return result
+  end
+  test_multi = function(text)
+    local x = extract_commands(text)
+    print()
+    print('---------')
+    print(text)
+    D(x)
+  end
+  test_multi(e7)
+  test_multi(e8)
+
+end
+
+T_lpeg_7_line_continuations = function()
+  local example = [[
+    TEXT I'm the cat in the hat, and I'm »
+      glad that I found you.
+      » Your mother would not mind at all »
+      if I »
+      » do.
+  ]]
+
+  local x = example
+  print(x)
+  x = x:gsub('»[ \t]*\n[ \t]*»', '')
+  print(x)
+  x = x:gsub('»[ \t]*\n[ \t]*', '')
+  print(x)
+  x = x:gsub('[ \t]*\n[ \t]*»', '')
+  print(x)
 end
 
 ----------------------------------------------------------------------
