@@ -849,8 +849,8 @@ local function content_lines(text)
 end
 
 -- Whip up a parsed token thing for testing
-local T = function(t, n, a, r)
-  return { token = t, nargs = n, args = pl.List(a), raw = r }
+local T = function(t, n, a)
+  return { token = t, nargs = n, args = pl.List(a) }
 end
 
 ----------------------------------------------------------------------
@@ -858,46 +858,51 @@ end
 -- For testing parsed_content
 local good_input_1 = content_lines([[
   !DRAFT
-  @META
+  [@META]
     TEMPLATE Basic
-    FOO      Bar
-  +BODY
+    TRAIN    Bar :: Baz
+    BUS      .d capacity=55, color=purple
+  [+BODY]
     BEGIN multicols :: 2
     TEXT Hello there
     END multicols
     VSPACE 30pt
     VFILL
-    TEXT Hello again]])
+    TEXT Hello again
+    ITEMIZE
+      :: One
+      :: Two
+      :: Three]])
 
 -- For testing SOURCES
 local good_input_2 = content_lines([[
-  @META
+  [@META]
     TEMPLATE Basic
     SOURCES  Questions, Figures, Tables
-  +BODY
+  [+BODY]
     TEXT Hello again]])
 
 -- For testing lack of SOURCES
 local good_input_3 = content_lines([[
-  @META
+  [@META]
     TEMPLATE Basic
-  +BODY
+  [+BODY]
     TEXT Hello again]])
 
 -- For testing positive expansion of Basic template
 local good_input_4 = content_lines([[
-  @META
+  [@META]
     TEMPLATE lbt.Basic
-  +BODY
+  [+BODY]
     TEXT Examples of animals:
     ITEMIZE  [topsep=0pt] :: Bear :: Chameleon :: Frog
     TEXT* 30pt :: Have you seen any of these?]])
 
 -- For testing negative expansion of Basic template
 local bad_input_1 = content_lines([[
-  @META
+  [@META]
     TEMPLATE lbt.Basic
-  +BODY
+  [+BODY]
     TEXT
     TEXT a :: b :: c
     ITEMIZE
@@ -905,9 +910,9 @@ local bad_input_1 = content_lines([[
 
 -- For testing styles (no local override)
 local good_input_5a = content_lines([[
-  @META
+  [@META]
     TEMPLATE TestQuestions
-  +BODY
+  [+BODY]
     TEXT 30pt :: Complete these questions in the space below.
     Q Evaluate:
     QQ $2+2$
@@ -918,10 +923,10 @@ local good_input_5a = content_lines([[
 
 -- For testing styles (local override)
 local good_input_5b = content_lines([[
-  @META
+  [@META]
     TEMPLATE TestQuestions
     STYLES   Q.vspace 18pt :: MC.alphabet roman
-  +BODY
+  [+BODY]
     TEXT 30pt :: Complete these questions in the space below.
     Q Evaluate:
     QQ $2+2$
@@ -932,9 +937,9 @@ local good_input_5b = content_lines([[
 
 -- For testing registers
 local good_input_6 = content_lines([[
-  @META
+  [@META]
     TEMPLATE lbt.Basic
-  +BODY
+  [+BODY]
     STO Delta :: 4 :: $b^2 - 4ac$
     STO Num   :: 4 :: $-b \pm \sqrt{◊Delta}$
     STO Den   :: 4 :: $2a$
@@ -956,23 +961,53 @@ local function T_pragmas_and_other_lines()
   EQ(lines, pl.List.new({"Line 1", "Line 2", "Line 3"}))
 end
 
+-- XXX In the process of updating, June 2024.
+-- !DRAFT
+-- [@META]
+--   TEMPLATE Basic
+--   TRAIN    Bar :: Baz
+--   BmbuUS      .d capacity=55, color=purple
+-- [+BODY]
+--   BEGIN multicols :: 2
+--   TEXT Hello there
+--   END multicols
+--   VSPACE 30pt
+--   VFILL
+--   TEXT Hello again
+--   ITEMIZE
+--     :: One
+--     :: Two
+--     :: Three
 local function T_parsed_content_1()
   lbt.api.reset_global_data()
   local pc = lbt.fn.parsed_content(good_input_1)
+  -- check pragams are correct
   local exp_pragmas = { draft = true, debug = false, ignore = false }
+  -- check META is correct
   EQ(pc.pragmas, exp_pragmas)
   local exp_meta = {
-    TEMPLATE = "Basic",
-    FOO      = "Bar"
+    type = 'dictionary-block',
+    name = 'META',
+    data = {
+      TEMPLATE = { n = 1, types = 's',  args = { 'Basic' } },
+      TRAIN    = { n = 2, types = 'ss', args = { 'Bar', 'Baz' } },
+      BUS      = { n = 1, types = 'd',  args = { { capacity = '55', color = 'purple' } } }
+    }
   }
-  EQ(pc.META, exp_meta)
+  EQ(pc.dict.META, exp_meta)
+  -- check BODY is correct     XXX need to update this
   local exp_body = {
-    T("BEGIN", 2, {"multicols","2"}, "multicols :: 2"),
-    T("TEXT", 1, {"Hello there"}, "Hello there"),
-    T("END", 1, {"multicols"}, "multicols"),
-    T("VSPACE", 1, {"30pt"}, "30pt"),
-    T("VFILL", 0, {}, ""),
-    T("TEXT", 1, {"Hello again"}, "Hello again"),
+    { opcode = 'BEGIN', options = {}, kwargs = {}, args = {'multicols', '2'}},
+    { 'etc.' }
+  }
+  local exp_body = {
+    T("BEGIN", 2, {"multicols","2"}),
+    T("TEXT", 1, {"Hello there"}),
+    T("END", 1, {"multicols"}),
+    T("VSPACE", 1, {"30pt"}),
+    T("VFILL", 0, {}),
+    T("TEXT", 1, {"Hello again"}),
+    T("ITEMIZE", 3, {"One", "Two", "Three"})
   }
   EQ(pc.BODY[1], exp_body[1])
   EQ(pc.BODY[2], exp_body[2])
@@ -980,6 +1015,7 @@ local function T_parsed_content_1()
   EQ(pc.BODY[4], exp_body[4])
   EQ(pc.BODY[5], exp_body[5])
   EQ(pc.BODY[6], exp_body[6])
+  EQ(pc.BODY[7], exp_body[7])
   EQ(pc.BODY, exp_body)
 end
 

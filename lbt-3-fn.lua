@@ -45,6 +45,13 @@ end
 --  * latex_expansion(pc)      (Latex representation based on the parsed content)
 --------------------------------------------------------------------------------
 
+-- new June 2024, based on lpeg.
+-- Return value...
+lbt.fn.parsed_content = function(content_lines)
+
+  
+end
+
 -- parsed_content(c)
 --
 -- Input: list of raw stripped lines from the `lbt` environment
@@ -57,7 +64,7 @@ end
 -- Note: each item in META, BODY etc. is of the form
 --   {token:'BEGIN' nargs:2, args:List('multicols','2') raw:'multicols 2'}
 --
-lbt.fn.parsed_content = function (content_lines)
+lbt.fn.parsed_content_old = function (content_lines)
   lbt.assert_table(1, content_lines)
   -- Obtain pragmas (set) and non-pragma lines (list), and set up result table.
   local pragmas, lines = lbt.fn.impl.pragmas_and_other_lines(content_lines)

@@ -44,7 +44,7 @@ lbt.err.E102_invalid_pragma = function(line)
 end
 
 lbt.err.E101_line_out_of_place = function(line)
-  E("E101: Line out of place (not contained in @META or +BODY or similar):\n  <<%s>>", line)
+  E("E101: Line out of place (not contained in [@META] or [+BODY] or similar):\n  <<%s>>", line)
 end
 
 lbt.err.E105_dictionary_key_without_value = function(line)

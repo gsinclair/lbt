@@ -114,11 +114,11 @@ One solution is as follows. Say I have a content template called `Math`. It defi
 OK, so how are they used? For a start, they can only be used in a LBT environment. The author might write
 
     \begin{lbt}
-        @META
+        [@META]
             TEMPLATE   lbt.WS0
             SOURCES    Math
             MACROS     defint,indefint,myvec
-        +BODY
+        [+BODY]
             TEXT Consider the vector \myvec{PQ} where ...
             Q Evaluate \indefint{e^{2x},dx}.
     \end{lbt}
@@ -162,10 +162,10 @@ The word "template" is a good choice for a key aspect of what LBT does, like for
     \begin{document}
     ...
     \begin{lbt}
-      @META
+      [@META]
         TEMPLATE lbt.Basic
         SOURCES  Poetry
-      +BODY
+      [+BODY]
         LIMERICK There once was a pirate named Bates
          » ::    Who rolled round the deck on his skates
          » ::    He fell on his cutlass
@@ -285,10 +285,10 @@ When implementing styles I was at one point going to write `lbt.api.style(key)` 
     --   \lbtStyle{Q.vspace 12pt :: MC.alphabet :: arabic }
     --
     --   \begin{lbt}
-    --     @META
+    --     [@META]
     --       TEMPLATE    Exam
     --       STYLE       Q.vspace 30pt :: Q.color gray :: MC.alphabet roman
-    --     +BODY
+    --     [+BODY]
     --       TEXT  You have 30 minutes.
     --       Q  Evaluate:
     --       QQ $2+2$
@@ -465,3 +465,4 @@ This would be a good way to give the user the ability to exercise some control o
     - Globally-applied options in Latex code: `\lbtSetOption{QQ.color=navy}`.
     - Defaults set up in the command code: `o.QQ = { vspace = '6pt', color = 'blue'}`.
  * Implementation of *lbt environments* using a syntax like `+COLUMNS 2` and `-COLUMNS`. Unfortunately this clashes with `+BODY` and that can't be overlooked. An alternative might be `[+COLUMNS 2]` and `[-COLUMNS]`. Or maybe reverse it, so that lbt documents have `[@META]` and `[+BODY]` and that means we can use `+COLUMNS 2` and `-COLUMNS` as originally hoped. I think I like that idea. A lot of documents will have to be updated, but that's OK.
+     - I am implementing the [@META] and [+BODY] idea now (June 2024).
