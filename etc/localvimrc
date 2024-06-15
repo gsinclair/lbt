@@ -1,0 +1,7 @@
+" Run the etc/exerpt.rb script in the other pane
+" nnoremap <leader>be :!tmux send-keys -t right 'ruby etc/excerpt.rb' Enter<CR><CR>
+nnoremap <leader>br :!tmux send-keys -t right './runtest.sh' Enter<CR><CR>
+nmap ,, <leader>br
+
+inoremap ,l ◊
+inoremap ,, ,

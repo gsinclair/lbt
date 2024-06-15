@@ -864,15 +864,22 @@ local good_input_1 = content_lines([[
     BUS      .d capacity=55, color=purple
   [+BODY]
     BEGIN multicols :: 2
-    TEXT Hello there
+    TEXT .o font=small :: Hello there
     END multicols
-    VSPACE 30pt
     VFILL
-    TEXT Hello again
     ITEMIZE
       :: One
       :: Two
-      :: Three]])
+      :: Three
+  [+EXTRA]
+    TABLE .o float
+      :: (caption) Phone directory
+      :: (colspec) ll
+      :: Name & Extension
+      :: John & 429
+      :: Mary & 388
+    TEXT Hello
+]])
 
 -- For testing SOURCES
 local good_input_2 = content_lines([[
@@ -966,18 +973,26 @@ end
 -- [@META]
 --   TEMPLATE Basic
 --   TRAIN    Bar :: Baz
---   BmbuUS      .d capacity=55, color=purple
+--   BUS      .d capacity=55, color=purple
 -- [+BODY]
 --   BEGIN multicols :: 2
---   TEXT Hello there
+--   TEXT .o font=small :: Hello there
 --   END multicols
---   VSPACE 30pt
 --   VFILL
---   TEXT Hello again
 --   ITEMIZE
 --     :: One
 --     :: Two
 --     :: Three
+-- [+EXTRA]
+--   TABLE .o float
+--     :: (caption) Phone directory
+--     :: (colspec) ll
+--     :: Name & Extension
+--     :: John & 429
+--     :: Mary & 388
+--   TEXT Hello
+
+-- This uses good_input_1 to test lbt.fn.parsed_content.
 local function T_parsed_content_1()
   lbt.api.reset_global_data()
   local pc = lbt.fn.parsed_content(good_input_1)
@@ -995,28 +1010,32 @@ local function T_parsed_content_1()
     }
   }
   EQ(pc.dict.META, exp_meta)
-  -- check BODY is correct     XXX need to update this
+  -- check BODY is correct
   local exp_body = {
-    { opcode = 'BEGIN', options = {}, kwargs = {}, args = {'multicols', '2'}},
-    { 'etc.' }
+    { opcode = 'BEGIN', options = {}, kwargs = {}, args = {'multicols', '2'} },
+    { opcode = 'TEXT', options = {font='small'}, kwargs = {}, args = {'Hello there'} },
+    { opcode = 'END', options = {}, kwargs = {}, args = {'multicols'} },
+    { opcode = 'VFILL', options = {}, kwargs = {}, args = {} },
+    { opcode = 'ITEMIZE', options = {}, kwargs = {}, args = {'One', 'Two', 'Three'} },
   }
-  local exp_body = {
-    T("BEGIN", 2, {"multicols","2"}),
-    T("TEXT", 1, {"Hello there"}),
-    T("END", 1, {"multicols"}),
-    T("VSPACE", 1, {"30pt"}),
-    T("VFILL", 0, {}),
-    T("TEXT", 1, {"Hello again"}),
-    T("ITEMIZE", 3, {"One", "Two", "Three"})
+  EQ(pc.list.BODY[1], exp_body[1])
+  EQ(pc.list.BODY[2], exp_body[2])
+  EQ(pc.list.BODY[3], exp_body[3])
+  EQ(pc.list.BODY[4], exp_body[4])
+  EQ(pc.list.BODY[5], exp_body[5])
+  EQ(pc.list.BODY[6], exp_body[6])
+  EQ(pc.list.BODY[7], exp_body[7])
+  EQ(pc.list.BODY,    exp_body)
+  -- check EXTRA is correct
+  local exp_extra = {
+    { opcode = 'TABLE', options = {float=true},
+      kwargs = {caption='Phone directory', colspec='ll'},
+      args = {'Name & Extension', 'John & 429', 'Mary & 388'} },
+    { opcode = 'TEXT', options = {}, kwargs = {}, args = {'Hello'} },
   }
-  EQ(pc.BODY[1], exp_body[1])
-  EQ(pc.BODY[2], exp_body[2])
-  EQ(pc.BODY[3], exp_body[3])
-  EQ(pc.BODY[4], exp_body[4])
-  EQ(pc.BODY[5], exp_body[5])
-  EQ(pc.BODY[6], exp_body[6])
-  EQ(pc.BODY[7], exp_body[7])
-  EQ(pc.BODY, exp_body)
+  EQ(pc.list.EXTRA[1], exp_extra[1])
+  EQ(pc.list.EXTRA[2], exp_extra[2])
+  EQ(pc.list.EXTRA,    exp_extra)
 end
 
 local function T_extra_sources()

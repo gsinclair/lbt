@@ -13,8 +13,7 @@ end
 --------------------------------------------------------------------------------
 -- {{{ Author content:
 --  * author_content_clear      (reset lbt.const and lbt.var data)
---  * author_content_append     (append stripped line to lbt.const.author_content,
---                               handling » continuations)
+--  * author_content_append     (append line to lbt.const.author_content)
 --------------------------------------------------------------------------------
 
 lbt.fn.author_content_clear = function()
@@ -24,17 +23,25 @@ lbt.fn.author_content_clear = function()
 end
 
 lbt.fn.author_content_append = function(line)
-  line_list = lbt.const.author_content
-  line = line:strip()
-  if line == "" or line:startswith('%') then return end
-  if line:sub(1,2) == "»" then
-    -- Continuation of previous line
-    prev_line = line_list:pop()
-    if prev_line == nil then
-      lbt.err.E103_invalid_line_continuation(line)
-    end
-    line = prev_line .. " " .. line:sub(3,-1)
-  end
+  -- NOTE we used to strip the line and handle » continuations here. That is
+  -- no longer desirable or necessary. We can easily handle all » at once with
+  -- string substitution. And stripping prevents us from supporting verbatim
+  -- text like code listings.
+  --
+  -- The code and the comment will be deleted when the lpeg parsing approach
+  -- is completed and the branch is merged.
+  --
+  -- line_list = lbt.const.author_content
+  -- line = line:strip()
+  -- if line == "" or line:startswith('%') then return end
+  -- if line:sub(1,2) == "»" then
+  --   -- Continuation of previous line
+  --   prev_line = line_list:pop()
+  --   if prev_line == nil then
+  --     lbt.err.E103_invalid_line_continuation(line)
+  --   end
+  --   line = prev_line .. " " .. line:sub(3,-1)
+  -- end
   lbt.const.author_content:append(line)
 end
 -- }}}
@@ -45,11 +52,31 @@ end
 --  * latex_expansion(pc)      (Latex representation based on the parsed content)
 --------------------------------------------------------------------------------
 
+-- An implementation aid for parsed_content.
+-- It 
+lbt.fn.parsed_content_0 = function (text) 
+end
+
 -- new June 2024, based on lpeg.
 -- Return value...
 lbt.fn.parsed_content = function(content_lines)
-
-  
+  -- The content lines are in a list. For lpeg parsing, we want the content as
+  -- a single string. But there could be pragmas in there like !DRAFT, and it
+  -- is better to extract them now that we have separate lines. Hence we call
+  -- a function to do this for us. This function handles » line continuations
+  -- as well. This is a pre-parsing stage.
+  local pragmas, content = lbt.fn.impl.pragmas_and_content(content_lines)
+  -- Set up our result variable, which will contain.......
+  local result = { pragmas = pragmas }
+  -- Detect ignore and act accordingly.
+  if pragmas.ignore then
+    return result
+  end
+  -- Detect debug and act accordingly.
+  if pragmas.debug then
+    lbt.fn.set_log_channels_for_debugging_single_expansion()
+  end
+  -- (Now we are ready to call functions in lbt.parser.)
 end
 
 -- parsed_content(c)
@@ -662,8 +689,9 @@ local update_pragma_set = function(pragmas, line)
 end
 
 -- Extract pragmas from the lines into a table.
--- Return a table of pragmas (draft, debug, ignore) and a List of non-pragma lines.
-lbt.fn.impl.pragmas_and_other_lines = function(input_lines)
+-- Return a table of pragmas (draft, debug, ignore) and a consolidated string of
+-- the actual content, with » line continations taken care of.
+lbt.fn.impl.pragmas_and_content = function(input_lines)
   pragmas = { draft = false, ignore = false, debug = false }
   lines   = pl.List()
   for line in input_lines:iter() do
@@ -673,7 +701,13 @@ lbt.fn.impl.pragmas_and_other_lines = function(input_lines)
       lines:append(line)
     end
   end
-  return pragmas, lines
+  local content = lines:concat('\n')
+  -- Handle » line continuations, which would normally happen at the beginning
+  -- of a line, but we will allow them at the end, or at both.
+  content = content:gsub('»[ \t]*\n[ \t]*»', '')
+  content = content:gsub('»[ \t]*\n[ \t]*', '')
+  content = content:gsub('[ \t]*\n[ \t]*»', '')
+  return pragmas, content
 end
 
 -- Validate that a content key like @META or +BODY comprises only upper-case

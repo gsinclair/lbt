@@ -178,6 +178,10 @@ lbt.fn = {}
 lbt.util = {}
 
 
+-- lbt.parser will contain functions that parse LBT documents.
+lbt.parser = {}
+
+
 -- lbt.err contains functions that assist in error handling.
 lbt.err = {}
 

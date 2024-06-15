@@ -56,6 +56,7 @@ end
 --
 --------------------------------------------------------------------------------
 
+-- This is called at the start of an lbt environment. See above and lby.sty.
 lbt.api.author_content_collect = function()
   -- Reset constants and variables ready for a new lbt expansion.
   lbt.fn.author_content_clear()
@@ -78,6 +79,7 @@ lbt.api.author_content_collect = function()
   lbt.log(3, "  * line:           %s", status.linenumber)
 end
 
+-- This is called at the end of an lbt environment. See above and lby.sty.
 lbt.api.author_content_emit_latex = function()
   local c  = lbt.const.author_content
   local eid = lbt.fn.current_expansion_id()
