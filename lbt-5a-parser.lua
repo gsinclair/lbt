@@ -65,7 +65,14 @@ local sep = space * '::' * hspace
 local endofcmd = hsp * (nl * -#sep)
 -- argument: all text until either a separator or endofcmd (just nl for now)
 local notarg   = sep + nl
-local argument = Pos * C((1 - notarg)^1) / tag('rawarg')
+local argtext  = C((1 - notarg)^1)
+local endverbtext = nl * hsp * '>>'
+local verbarg  = Pos * '.v <<' * hsp * nl *
+                  (C((P(1) - endverbtext)^1) * endverbtext / tag('posarg'))
+local optarg   = Pos * '.o' * hspace * argtext / tag('optarg')
+local kwarg    = Pos * '.k' * hspace * argtext / tag('kwarg')
+local posarg   = Pos * ('.a' * hspace)^-1 * argtext / tag('posarg')
+local argument = verbarg + optarg + kwarg + posarg
 local command0 = Ct(hsp * opcode * endofcmd)
 local command1 = Ct(hsp * opcode * (sep + hspace) * argument * endofcmd)
 local commandn = Ct(hsp * opcode * (sep + hspace) *
@@ -74,12 +81,24 @@ local commandn = Ct(hsp * opcode * (sep + hspace) *
 
 -- {{{ Actual command processing
 local process_cmd = function(data)
-  local result = { rawargs = pl.List() }
+  local result = { kwargs = pl.List(), posargs = pl.List() }
+  local seen = {}
   for _, x in pairs(data) do
     if x.type == 'opcode' then
-      result.opcode = x.value
-    elseif x.type == 'rawarg' then
-      result.rawargs:append(x.value)
+      result[1] = x.value
+    elseif x.type == 'optarg' then
+      if seen.optarg or seen.kwarg or seen.posarg then return false end
+      result.optarg = x.value
+      -- parse optarg here?
+      seen.optarg = true
+    elseif x.type == 'kwarg' then
+      if seen.posarg then return false end
+      result.kwargs:append(x.value)
+      -- parse kwarg here?
+      seen.kwarg = true
+    elseif x.type == 'posarg' then
+      result.posargs:append(x.value)
+      seen.posarg = true
     end
   end
   return result
@@ -109,8 +128,7 @@ local dict_block = Ct(sp * dict_header * dict_entry^1) / process_dict_block
 
 local list_header = Pos * '[+' * (loc.upper^1 / tag('list_header')) * ']' * hsp * nl
 local process_list_block = function(tags)
-  local result = { type = 'list_block', name = tags[1].value, commands = tags[2] }
-  return result
+  return { type = 'list_block', name = tags[1].value, commands = tags[2] }
 end
 local list_block = Ct(sp * list_header * commands) / process_list_block
 
@@ -199,6 +217,16 @@ local IN6 = [[
     TEXT Hello
 ]]
 
+-- IN7: test a verbatim argument
+local IN7 = [==[
+  MINTED python :: .v <<
+    for name in names:
+      print(f'Hello {name}')
+    print('Done')
+  >> :: foo
+  TEXT Hello
+]==]
+
 -- }}}
 
 -- {{{ Testing
@@ -211,7 +239,9 @@ local c = test(commands):match(IN3)   -- should be nil
 local d = test(dict_block):match(IN4)
 local e = test(list_block):match(IN5)
 local f = document:match(IN6)
-D(f)
+local g = commands:match(IN7)
+D(g)
+
 -- }}}
 
 IX('done testing')
