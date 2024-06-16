@@ -42,7 +42,6 @@ local tag = function(type)
 end
 local Pos = P(
   function (_, i)
-    print(F('MaxPosition: %d', i))
     MaxPosition = math.max(MaxPosition, i)
     return true
   end
@@ -81,48 +80,42 @@ local process_cmd = function(data)
       result.opcode = x.value
     elseif x.type == 'rawarg' then
       result.rawargs:append(x.value)
-    elseif x.type == 'position' then
-      result.position = x.value
     end
   end
   return result
 end
 local command = (commandn + command1 + command0) / process_cmd
-local commands = Ct(command^1) * sp * -1
+local commands = Ct(command^1)
 
--- Use the single command parser to extract one command at a time from the text.
--- All are returned in a table.
--- (This is experimental, but...) the advantage is if there is an error somewhere,
--- we can extract what we can up to just before the error, and thus identify
--- the error location for the user. Better this than just failing to parse at all.
--- But a different approach might be possible using Cmp to update the last known
--- good position during the parse.
-local extract_commands = function(text)
-  local length = #text
-  local position = 1
-  local result = pl.List()
-  local done = false
-  repeat
-    local cmd = command:match(text, position)
-    if cmd ~= nil then
-      result:append(cmd)
-      position = cmd.position
-    else
-      done = true
-    end
-  until done
-  return result
-end
 -- }}}
 
--- {{{ Overall document structure: [@META], [+BODY], etc.
+-- {{{ Overall document structure: [@META], [+BODY], and the whole document.
 -- [@META] introduces a dictionary block
-local dict_header = Pos * P'[@' * (loc.upper^1 / tag('dict_header')) * ']' * hsp * nl
+local dict_header = Pos * '[@' * (loc.upper^1 / tag('dict_header')) * ']' * hsp * nl
 local dict_key   = loc.alpha^1
 local dict_value = (P(1) - nl)^1
 local dict_entry = Pos * Ct(hsp * C(dict_key) * hspace * C(dict_value) * nl) / tag('dict_entry')
--- local dict_entries = Ct(sp)
-local dict_block = Ct(sp * dict_header * dict_entry^1)
+local process_dict_block = function(tags)
+  local result = { type = 'dict_block' }
+  result.name = tags[1].value
+  result.entries = {}
+  for i = 2,#tags do
+    local key, value = table.unpack(tags[i].value)
+    result.entries[key] = value
+  end
+  return result
+end
+local dict_block = Ct(sp * dict_header * dict_entry^1) / process_dict_block
+
+local list_header = Pos * '[+' * (loc.upper^1 / tag('list_header')) * ']' * hsp * nl
+local process_list_block = function(tags)
+  local result = { type = 'list_block', name = tags[1].value, commands = tags[2] }
+  return result
+end
+local list_block = Ct(sp * list_header * commands) / process_list_block
+
+local block = dict_block + list_block
+local document = Ct(block^1) * sp * -1
 -- }}}
 
 -- {{{ Test data
@@ -208,15 +201,17 @@ local IN6 = [[
 
 -- }}}
 
-  -- [@META]
-  --   TEMPLATE Basic
-  --   TRAIN    Bar :: Baz
-  --   BUS      .d capacity=55, color=purple
-
 -- {{{ Testing
-local m = commands:match(IN1)
--- local m = dict_block:match(IN4)
-D(m)
+local test = function(patt)
+  return patt * sp * -1
+end
+local a = test(commands):match(IN1)
+local b = test(commands):match(IN2)
+local c = test(commands):match(IN3)   -- should be nil
+local d = test(dict_block):match(IN4)
+local e = test(list_block):match(IN5)
+local f = document:match(IN6)
+D(f)
 -- }}}
 
 IX('done testing')
