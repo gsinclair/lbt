@@ -30,6 +30,7 @@ local Cp = lpeg.Cp -- position capture
 -- (sp * Cp() * word)^0   match  "one three two"  --> 1  5  11"
 local Ct = lpeg.Ct -- table capture
 local Cs = lpeg.Cs -- string capture [read more about this]
+local V = lpeg.V
 -- TODO examples
 
 -- }}}
@@ -54,25 +55,58 @@ local hsp = (S' \t')^0
 local hspace = (S' \t')^1
 local sp = (S' \t\n')^0
 local space = (S' \t\n')^1
+-- alpha, digit and symbol
+local Alpha = loc.alpha
+local Digit = loc.digit
+local Symbol = S'_.'
+-- identifier can be like foo or foo_bar or foo.bar
+local identifier = Alpha * (Alpha + Digit + Symbol)^1
+-- }}}
+
+-- {{{ Key-value list (used in optargs and possibly in META values etc.)
+local process_kvlist = function(data)
+  local result = {}
+  for _, x in ipairs(data) do
+    local k = x.value[1]
+    local v = x.value[2] or true
+    result[k] = v
+  end
+  return result
+end
+local kvlist = P({'kvlist',
+  key = C(identifier),
+  val = C( (P(1)-',')^1 ),
+  entry = Ct( Pos * hsp * V('key') * hsp * ('=' * hsp * V('val'))^-1 * hsp ) / tag('entry'),
+  kvlist = Ct( V('entry') * (',' * V('entry'))^0 ) / process_kvlist
+})
 -- }}}
 
 -- {{{ Meaty parsing units, like opcode, argument, command0, command1, commandn
 -- opcode is all upper case followed by optional star
 --   (this will have to evolve, not least for environments)
 local opcode = Pos * C(loc.upper^1 * (P'*')^-1) / tag('opcode')
+-- separator
 local sep = space * '::' * hspace
 -- end of command: a newline with no separator following
 local endofcmd = hsp * (nl * -#sep)
 -- argument: all text until either a separator or endofcmd (just nl for now)
 local notarg   = sep + nl
 local argtext  = C((1 - notarg)^1)
+-- verbatim argument .v << ...lines... >>
 local endverbtext = nl * hsp * '>>'
-local verbarg  = Pos * '.v <<' * hsp * nl *
+local verbarg  = '.v <<' * hsp * nl *
                   (C((P(1) - endverbtext)^1) * endverbtext / tag('posarg'))
-local optarg   = Pos * '.o' * hspace * argtext / tag('optarg')
-local kwarg    = Pos * '.k' * hspace * argtext / tag('kwarg')
-local posarg   = Pos * ('.a' * hspace)^-1 * argtext / tag('posarg')
-local argument = verbarg + optarg + kwarg + posarg
+-- options argument
+local optarg   = '.o' * hspace * argtext / tag('optarg')
+-- keyword argument
+local _key     = C(loc.alpha^1)
+local _value   = argtext
+local kwarg    = Ct('(' * _key * ')' * hspace * _value) / tag('kwarg')
+-- positional argument can be ".a blah blah blah" but is more likely unadorned
+local posarg   = ('.a' * hspace)^-1 * argtext / tag('posarg')
+-- argument is any of the above specific argument types
+local argument = Pos * (verbarg + optarg + kwarg + posarg)
+-- command is split into 0, 1 or n arguments for ease of specification
 local command0 = Ct(hsp * opcode * endofcmd)
 local command1 = Ct(hsp * opcode * (sep + hspace) * argument * endofcmd)
 local commandn = Ct(hsp * opcode * (sep + hspace) *
@@ -80,24 +114,29 @@ local commandn = Ct(hsp * opcode * (sep + hspace) *
 -- }}}
 
 -- {{{ Actual command processing
+-- The "tagging" that gets done when an opcode or argument is parsed is useful
+-- but crude. This function refines the data into something more usable.
 local process_cmd = function(data)
-  local result = { kwargs = pl.List(), posargs = pl.List() }
+  local result = { k = {}, a = pl.List() }
   local seen = {}
   for _, x in pairs(data) do
     if x.type == 'opcode' then
       result[1] = x.value
     elseif x.type == 'optarg' then
       if seen.optarg or seen.kwarg or seen.posarg then return false end
-      result.optarg = x.value
-      -- parse optarg here?
+      result.o = x.value                    -- raw string of kvlist
+      result.o = kvlist:match(result.o)     -- parsed kvlist
+      if result.o == nil then               --    which could be invalid
+        return nil
+      end
       seen.optarg = true
     elseif x.type == 'kwarg' then
       if seen.posarg then return false end
-      result.kwargs:append(x.value)
-      -- parse kwarg here?
+      local k, v = table.unpack(x.value)
+      result.k[k] = v
       seen.kwarg = true
     elseif x.type == 'posarg' then
-      result.posargs:append(x.value)
+      result.a:append(x.value)
       seen.posarg = true
     end
   end
@@ -214,18 +253,13 @@ local IN6 = [[
       :: Name & Extension
       :: John & 429
       :: Mary & 388
+    MINTED python :: .v <<
+      for name in names:
+        print(f'Hello {name}')
+      print('Done')
+    >> :: foo
     TEXT Hello
 ]]
-
--- IN7: test a verbatim argument
-local IN7 = [==[
-  MINTED python :: .v <<
-    for name in names:
-      print(f'Hello {name}')
-    print('Done')
-  >> :: foo
-  TEXT Hello
-]==]
 
 -- }}}
 
@@ -239,9 +273,118 @@ local c = test(commands):match(IN3)   -- should be nil
 local d = test(dict_block):match(IN4)
 local e = test(list_block):match(IN5)
 local f = document:match(IN6)
-local g = commands:match(IN7)
-D(g)
+D(f)
 
 -- }}}
 
-IX('done testing')
+-- {{{ Output of D(f) above, to demonstrate the result of parsing a whole document.
+-- The output is simply pasted in here, for sake of example.
+-- Note that the keys do not appear in a nice order.
+-- I have added comments to break it up.
+local output = {
+  -- The META dictionary block. Note that the key-value information in BUS
+  -- has not been parsed. Likewise the list information in TRAIN.
+  {
+    type = "dict_block",
+    name = "META",
+    entries = {
+      BUS = ".d capacity=55, color=purple",
+      TEMPLATE = "Basic",
+      TRAIN = "Bar :: Baz"
+    },
+  },
+  -- The BODY list block.
+  {
+    type = "list_block",
+    name = "BODY",
+    commands = {
+      {
+        "BEGIN",
+        a = {
+          "multicols",
+          "2"
+        },
+        k = {
+        }
+      },
+      {
+        "TEXT",
+        o = "font=small",
+        a = {
+          "Hello there"
+        },
+        k = {
+        },
+      },
+      {
+        "END",
+        a = {
+          "multicols"
+        },
+        k = {
+        }
+      },
+      {
+        "VFILL",
+        a = {
+        },
+        k = {
+        }
+      },
+      {
+        "ITEMIZE",
+        a = {
+          "One",
+          "Two",
+          "Three"
+        },
+        k = {
+        }
+      }
+    },
+  },
+  -- The EXTRA list block.
+  {
+    name = "EXTRA",
+    type = "list_block",
+    commands = {
+      {
+        "TABLE",
+        a = {
+          "Name & Extension",
+          "John & 429",
+          "Mary & 388"
+        },
+        k = {
+          caption = "Phone directory",
+          colspec = "ll"
+        },
+        o = "float"
+      },
+      {
+        "MINTED",
+        a = {
+          "python",
+          [[      for name in names:
+        print(f'Hello {name}')
+      print('Done')]],
+          "foo"
+        },
+        k = {
+        }
+      },
+      {
+        "TEXT",
+        a = {
+          "Hello"
+        },
+        k = {
+        }
+      }
+    },
+  }
+}
+
+-- }}}
+
+IX('done testing') -- exits the program
