@@ -18,6 +18,10 @@ local R = lpeg.R   -- range     R('af','AF','09')   /[a-fA-F0-9]/
 -- P(3) matches 3 characters unconditionally
 -- P(3) * 'hi' matches 3 characters followed by 'hi'
 local loc = lpeg.locale()
+local Alpha = loc.alpha
+local Upper = loc.upper
+local Digit = loc.digit
+local Alnum = loc.alpha + loc.digit
 -- loc.space^0 * loc.alpha^1      /\s*\w+/
 -- P'-'^-1 * R'0-9'^3             /-?\d{3,}/
 -- (P'ab' + 'a') * 'c'            /(ab|a)c/
@@ -31,7 +35,6 @@ local Cp = lpeg.Cp -- position capture
 local Ct = lpeg.Ct -- table capture
 local Cs = lpeg.Cs -- string capture [read more about this]
 local V = lpeg.V
--- TODO examples
 
 -- }}}
 
@@ -55,15 +58,13 @@ local hsp = (S' \t')^0
 local hspace = (S' \t')^1
 local sp = (S' \t\n')^0
 local space = (S' \t\n')^1
--- alpha, digit and symbol
-local Alpha = loc.alpha
-local Digit = loc.digit
+local RestOfLine = (P(1) - nl)^1
 local Symbol = S'_.'
 -- identifier can be like foo or foo_bar or foo.bar
 local identifier = Alpha * (Alpha + Digit + Symbol)^1
 -- }}}
 
--- {{{ Key-value list (used in optargs and possibly in META values etc.)
+-- {{{ Key-value list (used in optargs and in META values like OPTIONS etc.)
 local process_kvlist = function(data)
   local result = {}
   for _, x in ipairs(data) do
@@ -75,6 +76,7 @@ local process_kvlist = function(data)
 end
 local kvlist = P({'kvlist',
   key = C(identifier),
+  -- TODO allow for quoted values so that commas can be used
   val = C( (P(1)-',')^1 ),
   entry = Ct( Pos * hsp * V('key') * hsp * ('=' * hsp * V('val'))^-1 * hsp ) / tag('entry'),
   kvlist = Ct( V('entry') * (',' * V('entry'))^0 ) / process_kvlist
@@ -84,7 +86,7 @@ local kvlist = P({'kvlist',
 -- {{{ Meaty parsing units, like opcode, argument, command0, command1, commandn
 -- opcode is all upper case followed by optional star
 --   (this will have to evolve, not least for environments)
-local opcode = Pos * C(loc.upper^1 * (P'*')^-1) / tag('opcode')
+local opcode = Pos * C(Upper^1 * (P'*')^-1) / tag('opcode')
 -- separator
 local sep = space * '::' * hspace
 -- end of command: a newline with no separator following
@@ -99,7 +101,7 @@ local verbarg  = '.v <<' * hsp * nl *
 -- options argument
 local optarg   = '.o' * hspace * argtext / tag('optarg')
 -- keyword argument
-local _key     = C(loc.alpha^1)
+local _key     = C(Alpha^1)
 local _value   = argtext
 local kwarg    = Ct('(' * _key * ')' * hspace * _value) / tag('kwarg')
 -- positional argument can be ".a blah blah blah" but is more likely unadorned
@@ -149,29 +151,45 @@ local commands = Ct(command^1)
 
 -- {{{ Overall document structure: [@META], [+BODY], and the whole document.
 -- [@META] introduces a dictionary block
-local dict_header = Pos * '[@' * (loc.upper^1 / tag('dict_header')) * ']' * hsp * nl
-local dict_key   = loc.alpha^1
-local dict_value = (P(1) - nl)^1
-local dict_entry = Pos * Ct(hsp * C(dict_key) * hspace * C(dict_value) * nl) / tag('dict_entry')
 local process_dict_block = function(tags)
   local result = { type = 'dict_block' }
+  local kvpattern = P'.d' * hspace * kvlist
   result.name = tags[1].value
   result.entries = {}
+  result.types = {}
   for i = 2,#tags do
     local key, value = table.unpack(tags[i].value)
-    result.entries[key] = value
+    -- The value could be a kvlist, like 'OPTIONS .d vspace=12pt, color=blue'
+    -- We want to extract this and store it as a map.
+    local inline_kv = kvpattern:match(value)
+    -- Or it could be a normal list, like 'FOO bar :: baz :: quux'. This is not
+    -- supported yet. We will wait until there is a use case. But this is where
+    -- it would be implemented.
+    if inline_kv then
+      result.entries[key] = inline_kv
+      result.types[key] = 'dict'
+    else
+      result.entries[key] = value
+      result.types[key] = 'str'
+    end
   end
   return result
 end
-local dict_block = Ct(sp * dict_header * dict_entry^1) / process_dict_block
+local dictionary_block = P{ 'block',
+  block = Ct(sp * V'header' * V'entry'^1) / process_dict_block,
+  header = Pos * '[@' * (Upper^1 / tag('dict_header')) * ']' * hsp * nl,
+  entry = Pos * Ct(hsp * C(V'key') * hspace * C(V'value') * nl) / tag('dict_entry'),
+  key = Alpha^1,
+  value = RestOfLine,
+}
 
-local list_header = Pos * '[+' * (loc.upper^1 / tag('list_header')) * ']' * hsp * nl
+local list_header = Pos * '[+' * (Upper^1 / tag('list_header')) * ']' * hsp * nl
 local process_list_block = function(tags)
   return { type = 'list_block', name = tags[1].value, commands = tags[2] }
 end
 local list_block = Ct(sp * list_header * commands) / process_list_block
 
-local block = dict_block + list_block
+local block = dictionary_block + list_block
 local document = Ct(block^1) * sp * -1
 -- }}}
 
@@ -265,12 +283,12 @@ local IN6 = [[
 
 -- {{{ Testing
 local test = function(patt)
-  return patt * sp * -1
+  return patt * sp * P(-1)
 end
 local a = test(commands):match(IN1)
 local b = test(commands):match(IN2)
 local c = test(commands):match(IN3)   -- should be nil
-local d = test(dict_block):match(IN4)
+local d = test(dictionary_block):match(IN4)
 local e = test(list_block):match(IN5)
 local f = document:match(IN6)
 D(f)
