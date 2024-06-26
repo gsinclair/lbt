@@ -178,8 +178,8 @@ end
 
 -- simplemath macro -- get rid of a lot of backslashes, and potentially more
 --
--- Turn 'sin2x + cos2x equiv 1' into '\sin^2 x + \cos^2 x \equiv 1'
--- Turn 'costh = 0.72' into '\cos\theta = 0.72'
+-- Turn 'sin2 x + cos2 x equiv 1' into '\sin^2 x + \cos^2 x \equiv 1'
+-- Turn 'cos th = 0.72' into '\cos \theta = 0.72'
 
 do
   local makeset = function (text)
@@ -199,7 +199,7 @@ do
   local other = makeset[[equiv forall exists nexists implies to in notin mid nmid
                          quad le ge ne iff sqrt frac tfrac dfrac not neg
                          subset subseteq nsubseteq superset superseteq nsuperseteq
-                         int sum infty prod
+                         int sum infty prod lim
                          cdot times divide
                          dots cdots ldots
                          log ln
@@ -213,79 +213,47 @@ do
                          Upsilon Phi Chi Psi Omega]]
   local abbrev = makemap[[al alpha be beta ga gamma de delta ep epsilon th theta la lambda
                           Al Alpha Be Beta Ga Gamma De Delta Ep Epsilon Th Theta La Lambda]]
-  local process_abbrev = function (word)
-    if abbrev[word] then
+
+  local process_trig = function (fn, power)
+    return F([[\%s^{%s}]], fn, power)
+  end
+
+  local mathit = function(letters)
+    return F([[\mathit{%d}]], letters)
+  end
+
+  local process_word = function (word)
+    if alpha[word] or other[word] or trig[word] then
+      return '\\'..word
+    elseif abbrev[word] then
       return '\\'..abbrev[word]
     else
       return word
     end
   end
 
-  local process_alpha = function (word)
-    if alpha[word] then
-      return '\\'..word
-    else
-      return word
-    end
-  end
-
-  local process_trig = function (word)
-    local res      = {}
-    local pattern1 = '$a{stem}$d{index}$a{var}'
-    local pattern2 = '$a{stem}$d{index}'
-    local m        = pl.sip.match
-    if m(pattern1, word, res) or m(pattern2, word, res) then
-      -- we have matched something like cos2th or tan5x or just sin3
-      -- but beware: it could be rubbish like abcde7def or xyz47 or sinvbg3u
-      lbt.log('dev', 'Pattern match on %s was successful', word)
-      lbt.log('dev', 'res: %s', lbt.pp(res))
-      local stem, index, var = res.stem, res.index, res.var
-      if trig[stem] and var then
-        -- cos2th or tan5B
-        return F([[\%s^{%s} %s]], stem, index, process_abbrev(var))
-      elseif trig[stem] then
-        -- sin3 or csc2
-        return F([[\%s^{%s}]], stem, index)
-      else
-        return word
-      end
-    else
-      -- it could just be 'sinx' or 'cosal' or something
-      local stem = word:sub(1,3)
-      local rest = word:sub(4)
-      if trig[stem] then
-        return F([[\%s %s]], stem, process_abbrev(rest))
-      else
-        return word
-      end
-    end
-  end
-
-  local process = function (word)
-    lbt.log('dev', 'lbt.Math macro simplemath: %s', word)
-    local result = nil
-    if trig[word] or alpha[word] or other[word] then
-      lbt.log('dev', 'process A')
-      result = '\\'..word
-    elseif #word > 3 and trig[word:sub(1,3)] then
-      lbt.log('dev', 'process B')
-      result = process_trig(word)
-    else
-      lbt.log('dev', 'process C')
-      result = process_abbrev(word)
-    end
-    lbt.log('dev', '   ~> result: %s', result)
-    return result
-  end
+  local lpeg = require('lpeg')
+  local P, C, Ct, V, loc = lpeg.P, lpeg.C, lpeg.Ct, lpeg.V, lpeg.locale()
+  local smparse = P{ 'sm',
+    trigf = P(false) + 'sin' + 'cos' + 'tan' + 'sec' + 'csc' + 'cot' +
+                       'sinh' + 'cosh' + 'tanh',
+    trig  = (C(V'trigf') * C(loc.digit^1)) / process_trig,
+    upper = C(loc.upper^2) / mathit,
+    word  = C(loc.alpha^1) / process_word,
+    other = C( (1-loc.alpha)^1 ),
+    space = C(loc.space^1),
+    item  = V'trig' + V'upper' + V'word' + V'other' + V'space',
+    sm = Ct(V'item'^0) * -1
+  }
 
   m.simplemath = function (text)
-    local words = lbt.util.space_split(text)
-    local tokens = pl.List()
-    for word in words:iter() do
-      local substitute = process(word)
-      tokens:append(substitute)
+    local transformed = smparse:match(text)
+    if transformed then
+      return F([[\ensuremath{%s}]], table.concat(transformed, ''))
+    else
+      local errormsg = F('«Unable to parse simplemath text: %s»', text)
+      return F([[\textbf{\textcolor{red} %s }]], errormsg)
     end
-    return F([[\ensuremath{%s}]], tokens:concat(' '))
   end
 
 end
