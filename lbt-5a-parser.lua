@@ -295,6 +295,53 @@ D(f)
 
 -- }}}
 
+-- {{{ Functions used by other parts of the code
+-- 
+-- We have lbt.parser.parsed_content(text) which returns a result object
+-- containing a success flag, the max position reached, and a 'pc' object.
+--
+--   local x = lbt.parser.parsed_content(text)
+--   if x.ok then
+--     emit_latex(x.pc)
+--   else
+--     emit_error_message(text, x.maxposition)
+--   end
+--
+-- The 'pc' object is defined in this file: the ParsedContent class. It contains
+-- methods for accessing the parsed content, like the 'BODY' list or the 'META'
+-- dictionary. This is what currently exists in fn.lua. Not all will make sense
+-- here. We shall see.
+--
+--  * [ ] meta(pc)
+--  * [ ] title(pc)
+--  * [ ] dictionary(pc, "META")
+--  * [ ] list(pc, "BODY")
+--  * [ ] template_name(pc)
+--  * [ ] template_object(pc)
+--  * [ ] extra_sources(pc)
+--  * [ ] extra_styles(pc)
+--  * [ ] compact_representation(pc)       for debugging
+
+lbt.parser.parsed_content = function(text)
+  local result = {}
+  -- reset the file-scoped variable MaxPosition each time we do a parse
+  MaxPosition = -1
+  local content = document:match(text)
+  if content then
+    return { ok = true, pc = ParsedContent.new(content) }
+  else
+    return { ok = false, maxposition = MaxPosition }
+  end
+end
+
+local ParsedContent = {
+  new = function(content)
+    lbt.assert_table(1, content)
+  end
+}
+
+-- }}}
+
 -- {{{ Output of D(f) above, to demonstrate the result of parsing a whole document.
 -- The output is simply pasted in here, for sake of example.
 -- Note that the keys do not appear in a nice order.
