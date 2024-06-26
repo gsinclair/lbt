@@ -3,5 +3,8 @@
 nnoremap <leader>br :!tmux send-keys -t right './runtest.sh' Enter<CR><CR>
 nmap ,, <leader>br
 
+nnoremap <silent> <leader>bt :!tmux send-keys -t right './runtest.sh' Enter <CR><CR>
+nnoremap <silent> <leader>be :!tmux send-keys -t right Enter<CR><CR>
+
 inoremap ,l ◊
 inoremap ,, ,
