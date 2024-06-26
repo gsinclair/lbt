@@ -113,7 +113,13 @@ m.vectorijk = function (text)
       return '+'..x
     end
   end
-  local terms = lbt.util.space_split(text):map(force_sign)
+  local normalise = function(i, term)
+    if term == '1' then term = '' end
+    if term == '-1' then term = '-' end
+    if i > 1 then term = force_sign(term) end
+    return term
+  end
+  local terms = lbt.util.space_split(text)
   if #terms < 2 or #terms > 3 then
     return lbt.util.latex_macro_error('expect 2-3 args to vectorijk' .. arg)
   else
@@ -121,6 +127,7 @@ m.vectorijk = function (text)
     local unitvectors = {i,j,k}
     local result = pl.List()
     for i = 1,#terms do
+      terms[i] = normalise(i, terms[i])
       if terms[i] ~= '0' then
         local t = terms[i] .. unitvectors[i]
         result:append(t)
@@ -192,7 +199,7 @@ do
   local other = makeset[[equiv forall exists nexists implies to in notin mid nmid
                          quad le ge ne iff sqrt frac tfrac dfrac not neg
                          subset subseteq nsubseteq superset superseteq nsuperseteq
-                         sum infty prod
+                         int sum infty prod
                          cdot times divide
                          dots cdots ldots
                          log ln
