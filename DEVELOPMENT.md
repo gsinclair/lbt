@@ -428,3 +428,8 @@ We don't bother to clear out expired registers; we just check whether they are e
     CTRL dump-state filename.txt
 
 This would be a good way to give the user the ability to exercise some control over things without greatly expanding the number of tokens used.  
+
+
+## Simplemath improvements via lpeg
+
+Hopefully I can use lpeg to recognise 'words' without needing spaces. For example, 'int_0^infty frac 1 x \, dx' should be able to pick up the 'int' and the 'infty'.
