@@ -67,11 +67,9 @@ lbt.fn.parsed_content = function(content_lines)
   -- a function to do this for us. This function handles » line continuations
   -- as well. This is a pre-parsing stage.
   local pragmas, content = lbt.fn.impl.pragmas_and_content(content_lines)
-  -- Set up our result variable, which will contain.......
-  local result = { pragmas = pragmas }
   -- Detect ignore and act accordingly.
   if pragmas.ignore then
-    return result
+    return { pragmas = pragmas }
   end
   -- Detect debug and act accordingly.
   if pragmas.debug then
@@ -82,8 +80,9 @@ lbt.fn.parsed_content = function(content_lines)
   -- content = content:gsub('+BODY', '[+BODY]')
   local x = lbt.parser.parsed_content(content)
   if x.ok then
-    result.pc = x
-    return result
+    local pc = x.pc
+    pc.pragmas = pragmas
+    return pc
   else
     lbt.fn.output_parsed_content_error(content, x.maxposition)
     -- should we exit? [yes, for now]

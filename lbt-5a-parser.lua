@@ -89,8 +89,8 @@ local kvlist = P({'kvlist',
 local opcode = Pos * C(Upper^1 * (P'*')^-1) / tag('opcode')
 -- separator
 local sep = space * '::' * hspace
--- end of command: a newline with no separator following
-local endofcmd = hsp * (nl * -#sep)
+-- end of command: end-of-text or (a newline with no separator following)
+local endofcmd = -1 + (hsp * (nl * -#sep))
 -- argument: all text until either a separator or endofcmd (just nl for now)
 local notarg   = sep + nl
 local argtext  = C((1 - notarg)^1)
@@ -119,7 +119,7 @@ local commandn = Ct(hsp * opcode * (sep + hspace) *
 -- The "tagging" that gets done when an opcode or argument is parsed is useful
 -- but crude. This function refines the data into something more usable.
 local process_cmd = function(data)
-  local result = { k = {}, a = pl.List() }
+  local result = { o = {}, k = {}, a = pl.List() }
   local seen = {}
   for _, x in pairs(data) do
     if x.type == 'opcode' then
@@ -326,6 +326,8 @@ end
 --  * [ ] extra_styles(pc)
 --  * [ ] compact_representation(pc)       for debugging
 
+local ParsedContent = { }
+
 lbt.parser.parsed_content = function(text)
   local result = {}
   -- reset the file-scoped variable MaxPosition each time we do a parse
@@ -338,15 +340,13 @@ lbt.parser.parsed_content = function(text)
   end
 end
 
-local ParsedContent = { }
-
 local index_parsed_content = function(pc)
-  local result = { d = {}, l = {} }
+  local result = { dicts = {}, lists = {} }
   for _, x in ipairs(pc) do
     if x.type == 'dict_block' then
-      result.d[x.name] = x
+      result.dicts[x.name] = x
     elseif x.type == 'list_block' then
-      result.l[x.name] = x
+      result.lists[x.name] = x
     end
   end
   return result
@@ -363,11 +363,13 @@ function ParsedContent:new(pc)
 end
 
 function ParsedContent:dict_or_nil(name)
-  return self.idx.d[name]
+  local d = self.idx.dicts[name]
+  return d and d.entries
 end
 
 function ParsedContent:list_or_nil(name)
-  return self.idx.l[name]
+  local l = self.idx.lists[name]
+  return l and l.commands
 end
 
 function ParsedContent:meta()
@@ -378,116 +380,6 @@ end
 function ParsedContent:title()
   return self:meta().TITLE or '(no title)'
 end
-
--- }}}
-
--- {{{ Output of D(f) above, to demonstrate the result of parsing a whole document.
--- The output is simply pasted in here, for sake of example.
--- Note that the keys do not appear in a nice order.
--- I have added comments to break it up.
-local output = {
-  -- The META dictionary block. Note that the key-value information in BUS
-  -- has not been parsed. Likewise the list information in TRAIN.
-  {
-    type = "dict_block",
-    name = "META",
-    entries = {
-      BUS = ".d capacity=55, color=purple",
-      TEMPLATE = "Basic",
-      TRAIN = "Bar :: Baz"
-    },
-  },
-  -- The BODY list block.
-  {
-    type = "list_block",
-    name = "BODY",
-    commands = {
-      {
-        "BEGIN",
-        a = {
-          "multicols",
-          "2"
-        },
-        k = {
-        }
-      },
-      {
-        "TEXT",
-        o = "font=small",
-        a = {
-          "Hello there"
-        },
-        k = {
-        },
-      },
-      {
-        "END",
-        a = {
-          "multicols"
-        },
-        k = {
-        }
-      },
-      {
-        "VFILL",
-        a = {
-        },
-        k = {
-        }
-      },
-      {
-        "ITEMIZE",
-        a = {
-          "One",
-          "Two",
-          "Three"
-        },
-        k = {
-        }
-      }
-    },
-  },
-  -- The EXTRA list block.
-  {
-    name = "EXTRA",
-    type = "list_block",
-    commands = {
-      {
-        "TABLE",
-        a = {
-          "Name & Extension",
-          "John & 429",
-          "Mary & 388"
-        },
-        k = {
-          caption = "Phone directory",
-          colspec = "ll"
-        },
-        o = "float"
-      },
-      {
-        "MINTED",
-        a = {
-          "python",
-          [[      for name in names:
-        print(f'Hello {name}')
-      print('Done')]],
-          "foo"
-        },
-        k = {
-        }
-      },
-      {
-        "TEXT",
-        a = {
-          "Hello"
-        },
-        k = {
-        }
-      }
-    },
-  }
-}
 
 -- }}}
 

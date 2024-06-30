@@ -34,216 +34,6 @@ local Cs = lpeg.Cs -- string capture [read more about this]
 
 local D = pl.pretty.dump
 
-
-local T_parse_commands_lpeg = function()
-  -- -P'a' matches anything except an a, and does not consume
-  --       anything and cannot produce a capture
-  -- -P'1' refuses to match anything, so can detect the end of string
-  -- Put this together and we can search for a pattern p
-  --   vowel = P'aeiou'
-  --   const = loc.alpha - vowel
-  --   needle = const * vowel * const
-  --   haystack = 'I saw bob the other day'
-  --   searchP = (1-needle)^0 * Cp() * needle
-  -- Parse an assignment list like 'name=Tina, age =   42, married,'
-  --   sp    = loc.space^0
-  --   char  = loc.alpha + '_' + loc.digit
-  --   word  = C(loc.alpha * char^0) * sp
-  --   eq    = '=' * sp
-  --   comma = ';' * sp
-  --   assn  = word * (eq * word)^-1    // assignment
-  --   list  = assn * (comma * assn)^0
-  --   list  = sp * list^-1
-  -- T_lpeg_6_parse_several_commands()
-  T_lpeg_7_line_continuations()
-end
-
-T_lpeg_1 = function()
-  local sp = loc.space^0
-  local char = loc.alpha + '_' + loc.digit
-  local word = C(loc.alpha * char^0) * sp
-  local words2 = word * word
-  local words3 = word * word * word
-  local eq    = '=' * sp
-  local comma = ',' * sp
-  -- local assn  = word * (eq * word)^-1    // assignment
-  -- local list  = assn * (comma * assn)^0
-  -- list  = sp * list^-1
-  DEBUGGER()
-end
-
-T_lpeg_2 = function()
-  local inbox = {}
-
-  local sp    = loc.space^0
-  local space = loc.space^1
-  -- token
-  local cmd_char = loc.upper + loc.digit + S'-_*+=<>'
-  local command = C(loc.upper * cmd_char^0)
-  -- separator requires surrounding whitespace
-  local separator = space * '::' * space
-  -- general argument: leave the surrounding space for the separator
-  local arg = (1 - separator)^1
-  local argument = C(arg)
-
-  local examples = pl.List()
-  examples:append 'ITEMIZE one :: two :: three four five'
-  examples:append 'ITEMIZE :: one :: two :: three four five'
-  examples:append 'ITEMIZE :: one :: two :: three four five ::'
-  examples:append 'ITEMIZE :: one :: two :: three four five :: ()'
-
-  local command_line = command * (separator * argument)^0 * -1
-
-  local n = 0
-  for example in examples:iter() do
-    n = n + 1
-    print()
-    print('Example ' .. n)
-    print(example)
-    local captures = { command_line:match(example) }
-    D(captures)
-  end
-
-  -- DEBUGGER()
-end
-
-T_lpeg_3 = function()
-  local sp    = loc.space^0
-  local space = loc.space^1
-  -- opcode
-  local op_char = loc.upper + loc.digit + S'-_*+=<>'
-  local opcode = C(loc.upper * op_char^0)
-  -- separator requires surrounding whitespace
-  local separator = space * '::' * (space + -1)
-  -- general argument: leave the surrounding space for the separator
-  local argument = C( (1 - separator)^1 )
-
-  -- A command with no arguments is a plain opcode.
-  local command0 = opcode * -1
-  -- A command with one argument contains an optional separator.
-  local command1 = opcode * separator^-1 * sp * argument * -1
-  -- A command with n arguments has the optional separator, then
-  -- the first argument, then at least one separator-argument pair
-  local commandn = opcode * separator^-1 * sp * argument *
-                     (separator * argument)^1 * -1
-
-  local command = command0 + command1 + commandn
-
-  local examples = pl.List()
-  examples:append 'VFILL'
-  examples:append 'VFILL :: '
-  examples:append 'VFILL :: ()'
-  examples:append 'CMD bigskip'
-  examples:append 'CMD :: bigskip'
-  examples:append 'ITEMIZE one :: two :: three four five'
-  examples:append 'ITEMIZE :: one :: two :: three four five'
-  examples:append 'ITEMIZE :: one :: two :: three four five ::'
-  examples:append 'ITEMIZE :: one :: two :: three four five :: ()'
-
-  local n = 0
-  for example in examples:iter() do
-    n = n + 1
-    print()
-    print('Example ' .. n)
-    print(example)
-    local captures = { command:match(example) }
-    D(captures)
-  end
-
-end
-
-T_lpeg_4 = function()
-  -- `inbox` is where we collect data as we parse
-  inbox = {}
-
-  -- functions that collect data
-  process_opcode = function(x)
-    return { opcode = x }
-  end
-  process_options = function(x)
-    return { options = x }
-  end
-  process_kwarg = function(k, v)
-    return { kwarg = {k,v} }
-  end
-  process_arg = function(x)
-    if x == '()' then
-      return nil
-    else
-      return { arg = x }
-    end
-  end
-
-  -- sp = optional space; space = compulsory space
-  local sp    = loc.space^0
-  local space = loc.space^1
-  -- list: name = john, age= 42 , red,11
-  --   --> { kw = { name = 'john', age = '42' }, pos = { 'red', '11' } }
-
-  -- opcode
-  local op_char = loc.upper + loc.digit + S'-_*+=<>'
-  local opcode = (loc.upper * op_char^0) / process_opcode
-  -- separator requires surrounding whitespace
-  local separator = space * '::' * (space + -1)
-  -- general argument: leave the surrounding space for the separator
-  local argument_text = (1 - separator)^1 
-  local argument = argument_text / process_arg
-  -- options (also called styles) can be specified in three equivalent
-  -- ways: .o {list}  or .s {list}  or  [{list}]
-  local options1 = P'.o' * space * (argument_text / process_options)
-  local options2 = P'.s' * space * (argument_text / process_options)
-  local options3 = P'[' * (argument_text / process_options) * ']'
-  local options  = options1 + options2 + options3
-  -- a keyword argument is specified like the following example.
-  --     FIGURE .o centre
-  --       :: .a (filename) media/7/primenumbers.png
-  --       :: .a (width)    0.8
-  --       :: .a (caption)  The numbers 1 to 100, with primes circled
-  local key = '(' * C(loc.alpha^1) * ')'
-  local value = C(argument_text)
-  local kw_arg = P'.a' * space * (key * value) / process_kwarg
-
-  -- A command with no arguments is a plain opcode.
-  local command0 = opcode * -1
-  -- A command with one argument contains an optional separator.
-  local command1 = opcode * separator^-1 * sp * argument * -1
-  -- A command with n arguments has the optional separator, then perhaps an
-  -- "options" argument, then at least one separator-argument pair.
-  local commandn = opcode * separator^-1 * sp *
-                     (options * separator)^-1 *
-                     argument * (separator * argument)^1 * -1
-  local commandn = opcode * separator^-1 * sp *
-                     (options * separator)^-1 *
-                     (kw_arg * sep) *
-                     argument * (separator * argument)^1 * -1
-
-  local command = command0 + command1 + commandn
-
-  local examples = pl.List()
-  -- examples:append 'VFILL'
-  -- examples:append 'VFILL :: '
-  -- examples:append 'VFILL :: ()'
-  -- examples:append 'CMD bigskip'
-  -- examples:append 'CMD :: bigskip'
-  examples:append 'ITEMIZE one :: two :: three four five'
-  examples:append 'ITEMIZE :: one :: two :: three four five'
-  examples:append 'ITEMIZE :: one :: two :: three four five ::'
-  examples:append 'ITEMIZE :: one :: two :: three four five :: ()'
-  examples:append 'ITEMIZE :: .o compact :: one :: two'
-  examples:append 'FIGURE .o centre :: .a (filename) media/7/primenumbers.png :: .a (width)    0.8 :: .a (caption)  The numbers 1 to 100, with primes circled :: normal argument'
-
-  local n = 0
-  for example in examples:iter() do
-    n = n + 1
-    print()
-    print('Example ' .. n)
-    print(example)
-    local captures = { command:match(example) }
-    D(captures)
-  end
-
-end
-
 ----------------------------------------------------------------------
 
 local function content_lines(text)
@@ -418,46 +208,34 @@ end
 local function T_parsed_content_1()
   print('T_parsed_content_1')
   lbt.api.reset_global_data()
-  local x = lbt.fn.parsed_content(good_input_1)
-  EQ(x.ok, true)
-  EQ(x.pragmas, { draft = true, ignore = false, debug = false })
+  local pc = lbt.fn.parsed_content(good_input_1)
+  EQ(pc.pragmas, { draft = true, ignore = false, debug = false })
+  EQ(pc.type, 'ParsedContent')
   -- check META is correct
-  local exp_meta = {
-    type = 'dictionary-block',
-    name = 'META',
-    data = {
-      TEMPLATE = { n = 1, types = 's',  args = { 'Basic' } },
-      TRAIN    = { n = 2, types = 'ss', args = { 'Bar', 'Baz' } },
-      BUS      = { n = 1, types = 'd',  args = { { capacity = '55', color = 'purple' } } }
-    }
-  }
-  EQ(pc.dict.META, exp_meta)
+  local m = pc:meta()
+  EQ(m.TEMPLATE, 'Basic')
+  EQ(m.TRAIN, 'Bar :: Baz')
+  EQ(m.BUS, { capacity = '55', color = 'purple'} )
   -- check BODY is correct
-  local exp_body = {
-    { opcode = 'BEGIN', options = {}, kwargs = {}, args = {'multicols', '2'} },
-    { opcode = 'TEXT', options = {font='small'}, kwargs = {}, args = {'Hello there'} },
-    { opcode = 'END', options = {}, kwargs = {}, args = {'multicols'} },
-    { opcode = 'VFILL', options = {}, kwargs = {}, args = {} },
-    { opcode = 'ITEMIZE', options = {}, kwargs = {}, args = {'One', 'Two', 'Three'} },
-  }
-  EQ(pc.list.BODY[1], exp_body[1])
-  EQ(pc.list.BODY[2], exp_body[2])
-  EQ(pc.list.BODY[3], exp_body[3])
-  EQ(pc.list.BODY[4], exp_body[4])
-  EQ(pc.list.BODY[5], exp_body[5])
-  EQ(pc.list.BODY[6], exp_body[6])
-  EQ(pc.list.BODY[7], exp_body[7])
-  EQ(pc.list.BODY,    exp_body)
+  local b = pc:list_or_nil('BODY')
+  assert(b)
+  local b1 = { 'BEGIN', o = {}, k = {}, a = {'multicols', '2'} }
+  EQ(b[1], b1)
+  local b2 = { 'TEXT', o = { font = 'small' }, k = {}, a = {'Hello there'} }
+  EQ(b[2], b2)
+  local b3 = { 'END', o = {}, k = {}, a = {'multicols'}}
+  EQ(b[3], b3)
+  local b4 = { 'VFILL', o = {}, k = {}, a = {} }
+  EQ(b[4], b4)
+  local b5 = { 'ITEMIZE', o = {}, k = {}, a = {'One', 'Two', 'Three'} }
+  EQ(b[5], b5)
   -- check EXTRA is correct
-  local exp_extra = {
-    { opcode = 'TABLE', options = {float=true},
-      kwargs = {caption='Phone directory', colspec='ll'},
-      args = {'Name & Extension', 'John & 429', 'Mary & 388'} },
-    { opcode = 'TEXT', options = {}, kwargs = {}, args = {'Hello'} },
-  }
-  EQ(pc.list.EXTRA[1], exp_extra[1])
-  EQ(pc.list.EXTRA[2], exp_extra[2])
-  EQ(pc.list.EXTRA,    exp_extra)
+  local e = pc:list_or_nil('EXTRA')
+  assert(e)
+  local e1 = { 'TABLE', o = { float = true },
+    k = { caption = 'Phone directory', colspec = 'll' },
+    a = {'Name & Extension', 'John & 429', 'Mary & 388'} }
+  EQ(e[1], e1)
 end
 
 local function T_extra_sources()
@@ -672,7 +450,6 @@ local function RUN_TESTS(flag)
 
   -- IX(lbt.system.template_register)
 
-  T_parse_commands_lpeg()
   -- T_pragmas_and_other_lines()
   T_parsed_content_1()
   -- T_extra_sources()
