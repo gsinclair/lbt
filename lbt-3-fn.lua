@@ -58,7 +58,8 @@ lbt.fn.parsed_content_0 = function (text)
 end
 
 -- new June 2024, based on lpeg.
--- Return value...
+-- Return value:
+--   { pragmas = {...}, pc = {...} }
 lbt.fn.parsed_content = function(content_lines)
   -- The content lines are in a list. For lpeg parsing, we want the content as
   -- a single string. But there could be pragmas in there like !DRAFT, and it
@@ -77,6 +78,29 @@ lbt.fn.parsed_content = function(content_lines)
     lbt.fn.set_log_channels_for_debugging_single_expansion()
   end
   -- (Now we are ready to call functions in lbt.parser.)
+  -- content = content:gsub('@META', '[@META]')
+  -- content = content:gsub('+BODY', '[+BODY]')
+  local x = lbt.parser.parsed_content(content)
+  if x.ok then
+    result.pc = x
+    return result
+  else
+    lbt.fn.output_parsed_content_error(content, x.maxposition)
+    -- should we exit? [yes, for now]
+    -- should we call lbt.err.xyz instead?
+  end
+end
+
+lbt.fn.output_parsed_content_error = function(text, pos)
+  print()
+  print()
+  print('(lbt) *** Attempt to parse LBT content failed ***')
+  print(F('(lbt) position: %d    text: %s', pos, text:sub(pos,pos+50)))
+  print()
+  print(text)
+  print()
+  print('(lbt) end of report')
+  os.exit()
 end
 
 -- parsed_content(c)
@@ -673,8 +697,8 @@ end
 
 lbt.fn.impl = {}
 
-local update_pragma_set = function(pragmas, line)
-  p = line:match("!(%u+)$")
+local update_pragma_set = function(pragmas, setting)
+  local p = setting
   if     p == 'DRAFT'    then pragmas.draft  = true
   elseif p == 'NODRAFT'  then pragmas.draft  = false
   elseif p == 'SKIP'     then pragmas.skip   = true
@@ -684,7 +708,7 @@ local update_pragma_set = function(pragmas, line)
   elseif p == 'DEBUG'    then pragmas.debug  = true
   elseif p == 'NODEBUG'  then pragmas.debug  = false
   else
-    lbt.err.E102_invalid_pragma(line)
+    lbt.err.E102_invalid_pragma(p)
   end
 end
 
@@ -695,8 +719,9 @@ lbt.fn.impl.pragmas_and_content = function(input_lines)
   pragmas = { draft = false, ignore = false, debug = false }
   lines   = pl.List()
   for line in input_lines:iter() do
-    if line:at(1) == '!' then
-      update_pragma_set(pragmas, line)
+    p = line:match("!(%u+)%s*$")
+    if p then
+      update_pragma_set(pragmas, p)
     else
       lines:append(line)
     end

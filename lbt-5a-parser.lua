@@ -285,13 +285,17 @@ local IN6 = [[
 local test = function(patt)
   return patt * sp * P(-1)
 end
-local a = test(commands):match(IN1)
-local b = test(commands):match(IN2)
-local c = test(commands):match(IN3)   -- should be nil
-local d = test(dictionary_block):match(IN4)
-local e = test(list_block):match(IN5)
-local f = document:match(IN6)
-D(f)
+
+local run_tests = function()
+  local a = test(commands):match(IN1)
+  local b = test(commands):match(IN2)
+  local c = test(commands):match(IN3)   -- should be nil
+  local d = test(dictionary_block):match(IN4)
+  local e = test(list_block):match(IN5)
+  local f = document:match(IN6)
+  D(f)
+end
+-- run_tests()
 
 -- }}}
 
@@ -326,19 +330,54 @@ lbt.parser.parsed_content = function(text)
   local result = {}
   -- reset the file-scoped variable MaxPosition each time we do a parse
   MaxPosition = -1
-  local content = document:match(text)
-  if content then
-    return { ok = true, pc = ParsedContent.new(content) }
+  local pc = document:match(text)
+  if pc then
+    return { ok = true, pc = ParsedContent:new(pc) }
   else
     return { ok = false, maxposition = MaxPosition }
   end
 end
 
-local ParsedContent = {
-  new = function(content)
-    lbt.assert_table(1, content)
+local ParsedContent = { }
+
+local index_parsed_content = function(pc)
+  local result = { d = {}, l = {} }
+  for _, x in ipairs(pc) do
+    if x.type == 'dict_block' then
+      result.d[x.name] = x
+    elseif x.type == 'list_block' then
+      result.l[x.name] = x
+    end
   end
-}
+  return result
+end
+
+-- The idea of using metatables to build a class comes from Section 16.1 of the
+-- free online 'Programming in Lua'.
+function ParsedContent:new(pc)
+  lbt.assert_table(1, pc)
+  o = { type = 'ParsedContent', data = pc, idx = index_parsed_content(pc) }
+  setmetatable(o, self)   -- get methods from ParsedContent table
+  self.__index = self     -- this doesn't make sense to me
+  return o
+end
+
+function ParsedContent:dict_or_nil(name)
+  return self.idx.d[name]
+end
+
+function ParsedContent:list_or_nil(name)
+  return self.idx.l[name]
+end
+
+function ParsedContent:meta()
+  local m = self:dict_or_nil('META')
+  return m or lbt.err.E976_no_META_field()
+end
+
+function ParsedContent:title()
+  return self:meta().TITLE or '(no title)'
+end
 
 -- }}}
 
@@ -452,4 +491,3 @@ local output = {
 
 -- }}}
 
-IX('done testing') -- exits the program
