@@ -69,7 +69,7 @@ end
 -- all the metadata that is stored in pc0.
 function ParsedContent:list_or_nil(name)
   local l = self.index.lists[name]
-  return l and l.commands
+  return l and pl.List(l.commands)
 end
 
 -- Return the META dictionary block, or raise an error if it doesn't exist.
@@ -85,6 +85,26 @@ end
 
 function ParsedContent:template_name()
   return self:meta().TEMPLATE
+end
+
+function ParsedContent:template_object_or_error()
+  local tn = self:template_name()
+  local t = lbt.fn.template_object_or_error(tn)
+  return t
+end
+
+function ParsedContent:extra_sources()
+  return self:meta().SOURCES or {}
+end
+
+-- TODO 'styles' will be renamed 'options'
+function ParsedContent:extra_styles()
+  local styles = self:meta().STYLES  -- see note above
+  if styles then
+    return lbt.fn.style_string_to_map(styles)
+  else
+    return pl.Map()
+  end
 end
 
 -- NOTE old code to be deleted (next 60 lines)
@@ -241,7 +261,7 @@ end
 -- Returns a List.
 lbt.fn.latex_expansion = function (parsed_content)
   local pc = parsed_content
-  local t = lbt.fn.pc.template_object(pc)
+  local t = pc:template_object_or_error()
   -- Obtain token and style resolvers so that expansion can occur.
   local tr, sr = lbt.fn.token_and_style_resolvers(pc)
   -- Store the token and style resolvers for potential use by other functions.
@@ -250,7 +270,7 @@ lbt.fn.latex_expansion = function (parsed_content)
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
-  lbt.log(4, 'About to latex-expand template <%s>', lbt.fn.pc.template_name(pc))
+  lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
   local result = t.expand(pc, tr, sr)
   lbt.log(4, ' ~> result has %d bytes', #result)
   return result
@@ -360,7 +380,7 @@ end
 -- resolver.
 lbt.fn.token_and_style_resolvers = function (pc)
   -- The name of the template allows us to retrieve the template object.
-  local t = lbt.fn.pc.template_object(pc)
+  local t = pc:template_object_or_error()
   -- From the pc we can look for added sources. The template object has sources
   -- too. So we can calculate "consolidated sources".
   local src = lbt.fn.impl.consolidated_sources(pc, t)
@@ -741,12 +761,12 @@ end
 -- Error: if any template name cannot be resolved into a template object.
 --
 lbt.fn.impl.consolidated_sources = function (pc, t)
-  local src1 = lbt.fn.pc.extra_sources(pc)  -- optional specific source names (List)
-  local src2 = pl.List(t.sources)           -- source names baked in to the template (List)
+  local src1 = pc:extra_sources()    -- optional specific source names (List)
+  local src2 = pl.List(t.sources)    -- source names baked in to the template (List)
   local sources = pl.List();
   do
     sources:extend(src1);
-    sources:append(t.name)                  -- the template itself has to go in there
+    sources:append(t.name)           -- the template itself has to go in there
     sources:extend(src2)
   end
   local result = pl.List()
@@ -807,7 +827,7 @@ lbt.fn.impl.consolidated_styles = function (docwide, pc, sources)
   lbt.log('styles', 'extracting document-wide styles:', styles)
   result:update(styles)
   -- I(result)
-  styles = lbt.fn.pc.extra_styles(pc)
+  styles = pc:extra_styles()
   lbt.log('styles', 'extracting styles from parsed content: %s', styles)
   result:update(styles)
   -- IX(result)

@@ -265,8 +265,8 @@ end
 lbt.api.default_template_expand = function()
   return function (pc, tr, sr)
     -- abbreviations for: parsed content, token resolver, style resolver
-    lbt.log(4, 'Inside default_template_expand for template <%s>', lbt.fn.pc.template_name(pc))
-    local body = lbt.fn.pc.content_list_or_nil(pc, 'BODY')
+    lbt.log(4, 'Inside default_template_expand for template <%s>', pc:template_name())
+    local body = pc:list_or_nil('BODY')
     lbt.log(4, ' * BODY has <%d> items to expand', body:len())
     if body == nil then
       lbt.err.E301_default_expand_failed_no_body()

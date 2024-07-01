@@ -219,10 +219,10 @@ local function T_extra_sources()
   -- We assume parsed_content works for these inputs.
   local pc2 = lbt.fn.parsed_content(good_input_2)
   local pc3 = lbt.fn.parsed_content(good_input_3)
-  local s2  = pc2:meta().SOURCES
-  local s3  = pc3:meta().SOURCES
-  assert(s2 == pl.List{"Questions", "Figures", "Tables"})
-  assert(s3 == nil)
+  local s2  = pc2:extra_sources()
+  local s3  = pc3:extra_sources()
+  EQ(s2, {"Questions", "Figures", "Tables"})
+  EQ(s3, {})
 end
 
 local function T_add_template_directory()
@@ -241,6 +241,12 @@ local function T_add_template_directory()
   assert(p2:endswith("test/templates/HSCLectures.lua"))
 end
 
+  -- [@META]
+  --   TEMPLATE lbt.Basic
+  -- [+BODY]
+  --   TEXT Examples of animals:
+  --   ITEMIZE  [topsep=0pt] :: Bear :: Chameleon :: Frog
+  --   TEXT* 30pt :: Have you seen any of these?]])
 local function T_expand_Basic_template_1()
   lbt.api.reset_global_data()
   lbt.fn.template_register_to_logfile()
@@ -429,8 +435,8 @@ local function RUN_TESTS(flag)
   -- T_pragmas_and_other_lines()
   T_parsed_content_1()
   T_extra_sources()
-  -- T_add_template_directory()
-  -- T_expand_Basic_template_1()
+  T_add_template_directory()
+  T_expand_Basic_template_1()
   -- T_expand_Basic_template_2()
   -- T_util()
   -- T_template_styles_specification()
