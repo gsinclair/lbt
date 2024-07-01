@@ -144,7 +144,7 @@ local process_cmd = function(data)
   end
   return result
 end
-local command = (commandn + command1 + command0) / process_cmd
+local command = (commandn + command1 + command0) / process_cmd * sp
 local commands = Ct(command^1)
 
 -- }}}
@@ -328,58 +328,25 @@ end
 
 local ParsedContent = { }
 
-lbt.parser.parsed_content = function(text)
+-- lbt.parser.parsed_content_0
+--   * Does the actual parsing
+--   * The text must not contain any pragmas
+--   * Returns a list of document blocks, each one being of type 'dict_block'
+--     or 'list_block'
+--   * Further processing will be required to use the results:
+--     - build an index of the contents   - incorporate pragmas
+lbt.parser.parsed_content_0 = function(text)
   local result = {}
   -- reset the file-scoped variable MaxPosition each time we do a parse
   MaxPosition = -1
-  local pc = document:match(text)
-  if pc then
-    return { ok = true, pc = ParsedContent:new(pc) }
+  local pc0 = document:match(text)
+  if pc0 then
+    return { ok = true, pc0 = pc0 }
   else
     return { ok = false, maxposition = MaxPosition }
   end
 end
 
-local index_parsed_content = function(pc)
-  local result = { dicts = {}, lists = {} }
-  for _, x in ipairs(pc) do
-    if x.type == 'dict_block' then
-      result.dicts[x.name] = x
-    elseif x.type == 'list_block' then
-      result.lists[x.name] = x
-    end
-  end
-  return result
-end
-
--- The idea of using metatables to build a class comes from Section 16.1 of the
--- free online 'Programming in Lua'.
-function ParsedContent:new(pc)
-  lbt.assert_table(1, pc)
-  o = { type = 'ParsedContent', data = pc, idx = index_parsed_content(pc) }
-  setmetatable(o, self)   -- get methods from ParsedContent table
-  self.__index = self     -- this doesn't make sense to me
-  return o
-end
-
-function ParsedContent:dict_or_nil(name)
-  local d = self.idx.dicts[name]
-  return d and d.entries
-end
-
-function ParsedContent:list_or_nil(name)
-  local l = self.idx.lists[name]
-  return l and l.commands
-end
-
-function ParsedContent:meta()
-  local m = self:dict_or_nil('META')
-  return m or lbt.err.E976_no_META_field()
-end
-
-function ParsedContent:title()
-  return self:meta().TITLE or '(no title)'
-end
 
 -- }}}
 

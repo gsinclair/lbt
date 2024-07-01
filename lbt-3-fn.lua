@@ -11,6 +11,143 @@ end
 -- }}}
 
 --------------------------------------------------------------------------------
+-- {{{ ParsedContent class
+--
+--  * ParsedContent.new(pc0, pragmas)
+--  * pc:meta()
+--  * pc:title()
+--  * pc:dict_or_nil(name)
+--  * pc:list_or_nil(name)
+--  * pc:template_name()
+--  * pc:template_object()
+--  * pc:extra_sources()
+--  * pc:extra_styles()
+--  * pc:toString()       -- a compact representation
+--------------------------------------------------------------------------------
+
+-- Class for storing and providing access to parsed content.
+-- The actual parsing is done in lbt.parser and the result (pc0) is fed in
+-- here. We generate an index to facilitate lookups.
+local ParsedContent = {}
+ParsedContent.mt = { __index = ParsedContent }
+
+local mkindex = function(pc0)
+  local result = { dicts = {}, lists = {} }
+  for _, x in ipairs(pc0) do
+    if x.type == 'dict_block' then
+      result.dicts[x.name] = x
+    elseif x.type == 'list_block' then
+      result.lists[x.name] = x
+    end
+  end
+  return result
+end
+
+-- The idea of using metatables to build a class comes from Section 16.1 of the
+-- free online 'Programming in Lua'.
+function ParsedContent.new(pc0, pragmas)
+  lbt.assert_table(1, pc0)
+  lbt.assert_table(2, pragmas)
+  local o = {
+    type = 'ParsedContent',
+    data = pc0,
+    index = mkindex(pc0),
+    pragmas = pragmas
+  }
+  setmetatable(o, ParsedContent.mt)
+  return o
+end
+
+-- Return a dictionary given a name. The actual keys and values are returned
+-- in a table, not all the metadata that is stored in pc0.
+function ParsedContent:dict_or_nil(name)
+  local d = self.index.dicts[name]
+  return d and d.entries
+end
+
+-- Return a list given a name. The actual values are returned in a table, not
+-- all the metadata that is stored in pc0.
+function ParsedContent:list_or_nil(name)
+  local l = self.index.lists[name]
+  return l and l.commands
+end
+
+-- Return the META dictionary block, or raise an error if it doesn't exist.
+function ParsedContent:meta()
+  local m = self:dict_or_nil('META')
+  return m or lbt.err.E976_no_META_field()
+end
+
+-- Return the TITLE value from the META block, or '(no title)' if it doesn't exist.
+function ParsedContent:title()
+  return self:meta().TITLE or '(no title)'
+end
+
+-- NOTE old code to be deleted (next 60 lines)
+
+lbt.fn.pc = {}
+
+lbt.fn.pc.meta = function (pc)
+  local meta = pc.META
+  if meta == nil then
+    lbt.err.E976_no_META_field(pc)
+  end
+  return meta
+end
+
+lbt.fn.pc.title = function (pc)
+  return lbt.fn.pc.meta(pc).TITLE or "(no title)"
+end
+
+lbt.fn.pc.template_name = function (pc)
+  return lbt.fn.pc.meta(pc).TEMPLATE
+end
+
+lbt.fn.pc.template_object = function (pc)
+  local tn = lbt.fn.pc.template_name(pc)
+  local t = lbt.fn.template_object_or_error(tn)
+  return t
+end
+
+lbt.fn.pc.content_dictionary_or_nil = function (pc, key)
+  local d = pc[key]
+  return d
+end
+
+lbt.fn.pc.content_list_or_nil = function (pc, key)
+  local l = pc[key]
+  return l
+end
+
+-- Return a List of template names given in META.SOURCES.
+-- May be empty.
+lbt.fn.pc.extra_sources = function (pc)
+  local sources = pc.META.SOURCES
+  if sources then
+    local bits = sources:split(",")
+    return pl.List(bits):map(pl.stringx.strip)
+  else
+    return pl.List()
+  end
+end
+
+-- Return a Map of style settings given in META.STYLES.
+-- May be empty.
+lbt.fn.pc.extra_styles = function (pc)
+  local styles = pc.META.STYLES
+  if styles then
+    return lbt.fn.style_string_to_map(styles)
+  else
+    return pl.Map()
+  end
+end
+
+lbt.fn.pc.compact_representation_line = function(pc_line)
+  return F("%s | %s", pc_line.token, pc_line.raw:shorten(60))
+end
+-- }}}
+
+--------------------------------------------------------------------------------
 -- {{{ Author content:
 --  * author_content_clear      (reset lbt.const and lbt.var data)
 --  * author_content_append     (append line to lbt.const.author_content)
@@ -52,14 +189,7 @@ end
 --  * latex_expansion(pc)      (Latex representation based on the parsed content)
 --------------------------------------------------------------------------------
 
--- An implementation aid for parsed_content.
--- It 
-lbt.fn.parsed_content_0 = function (text) 
-end
 
--- new June 2024, based on lpeg.
--- Return value:
---   { pragmas = {...}, pc = {...} }
 lbt.fn.parsed_content = function(content_lines)
   -- The content lines are in a list. For lpeg parsing, we want the content as
   -- a single string. But there could be pragmas in there like !DRAFT, and it
@@ -69,124 +199,26 @@ lbt.fn.parsed_content = function(content_lines)
   local pragmas, content = lbt.fn.impl.pragmas_and_content(content_lines)
   -- Detect ignore and act accordingly.
   if pragmas.ignore then
-    return { pragmas = pragmas }
+    return ParsedContent.new(nil, pragmas)
   end
   -- Detect debug and act accordingly.
   if pragmas.debug then
     lbt.fn.set_log_channels_for_debugging_single_expansion()
   end
-  -- (Now we are ready to call functions in lbt.parser.)
+  -- Now we are ready to parse the actual content, courtesy of lbt.parser.
   -- content = content:gsub('@META', '[@META]')
   -- content = content:gsub('+BODY', '[+BODY]')
-  local x = lbt.parser.parsed_content(content)
+  local x = lbt.parser.parsed_content_0(content)
   if x.ok then
-    local pc = x.pc
-    pc.pragmas = pragmas
-    return pc
+    lbt.log('parse', 'Content parsed with lbt.parser.parsed_content_0. Result:')
+    lbt.log('parse', pl.pretty.write(x.pc0))
+    return ParsedContent.new(x.pc0, pragmas)
   else
-    lbt.fn.output_parsed_content_error(content, x.maxposition)
-    -- should we exit? [yes, for now]
-    -- should we call lbt.err.xyz instead?
+    lbt.err.E110_unable_to_parse_content(content, x.maxposition)
   end
 end
 
-lbt.fn.output_parsed_content_error = function(text, pos)
-  print()
-  print()
-  print('(lbt) *** Attempt to parse LBT content failed ***')
-  print(F('(lbt) position: %d    text: %s', pos, text:sub(pos,pos+50)))
-  print()
-  print(text)
-  print()
-  print('(lbt) end of report')
-  os.exit()
-end
-
--- parsed_content(c)
---
--- Input: list of raw stripped lines from the `lbt` environment
---        (no need to worry about line continuations)
--- Output: { pragmas: Set(...),
---           META: {...},
---           BODY: List(...),
---           ...}
---
--- Note: each item in META, BODY etc. is of the form
---   {token:'BEGIN' nargs:2, args:List('multicols','2') raw:'multicols 2'}
---
-lbt.fn.parsed_content_old = function (content_lines)
-  lbt.assert_table(1, content_lines)
-  -- Obtain pragmas (set) and non-pragma lines (list), and set up result table.
-  local pragmas, lines = lbt.fn.impl.pragmas_and_other_lines(content_lines)
-  local result = { pragmas = pragmas }
-  -- Detect ignore and act accordingly.
-  if pragmas.ignore then
-    return result
-  end
-  -- Detect debug and act accordingly.
-  if pragmas.debug then
-    lbt.fn.set_log_channels_for_debugging_single_expansion()
-  end
-  -- Local variables know whether we are appending to a list or a dictionary,
-  -- and what current key in the results table we are appending to.
-  local append_mode = nil
-  local current_key = nil
-  -- Process each line. It could be something like @META or something like +BODY,
-  -- or something like "TEXT There once was a man from St Ives...".
-  for line in lines:iter() do
-    lbt.log('parse', "Parsing line: <<%s>>", line)
-    if line:at(1) == '@' then
-      -- We have @META or similar, which acts as a dictionary.
-      current_key = lbt.fn.impl.validate_content_key(line, result)
-      append_mode = 'dict'
-      result[current_key] = {}
-    elseif line:at(1) == '+' then
-      -- We have +BODY or similar, which acts as a list.
-      current_key = lbt.fn.impl.validate_content_key(line, result)
-      append_mode = 'list'
-      result[current_key] = pl.List()
-    else
-      -- We have a (hopefully valid) token, possibly with some text afterwards.
-      local token, text = lbt.fn.impl.token_and_text(line)
-      if token == nil then
-        lbt.err.E001_internal_logic_error('somehow token is nil')
-      end
-      if not lbt.fn.impl.valid_token(token) then
-        lbt.err.E100_invalid_token(token)
-      end
-      if append_mode == nil or current_key == nil then
-        lbt.err.E101_line_out_of_place(line)
-      end
-      if append_mode == 'dict' then
-        -- Put key and value in dictionary (note...no splitting...this may change)
-        if text == nil then lbt.err.E105_dictionary_key_without_value(line) end
-        result[current_key][token] = text
-      elseif append_mode == 'list' and text == nil then
-        local parsedline = {
-          token = token,
-          nargs = 0,
-          args  = pl.List(),
-          raw   = ""
-        }
-        result[current_key]:append(parsedline)
-      elseif append_mode == 'list' and text ~= nil then
-        -- The text needs to be split into arguments.
-        local args = pl.utils.split(text, "%s+::%s+")
-        local parsedline = {
-          token = token,
-          nargs = #args,
-          args  = pl.List.new(args),
-          raw   = text
-        }
-        result[current_key]:append(parsedline)
-      else
-        lbt.err.E001_internal_logic_error("append_mode: %s", append_mode)
-      end
-    end
-  end
-  return result
-end
-
+-- old code - still needed?
 lbt.fn.validate_parsed_content = function (pc)
   -- We check that META and META.TEMPLATE are present.
   local m = pc.META
@@ -396,81 +428,6 @@ lbt.fn.style_resolver = function (style_map)
   end
 end
 
--- }}}
-
---------------------------------------------------------------------------------
--- {{{ Functions associated with parsed content
---  * meta(pc)
---  * title(pc)
---  * dictionary(pc, "META")
---  * list(pc, "BODY")
---  * template_name(pc)
---  * template_object(pc)
---  * extra_sources(pc)
---  * extra_styles(pc)
---  * compact_representation(pc)       for debugging
---------------------------------------------------------------------------------
-
-lbt.fn.pc = {}
-
-lbt.fn.pc.meta = function (pc)
-  local meta = pc.META
-  if meta == nil then
-    lbt.err.E976_no_META_field(pc)
-  end
-  return meta
-end
-
-lbt.fn.pc.title = function (pc)
-  return lbt.fn.pc.meta(pc).TITLE or "(no title)"
-end
-
-lbt.fn.pc.template_name = function (pc)
-  return lbt.fn.pc.meta(pc).TEMPLATE
-end
-
-lbt.fn.pc.template_object = function (pc)
-  local tn = lbt.fn.pc.template_name(pc)
-  local t = lbt.fn.template_object_or_error(tn)
-  return t
-end
-
-lbt.fn.pc.content_dictionary_or_nil = function (pc, key)
-  local d = pc[key]
-  return d
-end
-
-lbt.fn.pc.content_list_or_nil = function (pc, key)
-  local l = pc[key]
-  return l
-end
-
--- Return a List of template names given in META.SOURCES.
--- May be empty.
-lbt.fn.pc.extra_sources = function (pc)
-  local sources = pc.META.SOURCES
-  if sources then
-    local bits = sources:split(",")
-    return pl.List(bits):map(pl.stringx.strip)
-  else
-    return pl.List()
-  end
-end
-
--- Return a Map of style settings given in META.STYLES.
--- May be empty.
-lbt.fn.pc.extra_styles = function (pc)
-  local styles = pc.META.STYLES
-  if styles then
-    return lbt.fn.style_string_to_map(styles)
-  else
-    return pl.Map()
-  end
-end
-
-lbt.fn.pc.compact_representation_line = function(pc_line)
-  return F("%s | %s", pc_line.token, pc_line.raw:shorten(60))
-end
 -- }}}
 
 --------------------------------------------------------------------------------

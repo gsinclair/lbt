@@ -7,34 +7,6 @@ local F = string.format
 local nothing = "<nil>"
 
 ----------------------------------------------------------------------
--- vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
---      Experimental code: using lpeg to parse lbt document
--- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-local lpeg = require 'lpeg'
-
-local P = lpeg.P   -- pattern   P'hello'
-local S = lpeg.S   -- set       S'aeiou'            /[aeiou]/
-local R = lpeg.R   -- range     R('af','AF','09')   /[a-fA-F0-9]/
--- P(3) matches 3 characters unconditionally
--- P(3) * 'hi' matches 3 characters followed by 'hi'
-local loc = lpeg.locale()
--- loc.space^0 * loc.alpha^1      /\s*\w+/
--- P'-'^-1 * R'0-9'^3             /-?\d{3,}/
--- (P'ab' + 'a') * 'c'            /(ab|a)c/
-local C = lpeg.C   -- simple capture
--- loc.space^0 * C(loc.alpha^1)   /\s*(\w+)/     capture word
--- C(C(2) * 1 * C(2)) match "hello"  --> hello  he  lo
-local Cp = lpeg.Cp -- position capture
--- sp = loc.space^0
--- word = loc.alpha^1
--- (sp * Cp() * word)^0   match  "one three two"  --> 1  5  11"
-local Ct = lpeg.Ct -- table capture
-local Cs = lpeg.Cs -- string capture [read more about this]
--- TODO examples
-
-local D = pl.pretty.dump
-
-----------------------------------------------------------------------
 
 local function content_lines(text)
   return pl.List(pl.utils.split(text, "\n"))
@@ -59,6 +31,7 @@ local good_input_1 = content_lines([[
     TEXT .o font=small :: Hello there
     END multicols
     VFILL
+
     ITEMIZE
       :: One
       :: Two
@@ -191,6 +164,7 @@ end
 --   TEXT .o font=small :: Hello there
 --   END multicols
 --   VFILL
+--
 --   ITEMIZE
 --     :: One
 --     :: Two
@@ -206,7 +180,6 @@ end
 
 -- This uses good_input_1 to test lbt.fn.parsed_content.
 local function T_parsed_content_1()
-  print('T_parsed_content_1')
   lbt.api.reset_global_data()
   local pc = lbt.fn.parsed_content(good_input_1)
   EQ(pc.pragmas, { draft = true, ignore = false, debug = false })
@@ -236,6 +209,8 @@ local function T_parsed_content_1()
     k = { caption = 'Phone directory', colspec = 'll' },
     a = {'Name & Extension', 'John & 429', 'Mary & 388'} }
   EQ(e[1], e1)
+  local e2 = { 'TEXT', o = {}, k = {}, a = {'Hello'} }
+  EQ(e[2], e2)
 end
 
 local function T_extra_sources()

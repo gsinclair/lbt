@@ -35,6 +35,7 @@ lbt.err.E001_internal_logic_error = function(details)
   end
 end
 
+-- no longer needed
 lbt.err.E100_invalid_token = function(line)
   E("E100: Invalid token encountered in content line:\n  <<%s>>", line)
 end
@@ -43,10 +44,26 @@ lbt.err.E102_invalid_pragma = function(p)
   E("E100: Invalid pragma encountered:\n  <<%s>>", p)
 end
 
+-- no longer needed
 lbt.err.E101_line_out_of_place = function(line)
   E("E101: Line out of place (not contained in [@META] or [+BODY] or similar):\n  <<%s>>", line)
 end
 
+lbt.err.E110_unable_to_parse_content = function(text, pos)
+  local message = [[
+
+  (lbt) *** Attempt to parse LBT content failed ***'
+  (lbt) position: %d    text: %s'
+
+%s
+
+  (lbt) end of report'
+
+]]
+  E(message, pos, text:sub(pos,pos+50), text)
+end
+
+-- no longer needed
 lbt.err.E105_dictionary_key_without_value = function(line)
   E("E105: Content dictionary has key with no value:\n  <<%s>>", line)
 end
