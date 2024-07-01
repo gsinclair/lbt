@@ -43,6 +43,7 @@ local good_input_1 = content_lines([[
       :: Name & Extension
       :: John & 429
       :: Mary & 388
+    % Comment
     TEXT Hello
 ]])
 
@@ -452,4 +453,4 @@ local function RUN_TESTS(flag)
   end
 end
 
-RUN_TESTS(1)
+RUN_TESTS(0)

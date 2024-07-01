@@ -83,6 +83,10 @@ function ParsedContent:title()
   return self:meta().TITLE or '(no title)'
 end
 
+function ParsedContent:template_name()
+  return self:meta().TEMPLATE
+end
+
 -- NOTE old code to be deleted (next 60 lines)
 
 lbt.fn.pc = {}
@@ -195,7 +199,7 @@ lbt.fn.parsed_content = function(content_lines)
   -- a single string. But there could be pragmas in there like !DRAFT, and it
   -- is better to extract them now that we have separate lines. Hence we call
   -- a function to do this for us. This function handles » line continuations
-  -- as well. This is a pre-parsing stage.
+  -- as well. It also removes comments lines. This is a pre-parsing stage.
   local pragmas, content = lbt.fn.impl.pragmas_and_content(content_lines)
   -- Detect ignore and act accordingly.
   if pragmas.ignore then
@@ -206,8 +210,12 @@ lbt.fn.parsed_content = function(content_lines)
     lbt.fn.set_log_channels_for_debugging_single_expansion()
   end
   -- Now we are ready to parse the actual content, courtesy of lbt.parser.
-  -- content = content:gsub('@META', '[@META]')
-  -- content = content:gsub('+BODY', '[+BODY]')
+  if content:find('[@META]', 1, true) then
+    -- we're good
+  else
+    content = content:gsub('@META', '[@META]')
+    content = content:gsub('+BODY', '[+BODY]')
+  end
   local x = lbt.parser.parsed_content_0(content)
   if x.ok then
     lbt.log('parse', 'Content parsed with lbt.parser.parsed_content_0. Result:')
@@ -221,12 +229,10 @@ end
 -- old code - still needed?
 lbt.fn.validate_parsed_content = function (pc)
   -- We check that META and META.TEMPLATE are present.
-  local m = pc.META
-  if m == nil then
+  if pc:meta() == nil then
     lbt.err.E203_no_META_defined()
   end
-  local t = pc.META.TEMPLATE
-  if t == nil then
+  if pc:template_name() == nil then
     lbt.err.E204_no_TEMPLATE_defined()
   end
   return nil
@@ -678,6 +684,8 @@ lbt.fn.impl.pragmas_and_content = function(input_lines)
     p = line:match("!(%u+)%s*$")
     if p then
       update_pragma_set(pragmas, p)
+    elseif line:match('^%s*%%') then
+      -- ignore comment line
     else
       lines:append(line)
     end

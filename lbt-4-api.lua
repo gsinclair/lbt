@@ -97,12 +97,12 @@ lbt.api.author_content_emit_latex = function()
   elseif pc.pragmas.skip then
     lbt.log(3, '  * SKIP pragma detected - no further action for eID %d', eid)
     local skipmsg = F([[{\noindent\color{red}\bfseries Explicitly instructed to skip content (eID=%d).
-      Title is `%s` }]], eid, lbt.fn.pc.title(pc))
+      Title is `%s` }]], eid, pc:title())
     tex.print(skipmsg)
     return
   elseif pc.pragmas.draft == false and lbt.api.get_draft_mode() == true then
     local draftskipmsg = F([[{\noindent\color{red}\bfseries Skipping non-draft content (eID=%d).
-      Title is `%s' }]], eid, lbt.fn.pc.title(pc))
+      Title is `%s' }]], eid, pc:title())
     tex.print(draftskipmsg)
     lbt.log(3, '  * DRAFT pragma _not_ detected - no further action for eID %d', eid)
     return
@@ -110,8 +110,14 @@ lbt.api.author_content_emit_latex = function()
   lbt.log('parse', 'Parsed content below. eID=%d', eid)
   lbt.log('parse', lbt.pp(pc))
   lbt.fn.validate_parsed_content(pc)
-  lbt.log(3, '  * template:       %s', lbt.fn.pc.template_name(pc))
-  local l  = lbt.fn.latex_expansion(pc)
+  lbt.log(3, '  * template:       %s', pc:template_name())
+  local development = true
+  local l
+  if development then
+    l = F([[\par\textbf{Expansion for LBT object %d (title `%s')}\par]], eid, pc:title())
+  else
+    l  = lbt.fn.latex_expansion(pc)
+  end
   local output = lbt.util.normalise_latex_output(l)
   lbt.log(3, '  * latex expansion complete (eid=%d)', eid)
   lbt.util.print_tex_lines(output)

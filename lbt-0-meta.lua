@@ -27,7 +27,12 @@ local channel_name = { [0] = 'ANN',  [1] = 'ERROR', [2] = 'WARN',
 
 lbt.log = function (channel, format, ...)
   if lbt.api.query_log_channels(channel) then
-    local message = F(format, ...)
+    local message
+    if ... == nil then
+      message = format
+    else
+      local message = F(format, ...)
+    end
     local name = channel_name[channel] or channel
     local line = F('[#%-10s] %s\n', name, message)
     logfile:write(line)
