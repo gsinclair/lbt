@@ -56,7 +56,7 @@ local good_input_1 = content_lines([[
 local good_input_2 = content_lines([[
   [@META]
     TEMPLATE Basic
-    SOURCES  Questions, Figures, Tables
+    SOURCES  .l Questions, Figures, Tables
   [+BODY]
     TEXT Hello again]])
 
@@ -219,10 +219,10 @@ local function T_extra_sources()
   -- We assume parsed_content works for these inputs.
   local pc2 = lbt.fn.parsed_content(good_input_2)
   local pc3 = lbt.fn.parsed_content(good_input_3)
-  local s2  = lbt.fn.pc.extra_sources(pc2)
-  local s3  = lbt.fn.pc.extra_sources(pc3)
+  local s2  = pc2:meta().SOURCES
+  local s3  = pc3:meta().SOURCES
   assert(s2 == pl.List{"Questions", "Figures", "Tables"})
-  assert(s3 == pl.List{})
+  assert(s3 == nil)
 end
 
 local function T_add_template_directory()
@@ -428,7 +428,7 @@ local function RUN_TESTS(flag)
 
   -- T_pragmas_and_other_lines()
   T_parsed_content_1()
-  -- T_extra_sources()
+  T_extra_sources()
   -- T_add_template_directory()
   -- T_expand_Basic_template_1()
   -- T_expand_Basic_template_2()
@@ -453,4 +453,4 @@ local function RUN_TESTS(flag)
   end
 end
 
-RUN_TESTS(0)
+RUN_TESTS(1)

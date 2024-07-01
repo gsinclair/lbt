@@ -83,6 +83,16 @@ local kvlist = P({'kvlist',
 })
 -- }}}
 
+-- {{{ Comma-separated list (used in META values like SOURCES etc.)
+-- local process_commalist = function(data)
+-- end
+local commalist = P({'commalist',
+  -- TODO allow for quoted values so that commas can be used
+  item = C( (P(1)-',')^1 ) / pl.stringx.strip,
+  commalist = Ct( V('item') * (',' * V('item'))^0 )
+})
+-- }}}
+
 -- {{{ Meaty parsing units, like opcode, argument, command0, command1, commandn
 -- opcode is all upper case followed by optional star
 --   (this will have to evolve, not least for environments)
@@ -154,6 +164,7 @@ local commands = Ct(command^1)
 local process_dict_block = function(tags)
   local result = { type = 'dict_block' }
   local kvpattern = P'.d' * hspace * kvlist
+  local listpattern = P'.l' * hspace * commalist
   result.name = tags[1].value
   result.entries = {}
   result.types = {}
@@ -162,12 +173,14 @@ local process_dict_block = function(tags)
     -- The value could be a kvlist, like 'OPTIONS .d vspace=12pt, color=blue'
     -- We want to extract this and store it as a map.
     local inline_kv = kvpattern:match(value)
-    -- Or it could be a normal list, like 'FOO bar :: baz :: quux'. This is not
-    -- supported yet. We will wait until there is a use case. But this is where
-    -- it would be implemented.
+    -- Or it could be a normal list, like 'SOURCES .l Exam, Questions'.
+    local inline_list = listpattern:match(value)
     if inline_kv then
       result.entries[key] = inline_kv
       result.types[key] = 'dict'
+    elseif inline_list then
+      result.entries[key] = inline_list
+      result.types[key] = 'list'
     else
       result.entries[key] = value
       result.types[key] = 'str'
