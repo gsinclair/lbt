@@ -107,68 +107,6 @@ function ParsedContent:extra_styles()
   end
 end
 
--- NOTE old code to be deleted (next 60 lines)
-
-lbt.fn.pc = {}
-
-lbt.fn.pc.meta = function (pc)
-  local meta = pc.META
-  if meta == nil then
-    lbt.err.E976_no_META_field(pc)
-  end
-  return meta
-end
-
-lbt.fn.pc.title = function (pc)
-  return lbt.fn.pc.meta(pc).TITLE or "(no title)"
-end
-
-lbt.fn.pc.template_name = function (pc)
-  return lbt.fn.pc.meta(pc).TEMPLATE
-end
-
-lbt.fn.pc.template_object = function (pc)
-  local tn = lbt.fn.pc.template_name(pc)
-  local t = lbt.fn.template_object_or_error(tn)
-  return t
-end
-
-lbt.fn.pc.content_dictionary_or_nil = function (pc, key)
-  local d = pc[key]
-  return d
-end
-
-lbt.fn.pc.content_list_or_nil = function (pc, key)
-  local l = pc[key]
-  return l
-end
-
--- Return a List of template names given in META.SOURCES.
--- May be empty.
-lbt.fn.pc.extra_sources = function (pc)
-  local sources = pc.META.SOURCES
-  if sources then
-    local bits = sources:split(",")
-    return pl.List(bits):map(pl.stringx.strip)
-  else
-    return pl.List()
-  end
-end
-
--- Return a Map of style settings given in META.STYLES.
--- May be empty.
-lbt.fn.pc.extra_styles = function (pc)
-  local styles = pc.META.STYLES
-  if styles then
-    return lbt.fn.style_string_to_map(styles)
-  else
-    return pl.Map()
-  end
-end
-
-lbt.fn.pc.compact_representation_line = function(pc_line)
-  return F("%s | %s", pc_line.token, pc_line.raw:shorten(60))
-end
 -- }}}
 
 --------------------------------------------------------------------------------
@@ -336,7 +274,7 @@ lbt.fn.latex_for_command = function (command, tr, sr)
     lbt.fn.impl.assign_register(args)
     return 'sto', nil
   end
-  -- 2. Search for a opcode function and return if we did not find one.
+  -- 2. Search for an opcode function and return if we did not find one.
   local findings = tr(opcode)
   if findings == nil then
     lbt.log('emit', '    --> NOTFOUND')
@@ -378,81 +316,7 @@ lbt.fn.latex_for_command = function (command, tr, sr)
   end
 end
 
--- Take a single line of parsed author content (table with keys token, nargs,
--- args and raw) and produce a string of Latex.
---
--- Before sending the arguments to the token function, any register references
--- like ◊ABC are expanded.
---
--- Parameters:
---  * line: parsed author content
---  * tr:   a token resolver that we call to get a token function
---  * sr:   a style resolver that we pass to the function for token expansion
---
--- Return:
---  * 'ok', latex       [succesful]
---  * 'sto', nil        [STO register allocation]
---  * 'notfound', nil   [token not found among sources]
---  * 'error', details  [error occurred while processing token]
---
--- Side effect:
---  * lbt.var.line_count is increased (unless this is a register allocation)
---  * lbt.var.registers might be updated
-lbt.fn.parsed_content_to_latex_single_old = function (line, tr, sr)
-  lbt.log(4, 'parsed_content_to_latex_single: %s', lbt.fn.pc.compact_representation_line(line))
-  lbt.log('emit', '')
-  lbt.log('emit', 'Line: %s', lbt.fn.pc.compact_representation_line(line))
-  local token = line.token
-  local nargs = line.nargs
-  local args  = line.args
-  -- 1. Handle a register allocation. Do not increment linecount.
-  if token == 'STO' then
-    lbt.fn.impl.assign_register(line)
-    return 'sto', nil
-  end
-  -- 2. Search for a token function and return if we did not find one.
-  local findings = tr(token)
-  if findings == nil then
-    lbt.log('emit', '    --> NOTFOUND')
-    lbt.log(2, 'Token not resolved: %s', token)
-    return 'notfound', nil
-  end
-  local token_function, argspec = table.unpack(findings)
-  -- 3. Check we have a valid number of arguments.
-  if argspec then
-    local a = argspec
-    if nargs < a.min or nargs > a.max then
-      local msg = F("%d args given but %s expected", nargs, a.spec)
-      lbt.log('emit', '    --> ERROR: %s', msg)
-      lbt.log(1, 'Error attempting to expand token:\n    %s', msg)
-      return 'error', msg
-    end
-  end
-  -- 4. We really are processing a token, so we can increase the token_count.
-  lbt.fn.impl.inc_token_count()
-  -- 5. Expand register references where necessary.
-  --    We are not necessarily in mathmode, hence false.
-  args = args:map(lbt.fn.impl.expand_register_references, false)
-  -- 6. Call the token function and return 'ok', ... or 'error', ...
-  local result = token_function(nargs, args, sr)
-  if type(result) == 'string' then
-    lbt.log('emit', '    --> %s', result)
-    return 'ok', result
-  elseif type(result) == 'table' and type(result.error) == 'string' then
-    local errormsg = result.error
-    lbt.log('emit', '    --> ERROR: %s', errormsg)
-    lbt.log(1, 'Error occurred while processing token %s\n    %s', token, errormsg)
-    return 'error', errormsg
-  elseif type(result) == 'table' then
-    result = table.concat(result, "\n")
-    lbt.log('emit', '    --> %s', result)
-    return 'ok', result
-  else
-    lbt.err.E325_invalid_return_from_template_function(token, result)
-  end
-end
-
--- From one parsed-content object, we can derive a token resolve and a style
+-- From one parsed-content object, we can derive a token resolver and a style
 -- resolver.
 lbt.fn.token_and_style_resolvers = function (pc)
   -- The name of the template allows us to retrieve the template object.
@@ -897,16 +761,13 @@ lbt.fn.impl.consolidated_styles = function (docwide, pc, sources)
     styles = s.styles or pl.Map()
     lbt.log('styles', 'extracting styles from <%s>: %s', s.name, styles)
     result:update(styles)
-    -- I(result)
   end
   styles = docwide
   lbt.log('styles', 'extracting document-wide styles:', styles)
   result:update(styles)
-  -- I(result)
   styles = pc:extra_styles()
   lbt.log('styles', 'extracting styles from parsed content: %s', styles)
   result:update(styles)
-  -- IX(result)
   return result
 end
 

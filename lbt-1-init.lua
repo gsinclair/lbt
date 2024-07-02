@@ -153,6 +153,7 @@ end
 -- api          [functions called by Latex or templates]
 -- fn           [functions supporting the API]
 -- util         [functions useful in template code]
+-- parser       [a function that comprehensivly parses document text]
 -- err          [centralised error messages]
 -- test         [unit testing]
 --------------------------------------------------------------------------------
@@ -178,7 +179,7 @@ lbt.fn = {}
 lbt.util = {}
 
 
--- lbt.parser will contain functions that parse LBT documents.
+-- lbt.parser contains a function that parses LBT documents.
 lbt.parser = {}
 
 

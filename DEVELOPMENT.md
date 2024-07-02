@@ -466,3 +466,17 @@ This would be a good way to give the user the ability to exercise some control o
     - Defaults set up in the command code: `o.QQ = { vspace = '6pt', color = 'blue'}`.
  * Implementation of *lbt environments* using a syntax like `+COLUMNS 2` and `-COLUMNS`. Unfortunately this clashes with `+BODY` and that can't be overlooked. An alternative might be `[+COLUMNS 2]` and `[-COLUMNS]`. Or maybe reverse it, so that lbt documents have `[@META]` and `[+BODY]` and that means we can use `+COLUMNS 2` and `-COLUMNS` as originally hoped. I think I like that idea. A lot of documents will have to be updated, but that's OK.
      - I am implementing the [@META] and [+BODY] idea now (June 2024).
+
+### Progress towards lpeg parsing
+
+(June 2024) It is going great. The lpeg-parsing branch is making great progress. It is working well, with just the following improvements planned:
+ * Allow quoted values in dictionaries so that commas can be included if necessary.
+ * Tidy up some of the code by using grammars instead of lots of local variables.
+
+Flexible linebreaks is implemented.
+
+lbt environments have not been implemented. Picking them up in parsing is fine, but they need to be implemented in lbt.fn.
+
+### Progress towards opargs and kwargs
+
+The parser picks them up, and now I need to write the code that acts on them.

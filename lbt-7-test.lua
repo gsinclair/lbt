@@ -155,30 +155,6 @@ local function T_pragmas_and_other_lines()
   EQ(lines, pl.List.new({"Line 1", "Line 2", "Line 3"}))
 end
 
--- XXX In the process of updating, June 2024.
--- [@META]
---   TEMPLATE Basic
---   TRAIN    Bar :: Baz
---   BUS      .d capacity=55, color=purple
--- [+BODY]
---   BEGIN multicols :: 2
---   TEXT .o font=small :: Hello there
---   END multicols
---   VFILL
---
---   ITEMIZE
---     :: One
---     :: Two
---     :: Three
--- [+EXTRA]
---   TABLE .o float
---     :: (caption) Phone directory
---     :: (colspec) ll
---     :: Name & Extension
---     :: John & 429
---     :: Mary & 388
---   TEXT Hello
-
 -- This uses good_input_1 to test lbt.fn.parsed_content.
 local function T_parsed_content_1()
   lbt.api.reset_global_data()
@@ -241,12 +217,6 @@ local function T_add_template_directory()
   assert(p2:endswith("test/templates/HSCLectures.lua"))
 end
 
-  -- [@META]
-  --   TEMPLATE lbt.Basic
-  -- [+BODY]
-  --   TEXT Examples of animals:
-  --   ITEMIZE  [topsep=0pt] :: Bear :: Chameleon :: Frog
-  --   TEXT* 30pt :: Have you seen any of these?]])
 local function T_expand_Basic_template_1()
   lbt.api.reset_global_data()
   lbt.fn.template_register_to_logfile()
