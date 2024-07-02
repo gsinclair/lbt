@@ -203,7 +203,7 @@ lbt.fn.latex_expansion = function (parsed_content)
   -- Obtain token and style resolvers so that expansion can occur.
   local tr, sr = lbt.fn.token_and_style_resolvers(pc)
   -- Store the token and style resolvers for potential use by other functions.
-  lbt.const.token_resolver = sr
+  lbt.const.token_resolver = tr
   lbt.const.style_resolver = sr
   -- Allow the template to initialise counters, etc.
   t.init()
@@ -222,6 +222,9 @@ end
 -- commands: List of parsed commands like {'TEXT', o = {}, k = {}, a = {'Hello'}}
 -- tr:       template resolver       call tr('Q') to resolve token Q to a function
 -- sr:       style resolver          call s.get('Q.vspace') to get the value
+--
+-- TODO rename this function to `latex_for_commands`.
+--      (That means changing several template expand functions.)
 lbt.fn.parsed_content_to_latex_multi = function (commands, tr, sr)
   local buffer = pl.List()
   for command in commands:iter() do
@@ -298,7 +301,15 @@ lbt.fn.latex_for_command = function (command, tr, sr)
   --    We are not necessarily in mathmode, hence false.
   args = args:map(lbt.fn.impl.expand_register_references, false)
   -- 6. Call the opcode function and return 'ok', ... or 'error', ...
-  local result = opcode_function(nargs, args, sr)
+  local in_development = true -- (June 2024 changes)
+  local result
+  if in_development then
+    local o = lbt.fn.options_resolver(command.o)
+    local k = command.k
+    result = opcode_function(nargs, args, o, k)
+  else
+    result = opcode_function(nargs, args, sr)
+  end
   if type(result) == 'string' then
     lbt.log('emit', '    --> %s', result)
     return 'ok', result
@@ -378,6 +389,60 @@ end
 --
 -- TODO make this impl
 lbt.fn.style_resolver = function (style_map)
+  return function (multikeystring)
+    local x = multikeystring    -- e.g. 'Q.vspace Q.color'
+    local keys = pl.List(pl.utils.split(x, '[, ]%s*'))
+    local result = pl.List()
+    for k in keys:iter() do
+      local value = style_map[k]
+      if value then
+        result:append(value)
+      else
+        lbt.err.E387_style_not_found(k)
+      end
+    end
+    return table.unpack(result)
+  end
+end
+
+-- NOTE This code is highly experimental. It is supposed to replace
+-- style_resolver above, but it has not yet been beaten into shape.
+--
+-- Suppose we have a command
+--   QQ .o color=blue, vspace=12pt :: In what year did \dots
+-- 
+-- Then this function gets called with:
+--   options_resolver('QQ', {color='blue', vspace='12pt'})
+--
+-- It needs to:
+--  * qualify the two options passed in so that they keys are QQ.color etc.
+--  * return a function that will look up any style based on qualified key.
+--    * that function looks in the following places, in order:
+--      - local options
+--             QQ .o color=blue, vspace=12pt
+--      - a CTRL command (not yet implemented, only considered)
+--      - the document's META settings, like
+--             OPTIONS .d QQ.color=red, QQ.vspace=6pt
+--      - whole-of-document settings:
+--             \lbtSetOption{QQ.color=navy}
+--      - the default for the template
+--             o.QQ = { vspace = 6pt', color = 'blue'}'
+lbt.fn.options_resolver = function (opcode, local_options)
+  local qualified_local_options = pl.Map()
+  for k, v in pairs(local_options) do
+    k = F('%s.%s', opcode, k)
+    qualified_local_options[k] = v
+  end
+  local lookup = function (key)
+    local v
+    -- 1. local options
+    v = qualified_local_options[key]
+    if v then return v end
+    -- 2. a CRTL command (not implemented)
+    -- 3. the META settings
+    -- 4. \lbtSetOption{QQ.color=navy}
+    -- 5. the default for the template
+  end
   return function (multikeystring)
     local x = multikeystring    -- e.g. 'Q.vspace Q.color'
     local keys = pl.List(pl.utils.split(x, '[, ]%s*'))
@@ -742,10 +807,10 @@ end
 -- evaluations for the whole expansion.
 --
 -- Input:
---  * docwide        a Map of document-wide styles (i.e. lbt.system.d_w_s)
---  * pc             parsed content, which gives us access to STYLES
+--  * docwide        a Map of document-wide options (i.e. lbt.system.d_w_o)
+--  * meta           a table of expansion-local options in META.OPTIONS
 --  * templates      consolidated list of templates in precedence order
---                   (we extract the 'styles' map from each)
+--                   (we extract the 'options' map from each)
 -- 
 -- Return:
 --  * a pl.Map of all style mappings, respecting precedence
@@ -753,12 +818,12 @@ end
 -- Errors:
 --  * none that I can think of
 --
-lbt.fn.impl.consolidated_styles = function (docwide, pc, sources)
+lbt.fn.impl.consolidated_options = function (docwide, meta, templates)
   lbt.log('styles', '')
   local result = pl.Map()
-  local styles = nil
-  for s in pl.List(sources):reverse():iter() do
-    styles = s.styles or pl.Map()
+  local options
+  for t in pl.List(templates):reverse():iter() do
+    options = t.options or pl.Map()
     lbt.log('styles', 'extracting styles from <%s>: %s', s.name, styles)
     result:update(styles)
   end
@@ -766,7 +831,7 @@ lbt.fn.impl.consolidated_styles = function (docwide, pc, sources)
   lbt.log('styles', 'extracting document-wide styles:', styles)
   result:update(styles)
   styles = pc:extra_styles()
-  lbt.log('styles', 'extracting styles from parsed content: %s', styles)
+  lbt.log('styles', 'extracting styles from document content: %s', styles)
   result:update(styles)
   return result
 end
