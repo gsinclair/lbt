@@ -139,12 +139,12 @@ lbt.init.reset_var = function ()
   lbt.var.data = {}
   -- Current register values and expiry times.
   lbt.var.registers = pl.Map()
-  -- We need to know what token number we are on so that we know when registers
+  -- We need to know what command number we are on so that we know when registers
   -- expire. Ideally this would be a local variable but it's too much trouble
   -- as it would be passed to functions and back again.
-  -- Start at zero and increment when we are about to act on a token.
-  -- Do not increment if the "token" is a register allocation.
-  lbt.var.token_count = 0
+  -- Start at zero and increment when we are about to act on a command.
+  -- Do not increment if the "command" is a register allocation.
+  lbt.var.command_count = 0
 end
 
 

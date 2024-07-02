@@ -281,25 +281,101 @@ end
 -- we insert some bold red information into the Latex so the author can see,
 -- rather than halt the processing.
 --
--- body: List of parsed lines
--- tr:   template resolver       call tr('Q') to resolve token Q to a function
--- sr:   style resolver          call s.get('Q.vspace') to get the value
-lbt.fn.parsed_content_to_latex_multi = function (body, tr, sr)
+-- commands: List of parsed commands like {'TEXT', o = {}, k = {}, a = {'Hello'}}
+-- tr:       template resolver       call tr('Q') to resolve token Q to a function
+-- sr:       style resolver          call s.get('Q.vspace') to get the value
+lbt.fn.parsed_content_to_latex_multi = function (commands, tr, sr)
   local buffer = pl.List()
-  for line in body:iter() do
-    local status, latex = lbt.fn.parsed_content_to_latex_single(line, tr, sr)
+  for command in commands:iter() do
+    local status, latex = lbt.fn.latex_for_command(command, tr, sr)
     if status == 'ok' then
       buffer:append(latex)
     elseif status == 'notfound' then
-      local msg = lbt.fn.impl.latex_message_token_not_resolved(line.token)
+      local msg = lbt.fn.impl.latex_message_token_not_resolved(command[1])
       buffer:append(msg)
     elseif status == 'error' then
       local err = latex
-      local msg = lbt.fn.impl.latex_message_token_raised_error(line.token, err)
+      local msg = lbt.fn.impl.latex_message_token_raised_error(command[1], err)
       buffer:append(msg)
     end
   end
   return buffer
+end
+
+-- Take a single command of parsed author content like
+--   { 'ITEMIZE', o = { float = true}, k = {}, a = {'One', 'Two', 'Three'} }
+-- and produce a string of Latex.
+--
+-- Before sending the arguments to the opcode function, any register references
+-- like ◊ABC are expanded. Also, STO is treated specially. And, in the future,
+-- CTRL.
+--
+-- Parameters:
+--  * command: parsed author content
+--  * tr:      an opcode resolver that we call to get an opcode function
+--  * sr:      a style resolver that we pass to the function
+--
+-- Return:
+--  * 'ok', latex       [succesful]
+--  * 'sto', nil        [STO register allocation]
+--  * 'notfound', nil   [opcode not found among sources]
+--  * 'error', details  [error occurred while processing command]
+--
+-- Side effect:
+--  * lbt.var.line_count is increased (unless this is a register allocation)
+--  * lbt.var.registers might be updated
+lbt.fn.latex_for_command = function (command, tr, sr)
+  lbt.log(4, 'latex_for_command: %s', pl.pretty.write(command))
+  lbt.log('emit', '')
+  lbt.log('emit', 'Line: %s', pl.pretty.write(command))
+  local opcode = command[1]
+  local args  = command.a
+  local nargs = #args
+  -- 1. Handle a register allocation. Do not increment command count.
+  if opcode == 'STO' then
+    lbt.fn.impl.assign_register(args)
+    return 'sto', nil
+  end
+  -- 2. Search for a opcode function and return if we did not find one.
+  local findings = tr(opcode)
+  if findings == nil then
+    lbt.log('emit', '    --> NOTFOUND')
+    lbt.log(2, 'opcode not resolved: %s', opcode)
+    return 'notfound', nil
+  end
+  local opcode_function, argspec = table.unpack(findings)
+  -- 3. Check we have a valid number of arguments.
+  if argspec then
+    local a = argspec
+    if nargs < a.min or nargs > a.max then
+      local msg = F("%d args given but %s expected", nargs, a.spec)
+      lbt.log('emit', '    --> ERROR: %s', msg)
+      lbt.log(1, 'Error attempting to expand opcode:\n    %s', msg)
+      return 'error', msg
+    end
+  end
+  -- 4. We really are processing a command, so we can increase the command_count.
+  lbt.fn.impl.inc_command_count()
+  -- 5. Expand register references where necessary.
+  --    We are not necessarily in mathmode, hence false.
+  args = args:map(lbt.fn.impl.expand_register_references, false)
+  -- 6. Call the opcode function and return 'ok', ... or 'error', ...
+  local result = opcode_function(nargs, args, sr)
+  if type(result) == 'string' then
+    lbt.log('emit', '    --> %s', result)
+    return 'ok', result
+  elseif type(result) == 'table' and type(result.error) == 'string' then
+    local errormsg = result.error
+    lbt.log('emit', '    --> ERROR: %s', errormsg)
+    lbt.log(1, 'Error occurred while processing opcode %s\n    %s', opcode, errormsg)
+    return 'error', errormsg
+  elseif type(result) == 'table' then
+    result = table.concat(result, "\n")
+    lbt.log('emit', '    --> %s', result)
+    return 'ok', result
+  else
+    lbt.err.E325_invalid_return_from_template_function(opcode, result)
+  end
 end
 
 -- Take a single line of parsed author content (table with keys token, nargs,
@@ -322,7 +398,7 @@ end
 -- Side effect:
 --  * lbt.var.line_count is increased (unless this is a register allocation)
 --  * lbt.var.registers might be updated
-lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
+lbt.fn.parsed_content_to_latex_single_old = function (line, tr, sr)
   lbt.log(4, 'parsed_content_to_latex_single: %s', lbt.fn.pc.compact_representation_line(line))
   lbt.log('emit', '')
   lbt.log('emit', 'Line: %s', lbt.fn.pc.compact_representation_line(line))
@@ -939,11 +1015,11 @@ lbt.fn.impl.latex_message_token_raised_error = function (token, err)
   return F([[{\color{red}\bfseries Token \verb|%s| raised error: \emph{%s}} \par]], token, err)
 end
 
-lbt.fn.impl.assign_register = function (line)
-  if line.nargs ~= 3 then
-    lbt.err.E318_invalid_register_assignment_nargs(line)
+lbt.fn.impl.assign_register = function (args)
+  if #args ~= 3 then
+    lbt.err.E318_invalid_register_assignment_nargs(args)
   end
-  local regname, ttl, defn = table.unpack(line.args)
+  local regname, ttl, defn = table.unpack(args)
   local mathmode = false
   if defn:startswith('$') and defn:endswith('$') then
     mathmode = true
@@ -951,7 +1027,7 @@ lbt.fn.impl.assign_register = function (line)
   end
   local value = lbt.fn.impl.expand_register_references(defn, mathmode)
   local record = { name     = regname,
-                   exp      = lbt.fn.impl.current_token_count() + ttl,
+                   exp      = lbt.fn.impl.current_command_count() + ttl,
                    mathmode = mathmode,
                    value    = value }
   lbt.fn.impl.register_store(record)
@@ -987,20 +1063,20 @@ lbt.fn.impl.expand_register_references = function (str, math_context)
   return result
 end
 
-lbt.fn.impl.current_token_count = function ()
-  local token_count = lbt.var.token_count
-  if token_count == nil then
-    lbt.err.E001_internal_logic_error('current token_count not set')
+lbt.fn.impl.current_command_count = function ()
+  local command_count = lbt.var.command_count
+  if command_count == nil then
+    lbt.err.E001_internal_logic_error('current command_count not set')
   end
-  return token_count
+  return command_count
 end
 
-lbt.fn.impl.inc_token_count = function ()
-  local token_count = lbt.var.token_count
-  if token_count == nil then
-    lbt.err.E001_internal_logic_error('current token_count not set')
+lbt.fn.impl.inc_command_count = function ()
+  local command_count = lbt.var.command_count
+  if command_count == nil then
+    lbt.err.E001_internal_logic_error('current command_count not set')
   end
-  lbt.var.token_count = token_count + 1
+  lbt.var.command_count = command_count + 1
 end
 
 lbt.fn.impl.register_store = function (record)
@@ -1016,7 +1092,7 @@ lbt.fn.impl.register_value = function (name)
   -- DEBUGGER()
   if re == nil then
     return 'nonexistent', nil
-  elseif lbt.fn.impl.current_token_count() > re.exp then
+  elseif lbt.fn.impl.current_command_count() > re.exp then
     return 'stale', nil
   else
     return 'ok', re.value, re.mathmode
