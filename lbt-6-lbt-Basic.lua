@@ -208,6 +208,15 @@ f['ALIGN*'] = function(n, args)
   ]], args[1])
 end
 
+a.EQUATION = 1
+f.EQUATION = function (n, args)
+  return F([[
+\begin{equation}
+  %s
+\end{equation}
+  ]], args[1])
+end
+
 ----- f.HEADING = function(text)
 -----   local args = split(text, '::')
 -----   if #args == 2 then

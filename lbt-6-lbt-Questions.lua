@@ -284,6 +284,12 @@ f.ANSWERRESET = function(n, args, sr)
   return '{}'
 end
 
+a.QRESET = 0
+f.QRESET = function(n, args, sr)
+  lbt.api.counter_reset('q')
+  return '{}'
+end
+
 
 -------------------------------------------------------------------------------
 
