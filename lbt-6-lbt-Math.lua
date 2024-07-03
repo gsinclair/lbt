@@ -133,7 +133,7 @@ m.vectorijk = function (text)
         result:append(t)
       end
     end
-    return result:join(' ')
+    return F([[\ensuremath{%s}]], result:join(' '))
   end
 end
 
