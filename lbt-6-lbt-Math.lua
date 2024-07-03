@@ -52,7 +52,12 @@ end
 
 s.vector = { format = 'bold' }
 m.vector = function (text)
-  local args = lbt.util.space_split(text)
+  local args
+  if text:find(',') then
+    args = lbt.util.comma_split(text)
+  else
+    args = lbt.util.space_split(text)
+  end
   local n = #args
   if n == 1 then
     -- It is either a pronumeral like 'p' or a segment like 'AB'.
@@ -119,9 +124,14 @@ m.vectorijk = function (text)
     if i > 1 then term = force_sign(term) end
     return term
   end
-  local terms = lbt.util.space_split(text)
+  local terms
+  if text:find(',') then
+    terms = lbt.util.comma_split(text)
+  else
+    terms = lbt.util.space_split(text)
+  end
   if #terms < 2 or #terms > 3 then
-    return lbt.util.latex_macro_error('expect 2-3 args to vectorijk' .. arg)
+    return lbt.util.latex_macro_error('expect 2-3 args to vectorijk')
   else
     local i, j, k = m.vector('i'), m.vector('j'), m.vector('k')
     local unitvectors = {i,j,k}
@@ -129,7 +139,7 @@ m.vectorijk = function (text)
     for i = 1,#terms do
       terms[i] = normalise(i, terms[i])
       if terms[i] ~= '0' then
-        local t = terms[i] .. unitvectors[i]
+        local t = terms[i] .. [[{\kern 0.1em}]] .. unitvectors[i]
         result:append(t)
       end
     end
