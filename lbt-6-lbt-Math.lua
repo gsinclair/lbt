@@ -47,7 +47,7 @@ local function vector_pronumeral(x)
 end
 
 local function vector_segment(ab)
-  return F([[\ensuremath{\vv{%s}}]], ab)
+  return F([[\ensuremath{\vv{\mathit{%s}}}]], ab)
 end
 
 s.vector = { format = 'bold' }
@@ -219,7 +219,7 @@ do
   end
 
   local mathit = function(letters)
-    return F([[\mathit{%d}]], letters)
+    return F([[\mathit{%s}]], letters)
   end
 
   local process_word = function (word)

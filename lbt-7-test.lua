@@ -791,7 +791,7 @@ local function T_simplemath()
   --     A stetch goal would be to parse out {...} first and make this work.
   assert_math([[x ge alpha]], [[x \ge \alpha]])
   assert_math([[alpha beta gamma]], [[\alpha \beta \gamma]])
-  assert_math([[xxx]], [[xxx]])
+  assert_math([[OABC PQR XY]], [[\mathit{OABC} \mathit{PQR} \mathit{XY}]])
   assert_math([[xxx]], [[xxx]])
   assert_math([[xxx]], [[xxx]])
   assert_math([[xxx]], [[xxx]])

@@ -245,26 +245,31 @@ a.SHOWHINTS = 0
 f.SHOWHINTS = function(n, args, sr)
   local text = pl.List()
   local hints = lbt.api.data_get("hints", pl.OrderedMap())
-  table.insert(text, [[\begin{small}]])
+  text:append([[\begin{small}]])
   for q, h in hints:iter() do
     local x = F([[\par\textcolor{Mulberry}{\textbf{%d}} \enspace \textcolor{darkgray}{%s}]], q, h)
     text:append(x)
   end
   text:append([[\end{small}]])
-  return text:concat()
+  return text:concat('\n')
 end
 
 a.SHOWANSWERS = 0
 f.SHOWANSWERS = function(n, args, sr)
-  local text = pl.List()
-  local answers = lbt.api.data_get("answers", pl.OrderedMap())
-  table.insert(text, [[\begin{small}]])
-  for q, a in answers:iter() do
-    local x = F([[\par\textcolor{Mulberry}{\textbf{%d}} \enspace \textcolor{darkgray}{%s}]], q, a)
-    text:append(x)
+  if false then
+    return [[\textbf{answers\dots}]]
+  else
+    local text = pl.List()
+    local answers = lbt.api.data_get("answers", pl.OrderedMap())
+    -- DEBUGGER()
+    text:append([[\begin{small}]])
+    for q, a in answers:iter() do
+      local x = F([[\par\textcolor{Mulberry}{\textbf{%d}} \enspace \textcolor{darkgray}{%s}]], q, a)
+      text:append(x)
+    end
+    text:append([[\end{small}]])
+    return text:concat('\n')
   end
-  text:append([[\end{small}]])
-  return text:concat()
 end
 
 a.HINTRESET = 0
