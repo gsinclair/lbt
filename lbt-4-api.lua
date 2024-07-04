@@ -263,15 +263,15 @@ end
 -- assuming that the author content includes a '+BODY' somewhere. We raise an
 -- error if it does not exist.
 lbt.api.default_template_expand = function()
-  return function (pc, tr, sr)
-    -- abbreviations for: parsed content, token resolver, style resolver
+  return function (pc, ocr, ol)
+    -- abbreviations for: parsed content, opcode resolver, option lookup
     lbt.log(4, 'Inside default_template_expand for template <%s>', pc:template_name())
     local body = pc:list_or_nil('BODY')
     lbt.log(4, ' * BODY has <%d> items to expand', body:len())
     if body == nil then
       lbt.err.E301_default_expand_failed_no_body()
     end
-    return lbt.fn.parsed_content_to_latex_multi(body, tr, sr)
+    return lbt.fn.parsed_content_to_latex_multi(body, ocr, ol)
   end
 end
 

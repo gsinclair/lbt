@@ -21,7 +21,7 @@ end
 --  * pc:template_name()
 --  * pc:template_object()
 --  * pc:extra_sources()
---  * pc:extra_styles()
+--  * pc:local_options()
 --  * pc:toString()       -- a compact representation
 --------------------------------------------------------------------------------
 
@@ -97,14 +97,155 @@ function ParsedContent:extra_sources()
   return self:meta().SOURCES or {}
 end
 
--- TODO 'styles' will be renamed 'options'
-function ParsedContent:extra_styles()
-  local styles = self:meta().STYLES  -- see note above
-  if styles then
+function ParsedContent:local_options()
+  local options = self:meta().OPTIONS or self:meta().STYLES
+  if type(options) == 'table' then
+    return options
+  elseif type(options) == 'string' then
     return lbt.fn.style_string_to_map(styles)
   else
     return pl.Map()
   end
+end
+
+-- }}}
+
+--------------------------------------------------------------------------------
+-- {{{ OptionLookup class
+--
+--  * OptionLookup.new { document_wide = ..., document_narrow = ..., sources = ...}
+--  * o:set_opcode_and_options(opcode, options)
+--  * o:unset_opcode_and_options()
+-- 
+-- Then use like so:
+--   ol = OptionLookup.new {...}
+--   ol:set_opcode_and_options('ITEMIZE', {compact=true})
+--   ...
+--   if ol.compact then ... end
+--   if ol['vector.format'] == 'bold' then ... end
+--   ...
+--   ol:unset_opcode_and_options()
+--------------------------------------------------------------------------------
+
+local OptionLookup = {}
+local _sources_ = {}   -- template defaults
+local _wide_    = {}   -- document-wide options   (from \lbtOptions)
+local _narrow_  = {}   -- document-narrow options (from META.OPTIONS)
+local _cache_   = {}
+local _opcode_  = {}   -- e.g. 'ITEMIZE'
+local _local_   = {}   -- command-local options (not provided on initialisation)
+local _err_     = lbt.err.E190_invalid_OptionLookup
+
+-- OptionLookup.new {
+--   document_wide   = (dictionary of options)
+--   document_narrow = (dictionary of options)
+--   sources         = (list of template objects)
+-- }
+--
+-- We store the wide, narrow and sources information for our future use.
+-- We initialise an empty cache for future speedy access to information.
+-- We initialise an opcode to nil. In future, when we want to resolve a key
+-- (say, o.color), we need to know what opcode is at play. Are we looking
+-- for TEXT.color or QQ.color or ...?
+OptionLookup.new = function(t)
+  local o      = {}
+  o[_wide_]    = t.document_wide   or _err_('document_wide')
+  o[_narrow_]  = t.document_narrow or _err_('document_narrow')
+  o[_sources_] = t.sources         or _err_('sources')
+  o[_cache_]   = {}
+  o[_opcode_]  = nil   -- 'ITEMIZE', provided later
+  o[_local_]   = nil   -- 'compact=true, bullet=>', provided later
+  -- We need to put explicit methods in so that __index is not triggered.
+  o.set_opcode_and_options = OptionLookup.set_opcode_and_options
+  o.unset_opcode_and_options = OptionLookup.unset_opcode_and_options
+  -- Apart from that, any field reference is handled by __index, to perform
+  -- an option lookup.
+  setmetatable(o, OptionLookup)
+  return o
+end
+
+-- Call this before trying to resolve any options. The opcode needs to be known.
+function OptionLookup:set_opcode_and_options(opcode, options)
+  self[_opcode_] = opcode
+  self[_local_]  = options
+end
+
+-- Call this after completing a command, to refresh the option lookup for later.
+function OptionLookup:unset_opcode_and_options()
+  self[_opcode_] = nil
+  self[_local_]  = nil
+end
+
+-- Supporting option lookup below.
+local qualified_key = function(ol, key)
+  if key:find('%.') then
+    return key
+  elseif ol[_opcode_] then
+    return ol[_opcode_] .. '.' .. key
+  else
+    lbt.err.E191_cannot_qualify_key_for_option_lookup(key)
+  end
+end
+
+-- Supporting option lookup below.
+local multi_level_lookup = function(ol, qk)
+  local v
+  -- 1. document-narrow
+  v = ol[_narrow_][qk]
+  if v then return v end
+  -- 2. document-wide
+  v = ol[_wide_][qk]
+  if v then return v end
+  -- 3. template defaults
+  for t in pl.List(ol[_sources_]):reverse():iter() do
+    v = t.default_options[qk]
+    if v then return v end
+  end
+  -- 4. Nothing found
+  return nil
+end
+
+-- Doing an option lookup is complex.
+--  * First of all, the key is probably a simple one ('color') and needs to be
+--    qualified ('QQ.color').
+--  * Then, it might be set as a local option.
+--  * Otherwise, it might be in the cache, from a previous access.
+--  * Otherwise, it might be a document-narrow option.
+--  * Otherwise, it might be a document-wide option.
+--  * Otherwise, it might be a default in a template.
+OptionLookup.__index = function(self, key)
+  local qk = qualified_key(self, key)
+  local v
+  -- 1. Local option.
+  if self[_local_] == nil then lbt.err.E193_no_local_options_to_look_up(qk) end
+  v = self[_local_][key]
+  if v then return v end
+  -- 2. Cache.
+  v = self[_cache_][qk]
+  if v then return v end
+  -- 3. Other.
+  v = multi_level_lookup(self, qk)
+  if v then
+    self[_cache_][qk] = v
+    return v
+  else
+    lbt.err.E192_option_lookup_failed(key)
+  end
+end
+
+OptionLookup.__tostring = function(self)
+  local x = pl.List()
+  local add = function(fmt, ...)
+    x:append(F(fmt, ...))
+  end
+  local pretty = function(x)
+    if pl.tablex.size(x) == 0 then return '{}' else return pl.pretty.write(x) end
+  end
+  add('OptionLookup:')
+  add('  opcode: %s', self[_opcode_])
+  add('  local options: %s', pretty(self[_local_]))
+  add('  cache: %s', pretty(self[_cache_]))
+  return x:concat('\n')
 end
 
 -- }}}
@@ -197,7 +338,63 @@ lbt.fn.validate_parsed_content = function (pc)
 end
 
 -- Returns a List.
-lbt.fn.latex_expansion = function (parsed_content)
+-- Updating in June 2024 to include a better OptionLookup instead of the style
+-- resolver.
+--
+-- lbt.fn.latex_expansion(pc)
+--
+-- A very important function, turning parsed content into Latex, using the main
+-- template and any extra chosen sources to resolve each command.
+--
+-- We need a template object t on which we call t.init() for any initialisation
+-- and t.expand(pc, or, ol) to produce the Latex in line with the template's
+-- implementation. (Consider that an Article, Exam and Worksheet template will
+-- all produce different-looking documents, without even considering their
+-- different contents.)
+--
+-- We need to know what sources are being used. The template itself will name
+-- some, and the document may name more. Thus we have the helper function
+-- consolidated_sources(pc, t) to produce a list of template objects in which
+-- we can search for command implementations.
+--
+-- We need an opcode resolver ('ocr') so that 'ITEMIZE' in a document can be
+-- resolved into a Lua function (template lbt.Basic -> functions -> ITEMIZE).
+-- Thus we call the helper function opcode_resolver(sources). This returns a
+-- function we can call to provide the template function for any opcode.
+--
+-- We need an option lookup ('ol') so that commands may have access to options
+-- that are defined in various places: document-wide with \lbtOptions{...},
+-- document-narrow with META.OPTIONS, and command-local with '.o ...'. For
+-- example, 'QQ .o color=red :: Evaluate $3 \times 5$'. The implementation of
+-- QQ needs to be able to access 'o.color' and 'o.vspace' easily. Thus we call
+-- OptionLookup.new{...}.
+--
+-- With everything set up, we can call t.init() and t.expand(pc, or, ol).
+--
+-- We return a list of Latex strings, ready to be printed into the document at
+-- compile time.
+--
+lbt.fn.latex_expansion = function (pc)
+  local t = pc:template_object_or_error()
+  local sources = lbt.fn.impl.consolidated_sources(pc, t)
+  local ocr = lbt.fn.opcode_resolver(sources)
+  local ol = OptionLookup.new {
+    document_wide = lbt.system.document_wide_styles,
+    document_narrow = pc:local_options(),
+    sources = sources,
+  }
+  -- Allow the template to initialise counters, etc.
+  t.init()
+  -- And...go!
+  lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
+  local result = t.expand(pc, ocr, ol)
+  lbt.log(4, ' ~> result has %d bytes', #result)
+  return result
+end
+
+
+-- Returns a List.
+lbt.fn.latex_expansion_old = function (parsed_content)
   local pc = parsed_content
   local t = pc:template_object_or_error()
   -- Obtain token and style resolvers so that expansion can occur.
@@ -220,15 +417,16 @@ end
 -- rather than halt the processing.
 --
 -- commands: List of parsed commands like {'TEXT', o = {}, k = {}, a = {'Hello'}}
--- tr:       template resolver       call tr('Q') to resolve token Q to a function
--- sr:       style resolver          call s.get('Q.vspace') to get the value
+-- ocr:      opcode resolver         call ocr('Q') to get function for opcode Q
+-- ol:       option lookup           call o.color to get option for current opcode
+--                                   or o['Q.color'] to be specific
 --
 -- TODO rename this function to `latex_for_commands`.
 --      (That means changing several template expand functions.)
-lbt.fn.parsed_content_to_latex_multi = function (commands, tr, sr)
+lbt.fn.parsed_content_to_latex_multi = function (commands, ocr, ol)
   local buffer = pl.List()
   for command in commands:iter() do
-    local status, latex = lbt.fn.latex_for_command(command, tr, sr)
+    local status, latex = lbt.fn.latex_for_command(command, ocr, ol)
     if status == 'ok' then
       buffer:append(latex)
     elseif status == 'notfound' then
@@ -253,8 +451,8 @@ end
 --
 -- Parameters:
 --  * command: parsed author content
---  * tr:      an opcode resolver that we call to get an opcode function
---  * sr:      a style resolver that we pass to the function
+--  * or:      an opcode resolver that we call to get an opcode function
+--  * ol:      an options lookup that we pass to the function
 --
 -- Return:
 --  * 'ok', latex       [succesful]
@@ -265,7 +463,7 @@ end
 -- Side effect:
 --  * lbt.var.line_count is increased (unless this is a register allocation)
 --  * lbt.var.registers might be updated
-lbt.fn.latex_for_command = function (command, tr, sr)
+lbt.fn.latex_for_command = function (command, ocr, ol)
   lbt.log(4, 'latex_for_command: %s', pl.pretty.write(command))
   lbt.log('emit', '')
   lbt.log('emit', 'Line: %s', pl.pretty.write(command))
@@ -277,17 +475,16 @@ lbt.fn.latex_for_command = function (command, tr, sr)
     lbt.fn.impl.assign_register(args)
     return 'sto', nil
   end
-  -- 2. Search for an opcode function and return if we did not find one.
-  local findings = tr(opcode)
-  if findings == nil then
+  -- 2. Search for an opcode function (and argspec) and return if we did not find one.
+  local x = ocr(opcode)   --> { opcode_function = ..., argspec = ... }
+  if x == nil then
     lbt.log('emit', '    --> NOTFOUND')
     lbt.log(2, 'opcode not resolved: %s', opcode)
     return 'notfound', nil
   end
-  local opcode_function, argspec = table.unpack(findings)
   -- 3. Check we have a valid number of arguments.
-  if argspec then
-    local a = argspec
+  if x.argspec then
+    local a = x.argspec
     if nargs < a.min or nargs > a.max then
       local msg = F("%d args given but %s expected", nargs, a.spec)
       lbt.log('emit', '    --> ERROR: %s', msg)
@@ -304,9 +501,11 @@ lbt.fn.latex_for_command = function (command, tr, sr)
   local in_development = true -- (June 2024 changes)
   local result
   if in_development then
-    local o = lbt.fn.options_resolver(command.o)
+    -- local o = lbt.fn.options_resolver(command.o)
+    ol:set_opcode_and_options(opcode, command.o)
     local k = command.k
-    result = opcode_function(nargs, args, o, k)
+    result = x.opcode_function(nargs, args, ol, k)
+    ol:unset_opcode_and_options()
   else
     result = opcode_function(nargs, args, sr)
   end
@@ -354,18 +553,18 @@ end
 -- legitimately be nil, although we will put a warning in the log file.
 --
 -- TODO make this impl
-lbt.fn.token_resolver = function (sources)
+lbt.fn.opcode_resolver = function (sources)
   return pl.utils.memoize(function (token)
     for s in sources:iter() do
       -- Each 'source' is a template object, with properties 'functions'
       -- and 'arguments'.
       local f = s.functions[token]
-      local a = s.arguments and s.arguments[token]
+      local a = s.arguments[token]
       if f then
         if a == nil then
-          lbt.log(2, 'WARN: no argspec provided for token <%s>', token)
+          lbt.log(2, 'WARN: no argspec provided for opcode <%s>', token)
         end
-        return {f, a}
+        return { opcode_function = f, argspec = a }
       end
     end
     -- No token function found :(
@@ -515,14 +714,13 @@ lbt.fn.register_template = function(template_details, path)
       lbt.err.E215_invalid_template_details(td, path, x)
     end
   end
-  -- Same as above, but with styles.
-  if td.styles then
-    local ok, x = lbt.fn.impl.template_styles_specification(td.styles)
-    if ok then
-      td.styles = x
-    else
-      lbt.err.E215_invalid_template_details(td, path, x)
-    end
+  -- Likewise with default options. They are specified as strings and need to be
+  -- turned into a map.
+  local ok, x = lbt.fn.impl.template_normalise_default_options(td.default_options)
+  if ok then
+    td.default_options = x
+  else
+    lbt.err.E215_invalid_template_details(td, path, x)
   end
   return nil
 end
@@ -818,7 +1016,7 @@ end
 -- Errors:
 --  * none that I can think of
 --
-lbt.fn.impl.consolidated_options = function (docwide, meta, templates)
+lbt.fn.impl.consolidated_styles = function (docwide, meta, templates)
   lbt.log('styles', '')
   local result = pl.Map()
   local options
@@ -921,6 +1119,9 @@ end
 -- Return true, result  or  false, errormsg
 --
 -- TODO implement and test error checking
+--
+-- NOTE This is replaced with template_normalise_default_options below.
+--      Delete this.
 lbt.fn.impl.template_styles_specification = function (styles)
   local result = pl.Map()
   for k1,map in pairs(styles) do
@@ -928,6 +1129,26 @@ lbt.fn.impl.template_styles_specification = function (styles)
       local style_key = F('%s.%s', k1, k2)
       local style_value = v
       result[style_key] = style_value
+    end
+  end
+  return true, result
+end
+
+-- Input x is a list of strings, each of which is like
+--   'Q.color = blue, Q.vsp = 10pt'
+-- Output is a map { 'Q.color' = 'blue', Q.vsp = '10pt', ... }
+-- Return  true, output   or   false, error string
+lbt.fn.impl.template_normalise_default_options = function (x)
+  local result = pl.Map()
+  for s in pl.List(x):iter() do
+    if type(s) ~= 'string' then
+      lbt.err.E581_invalid_default_option_value(s)
+    end
+    local options = lbt.parser.parse_dictionary(s)
+    if options then
+      result:update(options)
+    else
+      return false, s
     end
   end
   return true, result
@@ -1015,7 +1236,6 @@ end
 lbt.fn.impl.register_value = function (name)
   local r = lbt.var.registers
   local re = lbt.var.registers[name]
-  -- DEBUGGER()
   if re == nil then
     return 'nonexistent', nil
   elseif lbt.fn.impl.current_command_count() > re.exp then

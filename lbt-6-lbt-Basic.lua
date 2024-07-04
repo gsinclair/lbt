@@ -7,27 +7,31 @@ local F = string.format
 local f = {}   -- functions
 local a = {}   -- number of arguments
 local m = {}   -- macros
+local o = pl.List()  -- options
 
 -- Text (TEXT puts a paragraph after, TEXT* does not)
 
 -- f.TEXT = function(text) return F([[%s \par]], text) end
 -- f["TEXT*"] = function(text) return F([[%s]], text) end
 
-a["TEXT*"] = '1-2'
-f["TEXT*"] = function (n, args)
-  if n == 1 then
+o:append'TEXT*.vsp=0pt'
+a["TEXT*"] = 1
+f["TEXT*"] = function (n, args, o)
+  -- DEBUGGER()
+  if o.vsp == '0pt' then
     return args[1]
-  elseif n == 2 then
-    return F([[\vspace{%s} %s]], args[1], args[2])
+  else
+    return F([[\vspace{%s} %s]], o.vsp, args[1])
   end
 end
 
-a.TEXT = '1-2'
-f.TEXT = function (n, args)
-  if n == 1 then
+o:append'TEXT.vsp=0pt'
+a.TEXT = 1
+f.TEXT = function (n, args, o)
+  if o.vsp == '0pt' then
     return F([[%s \par]], args[1])
-  elseif n == 2 then
-    return F([[\vspace{%s} %s \par]], args[1], args[2])
+  else
+    return F([[\vspace{%s} %s \par]], o.vsp, args[1])
   end
 end
 
@@ -393,6 +397,7 @@ return {
   init      = lbt.api.default_template_init(),
   expand    = lbt.api.default_template_expand(),
   functions = f,
-  arguments = a
+  arguments = a,
+  default_options = o,
 }
 

@@ -9,7 +9,8 @@ local F = string.format
 
 local f = {}
 local a = {}
-local s = {}
+local s = {}         -- remove this
+local o = pl.List()
 
 -- Support function to lay out horizontal subquestions or ---------------------
 -- multiple-choice options horizontally in fixed columns  ---------------------
@@ -103,7 +104,8 @@ end
 -- Questions, subquestions ----------------------------------------------------
 
 a.Q = 1
-s.Q = { vspace = '6pt', color = 'blue' }
+-- s.Q = { vspace = '6pt', color = 'blue' }
+o:append 'Q.vspace = 6pt, Q.color = blue'
 f.Q = function(n, args, s)
   lbt.api.counter_reset('qq')
   lbt.api.counter_reset('mc')
@@ -291,6 +293,7 @@ return {
   expand    = nil,
   functions = f,
   arguments = a,
-  styles    = s
+  -- styles    = s,
+  default_options = o
 }
 

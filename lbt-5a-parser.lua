@@ -59,8 +59,8 @@ local hspace = (S' \t')^1
 local sp = (S' \t\n')^0
 local space = (S' \t\n')^1
 local RestOfLine = (P(1) - nl)^1
-local Symbol = S'_.'
--- identifier can be like foo or foo_bar or foo.bar
+local Symbol = S'_.*'
+-- identifier can be like foo or foo_bar or foo.bar or TEXT*.vsp
 local identifier = Alpha * (Alpha + Digit + Symbol)^1
 -- }}}
 
@@ -71,6 +71,7 @@ local process_kvlist = function(data)
     local k = x.value[1]
     local v = x.value[2] or true
     result[k] = v
+    -- TODO collect solo keys (those with no values) in a list
   end
   return result
 end
@@ -360,6 +361,10 @@ lbt.parser.parsed_content_0 = function(text)
   end
 end
 
+local dictionary_only = kvlist * hsp * -1
+lbt.parser.parse_dictionary = function(s)
+  return dictionary_only:match(s)
+end
 
 -- }}}
 

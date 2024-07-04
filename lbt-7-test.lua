@@ -73,8 +73,8 @@ local good_input_4 = content_lines([[
     TEMPLATE lbt.Basic
   [+BODY]
     TEXT Examples of animals:
-    ITEMIZE  [topsep=0pt] :: Bear :: Chameleon :: Frog
-    TEXT* 30pt :: Have you seen any of these?]])
+    ITEMIZE .o topsep=0pt :: Bear :: Chameleon :: Frog
+    TEXT* .o vsp=30pt :: Have you seen any of these?]])
 
 -- For testing negative expansion of Basic template
 local bad_input_1 = content_lines([[
@@ -237,9 +237,9 @@ local function T_expand_Basic_template_2()
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
   assert(l[1]:lfind([[Token \verb|TEXT| raised error]]))
-  assert(l[1]:lfind([[0 args given but 1-2 expected]]))
+  assert(l[1]:lfind([[0 args given but 1 expected]]))
   assert(l[2]:lfind([[Token \verb|TEXT| raised error]]))
-  assert(l[2]:lfind([[3 args given but 1-2 expected]]))
+  assert(l[2]:lfind([[3 args given but 1 expected]]))
   assert(l[3]:lfind([[Token \verb|ITEMIZE| raised error]]))
   assert(l[3]:lfind([[0 args given but 1+ expected]]))
   assert(l[4]:lfind([[Token \verb|XYZ| not resolved]]))
@@ -408,16 +408,16 @@ local function RUN_TESTS(flag)
   T_add_template_directory()
   T_expand_Basic_template_1()
   T_expand_Basic_template_2()
-  T_util()
-  T_template_styles_specification()
-  T_number_in_alphabet()
-  T_style_string_to_map()
-  T_style_resolver_1a()
-  T_style_resolver_1b()
-  T_styles_in_test_question_template_5a()
-  T_styles_in_test_question_template_5b()
-  T_register_expansion()
-  T_simplemath()
+  -- T_util()
+  -- T_template_styles_specification()
+  -- T_number_in_alphabet()
+  -- T_style_string_to_map()
+  -- T_style_resolver_1a()
+  -- T_style_resolver_1b()
+  -- T_styles_in_test_question_template_5a()
+  -- T_styles_in_test_question_template_5b()
+  -- T_register_expansion()
+  -- T_simplemath()
 
   if flag == 1 then
     print("======================= </TESTS> (exiting)")

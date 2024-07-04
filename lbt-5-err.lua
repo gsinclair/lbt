@@ -81,11 +81,11 @@ lbt.err.E213_failed_template_load = function(path, error_details)
   E("E213: Failed to load template:\n * path: %s\n * msg: %s", path, error_details)
 end
 
-lbt.err.E215_invalid_template_details = function(td, error_details)
+lbt.err.E215_invalid_template_details = function(td, path, error_details)
   message = [[
-E215: Invalid template details. An attempt was made to register a template
-with a table that has missing or invalid information. A Lua file that
-describes a template should have at the bottom:
+E215: Invalid template details. An attempt was made to register a
+template with a table that has missing or invalid information. A Lua
+file that describes a template should have at the bottom:
   
   return {
     name      = <string>,
@@ -98,13 +98,20 @@ describes a template should have at the bottom:
     styles    = <table of styles>            # can be omitted
   }
 
+Error template path:
+  %s
+
 The error detected in your template description was:
   %s
 
 Your template description is below.
 
-%s]]
-  E(message, error_details, pl.pretty.write(td))
+<description>
+%s
+</description>
+
+]]
+  E(message, path, error_details, pl.pretty.write(td))
 end
 
 lbt.err.E301_default_expand_failed_no_body = function()
