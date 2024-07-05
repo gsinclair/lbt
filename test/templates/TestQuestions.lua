@@ -4,8 +4,8 @@
 -- This template provides simple typesetting of questions, sub-questions and
 -- multiple-choice options for worksheets, exams, etc.
 --
--- It is a *test* template for the purposes of testing the lbt projects,
--- in particular styles.
+-- It is a *test* template for the purposes of testing the lbt project,
+-- in particular command options like vspace, color.
 --
 -- Styles provided:
 --  * Q.vspace            vertical space before a question
@@ -28,17 +28,18 @@ local expand = lbt.api.default_template_expand()
 
 local f = {}
 local a = {}
-local s = {}
+local o = pl.List()
 
 local init = function()
   lbt.api.counter_reset('q')
 end
 
 a.Q = 1
-s.Q = { vspace = '12pt', color = 'blue' }
-f.Q = function(n, args, s)
+o:append 'Q.vspace = 12pt, Q.color = blue'
+f.Q = function(n, args, o)
   lbt.api.counter_reset('qq')
-  local vsp, col = s('Q.vspace Q.color')
+  local vsp = o.vspace
+  local col = o.color
   local q = lbt.api.counter_inc('q')
   return F([[{\vspace{%s}
               \bsferies\color{%s}Question~%d}\enspace %s]],
@@ -46,19 +47,19 @@ f.Q = function(n, args, s)
 end
 
 a.QQ = 1
-s.QQ = { alphabet = 'latin' }
-f.QQ = function(n, args, s)
-  local alph = s('QQ.alphabet')
+o:append 'QQ.alphabet = latin'
+f.QQ = function(n, args, o)
+  local alph = o.alphabet
   local qq = lbt.api.counter_inc('qq')
   qq = lbt.util.number_in_alphabet(qq, alph)
   return F([[(%s)~%s]], qq, args[1])
 end
 
 a.MC = '1+'
-s.MC = { alphabet = 'Latin' }
-f.MC = function(n, args, s)
+o:append 'MC.alphabet = Latin'
+f.MC = function(n, args, o)
   local result = pl.List()
-  local alph = s('MC.alphabet')
+  local alph = o.alphabet
   for i,x in ipairs(args) do
     local line = F([[(MC %s) \quad %s\\]],
       lbt.util.number_in_alphabet(i, alph), x)
@@ -73,7 +74,7 @@ return {
   sources = {},
   init = init,
   expand = lbt.api.default_template_expand(),
-  styles = s,
+  default_options = o,
   arguments = a,
   functions = f
 }

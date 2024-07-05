@@ -182,3 +182,7 @@ end
 lbt.err.E325_invalid_return_from_template_function = function (token, result)
   E('When calling function for token %s, the result was invalid\nResult: %s', token, lbt.pp(result))
 end
+
+lbt.err.E192_option_lookup_failed = function (opcode, key)
+  E('Attempt to resolve option "%s" failed (opcode: %s)', key, opcode)
+end

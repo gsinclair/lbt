@@ -229,7 +229,7 @@ OptionLookup.__index = function(self, key)
     self[_cache_][qk] = v
     return v
   else
-    lbt.err.E192_option_lookup_failed(key)
+    lbt.err.E192_option_lookup_failed(self[_opcode_], key)
   end
 end
 
@@ -393,24 +393,6 @@ lbt.fn.latex_expansion = function (pc)
 end
 
 
--- Returns a List.
-lbt.fn.latex_expansion_old = function (parsed_content)
-  local pc = parsed_content
-  local t = pc:template_object_or_error()
-  -- Obtain token and style resolvers so that expansion can occur.
-  local tr, sr = lbt.fn.token_and_style_resolvers(pc)
-  -- Store the token and style resolvers for potential use by other functions.
-  lbt.const.token_resolver = tr
-  lbt.const.style_resolver = sr
-  -- Allow the template to initialise counters, etc.
-  t.init()
-  -- And...go!
-  lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
-  local result = t.expand(pc, tr, sr)
-  lbt.log(4, ' ~> result has %d bytes', #result)
-  return result
-end
-
 -- Return List of strings, each containing Latex for a line of author content.
 -- If a line cannot be evaluated (no function to support a given token) then
 -- we insert some bold red information into the Latex so the author can see,
@@ -501,7 +483,6 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   local in_development = true -- (June 2024 changes)
   local result
   if in_development then
-    -- local o = lbt.fn.options_resolver(command.o)
     ol:set_opcode_and_options(opcode, command.o)
     local k = command.k
     result = x.opcode_function(nargs, args, ol, k)
@@ -524,23 +505,6 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   else
     lbt.err.E325_invalid_return_from_template_function(opcode, result)
   end
-end
-
--- From one parsed-content object, we can derive a token resolver and a style
--- resolver.
-lbt.fn.token_and_style_resolvers = function (pc)
-  -- The name of the template allows us to retrieve the template object.
-  local t = pc:template_object_or_error()
-  -- From the pc we can look for added sources. The template object has sources
-  -- too. So we can calculate "consolidated sources".
-  local src = lbt.fn.impl.consolidated_sources(pc, t)
-  -- Styles can come from three places: doc-wide, written into the content,
-  -- and from the consolidated sources that are in use. 
-  local sty = lbt.fn.impl.consolidated_styles(lbt.system.document_wide_styles, pc, src)
-  -- With consolidated sources and styles, we can make the resolvers.
-  local tr = lbt.fn.token_resolver(src)
-  local sr = lbt.fn.style_resolver(sty)
-  return tr, sr
 end
 
 -- Produce a function that resolves tokens using the sources provided here.
@@ -570,92 +534,6 @@ lbt.fn.opcode_resolver = function (sources)
     -- No token function found :(
     return nil
   end)
-end
-
--- Produce a function that resolves styles using global, template, and local
--- style information, as contained in the consolidated style_map parameter.
---
--- The resolver function takes a style key like 'Q.color' and returns a string
--- like 'RoyalBlue'. If there is no such style, a program-halting error occurs.
--- That's because the only place this resolver is called is in a token
--- expansion function, and if no style is found, it means the coder has
--- probably made a typo. They will want to know about it.
---
--- As a convenience for the template author, the resolver function can take
--- many keys and return many values. For example:
---
---   local col, vsp = sr('Q.color Q.vspace')        ->  'blue', '12pt'
---
--- TODO make this impl
-lbt.fn.style_resolver = function (style_map)
-  return function (multikeystring)
-    local x = multikeystring    -- e.g. 'Q.vspace Q.color'
-    local keys = pl.List(pl.utils.split(x, '[, ]%s*'))
-    local result = pl.List()
-    for k in keys:iter() do
-      local value = style_map[k]
-      if value then
-        result:append(value)
-      else
-        lbt.err.E387_style_not_found(k)
-      end
-    end
-    return table.unpack(result)
-  end
-end
-
--- NOTE This code is highly experimental. It is supposed to replace
--- style_resolver above, but it has not yet been beaten into shape.
---
--- Suppose we have a command
---   QQ .o color=blue, vspace=12pt :: In what year did \dots
--- 
--- Then this function gets called with:
---   options_resolver('QQ', {color='blue', vspace='12pt'})
---
--- It needs to:
---  * qualify the two options passed in so that they keys are QQ.color etc.
---  * return a function that will look up any style based on qualified key.
---    * that function looks in the following places, in order:
---      - local options
---             QQ .o color=blue, vspace=12pt
---      - a CTRL command (not yet implemented, only considered)
---      - the document's META settings, like
---             OPTIONS .d QQ.color=red, QQ.vspace=6pt
---      - whole-of-document settings:
---             \lbtSetOption{QQ.color=navy}
---      - the default for the template
---             o.QQ = { vspace = 6pt', color = 'blue'}'
-lbt.fn.options_resolver = function (opcode, local_options)
-  local qualified_local_options = pl.Map()
-  for k, v in pairs(local_options) do
-    k = F('%s.%s', opcode, k)
-    qualified_local_options[k] = v
-  end
-  local lookup = function (key)
-    local v
-    -- 1. local options
-    v = qualified_local_options[key]
-    if v then return v end
-    -- 2. a CRTL command (not implemented)
-    -- 3. the META settings
-    -- 4. \lbtSetOption{QQ.color=navy}
-    -- 5. the default for the template
-  end
-  return function (multikeystring)
-    local x = multikeystring    -- e.g. 'Q.vspace Q.color'
-    local keys = pl.List(pl.utils.split(x, '[, ]%s*'))
-    local result = pl.List()
-    for k in keys:iter() do
-      local value = style_map[k]
-      if value then
-        result:append(value)
-      else
-        lbt.err.E387_style_not_found(k)
-      end
-    end
-    return table.unpack(result)
-  end
 end
 
 -- }}}
@@ -922,35 +800,6 @@ lbt.fn.impl.pragmas_and_content = function(input_lines)
   return pragmas, content
 end
 
--- Validate that a content key like @META or +BODY comprises only upper-case
--- characters, except for the sigil, and is the only thing on the line.
--- Also, it must not already exist in the dictionary.
--- It is known before calling this that the first character is @ or +.
--- Return the key (META, BODY).
-lbt.fn.impl.validate_content_key = function(line, dictionary)
-  if line:find(" ") then
-    lbt.err.E103_invalid_content_key(line, "internal spaces")
-  end
-  name = line:match("^.(%u+)$")
-  if name == nil then
-    lbt.err.E103_invalid_content_key(line, "name can only be upper-case letters")
-  end
-  return name
-end
-
-lbt.fn.impl.token_and_text = function (line)
-  local x = pl.utils.split(line, '%s+', false, 2)
-  return table.unpack(x)
-end
-
--- A valid token must begin with a capital letter and contain only capital
--- letters, digits, and symbols. I would like to restrict the symbols to
--- tasteful ones like [!*_.], but perhaps that is too restricting, and it is
--- more hassle to implement.
-lbt.fn.impl.valid_token = function (token)
-  return token == token:upper()
-end
-
 -- lbt.fn.impl.consolidated_sources(pc,t)
 -- 
 -- A template itself has sources, starting with itself. For example, Exam might
@@ -983,54 +832,6 @@ lbt.fn.impl.consolidated_sources = function (pc, t)
   end
   local basic = lbt.fn.template_object_or_error("lbt.Basic")
   result:append(basic)
-  return result
-end
-
--- lbt.fn.impl.consolidated_styles(docwide, pc, sources)
---
--- There are three places that styles can be defined.
---  * In templates, with code such as `s.Q = { vspace = '12pt', color = 'blue' }`
---  * Document-wide, with code such as `\lbtStyles{Q.vspace 30pt}`
---  * Expansion-local, with code such as `STYLES Q.color red :: MC.alphabet Roman`
---
--- The precedence is expansion-local, then document-wide, then the templates.
---
--- There are potentially many templates at play (the list of sources). In the
--- expansion, there can be only one STYLES setting. Document-wide, there can be
--- several `\lbtStyles` commands, but they all end up affecting the one piece
--- of data: `lbt.system.document_wide_styles`.
---
--- In this function we create a single dictionary (pl.Map) that contains all styles
--- set, respecing precedence. It will be used to resolve styles in all token
--- evaluations for the whole expansion.
---
--- Input:
---  * docwide        a Map of document-wide options (i.e. lbt.system.d_w_o)
---  * meta           a table of expansion-local options in META.OPTIONS
---  * templates      consolidated list of templates in precedence order
---                   (we extract the 'options' map from each)
--- 
--- Return:
---  * a pl.Map of all style mappings, respecting precedence
---
--- Errors:
---  * none that I can think of
---
-lbt.fn.impl.consolidated_styles = function (docwide, meta, templates)
-  lbt.log('styles', '')
-  local result = pl.Map()
-  local options
-  for t in pl.List(templates):reverse():iter() do
-    options = t.options or pl.Map()
-    lbt.log('styles', 'extracting styles from <%s>: %s', s.name, styles)
-    result:update(styles)
-  end
-  styles = docwide
-  lbt.log('styles', 'extracting document-wide styles:', styles)
-  result:update(styles)
-  styles = pc:extra_styles()
-  lbt.log('styles', 'extracting styles from document content: %s', styles)
-  result:update(styles)
   return result
 end
 
@@ -1104,31 +905,6 @@ lbt.fn.impl.template_arguments_specification = function (arguments)
       result[token] = spec
     else
       return false, F('argument specification <%s> invalid for <%s>', x, token)
-    end
-  end
-  return true, result
-end
-
--- Convert { Q = { vspace = '12pt', color = 'blue' }, MC = { alphabet = 'roman' }}
--- to { 'Q.vspace' = '12pt', 'Q.color' = 'blue', 'MC.alphabet' = 'roman'}
---
--- In other words, flatten the dictionary and preseve the prefix.
---
--- Return type: pl.Map
---
--- Return true, result  or  false, errormsg
---
--- TODO implement and test error checking
---
--- NOTE This is replaced with template_normalise_default_options below.
---      Delete this.
-lbt.fn.impl.template_styles_specification = function (styles)
-  local result = pl.Map()
-  for k1,map in pairs(styles) do
-    for k2,v in pairs(map) do
-      local style_key = F('%s.%s', k1, k2)
-      local style_value = v
-      result[style_key] = style_value
     end
   end
   return true, result

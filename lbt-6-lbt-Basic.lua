@@ -14,24 +14,24 @@ local o = pl.List()  -- options
 -- f.TEXT = function(text) return F([[%s \par]], text) end
 -- f["TEXT*"] = function(text) return F([[%s]], text) end
 
-o:append'TEXT*.vsp=0pt'
+o:append'TEXT*.vspace=0pt'
 a["TEXT*"] = 1
 f["TEXT*"] = function (n, args, o)
   -- DEBUGGER()
-  if o.vsp == '0pt' then
+  if o.vspace == '0pt' then
     return args[1]
   else
-    return F([[\vspace{%s} %s]], o.vsp, args[1])
+    return F([[\vspace{%s} %s]], o.vspace, args[1])
   end
 end
 
-o:append'TEXT.vsp=0pt'
+o:append'TEXT.vspace=0pt'
 a.TEXT = 1
 f.TEXT = function (n, args, o)
-  if o.vsp == '0pt' then
+  if o.vspace == '0pt' then
     return F([[%s \par]], args[1])
   else
-    return F([[\vspace{%s} %s \par]], o.vsp, args[1])
+    return F([[\vspace{%s} %s \par]], o.vspace, args[1])
   end
 end
 

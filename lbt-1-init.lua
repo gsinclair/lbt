@@ -125,6 +125,8 @@ lbt.init.reset_const = function ()
   -- processing by lbt.fn.parsed_content(). Line continuation with » is handled
   -- by the code that populates this list.
   lbt.const.author_content = pl.List()
+
+  -- TODO set debug_mode and draft_mode?
 end
 
 lbt.init.reset_var = function ()

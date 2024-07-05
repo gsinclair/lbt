@@ -28,6 +28,9 @@ end
 --  * pc:          parsed content (passed to the `expand` function)
 --  * tr:          token resolver (passed to the `expand` function)
 --  * sr:          style resolver (passed to the `expand` function)
+-- 
+-- TODO update to use ocr and ol.
+--
 lbt.util.latex_expand_content_list = function (key, pc, tr, sr)
   local list = lbt.fn.pc.content_list_or_nil(pc, key)
   if list == nil then
@@ -41,6 +44,9 @@ end
 
 -- This is designed for use only in macro expansion, and only rarely.
 -- Commands should use the resolver passed to them.
+--
+-- TODO update to use OptionLookup instead.
+--
 lbt.util.get_style = function (key)
   local sr = lbt.const.style_resolver
   if sr == nil then

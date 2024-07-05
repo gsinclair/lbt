@@ -74,7 +74,7 @@ local good_input_4 = content_lines([[
   [+BODY]
     TEXT Examples of animals:
     ITEMIZE .o topsep=0pt :: Bear :: Chameleon :: Frog
-    TEXT* .o vsp=30pt :: Have you seen any of these?]])
+    TEXT* .o vspace=30pt :: Have you seen any of these?]])
 
 -- For testing negative expansion of Basic template
 local bad_input_1 = content_lines([[
@@ -91,7 +91,7 @@ local good_input_5a = content_lines([[
   [@META]
     TEMPLATE TestQuestions
   [+BODY]
-    TEXT 30pt :: Complete these questions in the space below.
+    TEXT Complete these questions in the space below.
     Q Evaluate:
     QQ $2+2$
     QQ $5 \times 6$
@@ -103,9 +103,9 @@ local good_input_5a = content_lines([[
 local good_input_5b = content_lines([[
   [@META]
     TEMPLATE TestQuestions
-    STYLES   Q.vspace 18pt :: MC.alphabet roman
+    OPTIONS  .d Q.vspace = 18pt, MC.alphabet = roman
   [+BODY]
-    TEXT 30pt :: Complete these questions in the space below.
+    TEXT .o vspace=30pt :: Complete these questions in the space below.
     Q Evaluate:
     QQ $2+2$
     QQ $5 \times 6$
@@ -254,17 +254,6 @@ local function T_util()
   EQ(lbt.util.comma_split('one,two   ,     three'), {'one','two','three'})
 end
 
-local function T_template_styles_specification()
-  lbt.api.reset_global_data()
-  local input = { Q  = { vspace = '12pt', color = 'blue' },
-                  MC = { alphabet = 'roman' } }
-  local expected = { ['Q.vspace'] = '12pt', ['Q.color'] = 'blue',
-                     ['MC.alphabet'] = 'roman' }
-  local ok, output = lbt.fn.impl.template_styles_specification(input)
-  assert(ok)
-  EQ(output, expected)
-end
-
 local function T_number_in_alphabet()
   lbt.api.reset_global_data()
   local f = lbt.util.number_in_alphabet
@@ -280,42 +269,13 @@ local function T_style_string_to_map()
   EQ(map, { ["MC.alphabet"] = "latin", ["Q.color"] = "navy", ["Q.vspace"] = "30pt" })
 end
 
--- In this test, we do not add any global styles, but we do add local ones
-local function T_style_resolver_1a()
-  lbt.api.reset_global_data()
-  lbt.api.add_template_directory("PWD/templates")
-  -- This is inside baseball, but it is necessary setup for a style resolver.
-  local pc = lbt.fn.parsed_content(good_input_5b)
-  local _, sr = lbt.fn.token_and_style_resolvers(pc)
-  -- We are now ready to test.
-  EQ(sr('Q.vspace'), '18pt')        -- local
-  EQ(sr('Q.color'), 'blue')         -- default
-  EQ(sr('QQ.alphabet'), 'latin')    -- default
-  EQ(sr('MC.alphabet'), 'roman')    -- local
-end
-
--- In this test, we add both global and local styles
-local function T_style_resolver_1b()
-  lbt.api.reset_global_data()
-  lbt.api.add_styles("Q.vspace 30pt :: Q.color navy :: MC.alphabet roman")
-  lbt.api.add_template_directory("PWD/templates")
-  -- This is inside baseball, but it is necessary setup for a style resolver.
-  local pc = lbt.fn.parsed_content(good_input_5b)
-  local _, sr = lbt.fn.token_and_style_resolvers(pc)
-  -- We are now ready to test.
-  EQ(sr('Q.vspace'), '18pt')        -- local
-  EQ(sr('Q.color'), 'navy')         -- global
-  EQ(sr('QQ.alphabet'), 'latin')    -- default
-  EQ(sr('MC.alphabet'), 'roman')    -- local
-end
-
 local function T_styles_in_test_question_template_5a()
   lbt.api.reset_global_data()
   lbt.api.add_template_directory("PWD/templates")
   local pc = lbt.fn.parsed_content(good_input_5a)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
-  EQ(l[1], [[\vspace{30pt} Complete these questions in the space below. \par]])
+  EQ(l[1], [[Complete these questions in the space below. \par]])
   EQ(l[2], [[{\vspace{12pt}
               \bsferies\color{blue}Question~1}\enspace Evaluate:]])
   EQ(l[3], [[(a)~$2+2$]])
@@ -408,16 +368,13 @@ local function RUN_TESTS(flag)
   T_add_template_directory()
   T_expand_Basic_template_1()
   T_expand_Basic_template_2()
-  -- T_util()
-  -- T_template_styles_specification()
-  -- T_number_in_alphabet()
-  -- T_style_string_to_map()
-  -- T_style_resolver_1a()
-  -- T_style_resolver_1b()
-  -- T_styles_in_test_question_template_5a()
-  -- T_styles_in_test_question_template_5b()
-  -- T_register_expansion()
-  -- T_simplemath()
+  T_util()
+  T_number_in_alphabet()
+  T_style_string_to_map()
+  T_styles_in_test_question_template_5a()
+  T_styles_in_test_question_template_5b()
+  T_register_expansion()
+  T_simplemath()
 
   if flag == 1 then
     print("======================= </TESTS> (exiting)")
