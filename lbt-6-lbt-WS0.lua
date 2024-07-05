@@ -19,22 +19,22 @@
 
 local F = string.format
 local f = {}
-local s = {}
+local o = pl.List()
 local a = {}
 local m = {}
 
-s.WS0 = { title_color = 'CadetBlue', teacher_notes_color = 'blue' }
+o:append'WS0.title_color = CadetBlue, WS0.teacher_notes_color = blue'
 
 local function init()
 end
 
--- Input: (pc) parsed content   (tr) token resolver   (sr) style resolver
-local function expand(pc, tr, sr)
+-- Input: (pc) parsed content   (ocr) opcode resolver   (ol) option lookup
+local function expand(pc, ocr, ol)
   local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
   local course   = lbt.util.content_meta_or_error(pc, 'COURSE')
   local tnotes   = lbt.util.content_meta_or_nil(pc, 'TEACHERNOTES') or '(none specified)'
-  local titlecol = sr('WS0.title_color')
-  local tncol    = sr('WS0.teacher_notes_color')
+  local titlecol = ol['WS0.title_color']
+  local tncol    = ol['WS0.teacher_notes_color']
 
   -- 1. Preamble
   local a = [[
@@ -82,7 +82,7 @@ local function expand(pc, tr, sr)
     \bigskip
 
     %s
-  ]], lbt.util.latex_expand_content_list('BODY', pc, tr, sr))
+  ]], lbt.util.latex_expand_content_list('BODY', pc, ocr, ol))
 
   -- Put it all together!
   return lbt.util.combine_latex_fragments(a,b,c,d,e)
@@ -107,39 +107,39 @@ local function heading_and_text_inline(heading, color, text)
   return F([[ {%s \bfseries %s} \quad %s \par ]], colorsetting, heading, text)
 end
 
-s.EXAMPLE = { color = 'blue' }
+o:append 'color = blue'
 a.EXAMPLE = 1
-f.EXAMPLE = function (n, args, sr)
-  return heading_and_text_indent('Example', sr('EXAMPLE.color'), args[1])
+f.EXAMPLE = function (n, args, o)
+  return heading_and_text_indent('Example', o('EXAMPLE.color'), args[1])
 end
 
 a['EXAMPLE*'] = 1
-f['EXAMPLE*'] = function (n, args, sr)
-  return heading_and_text_inline('Example', sr('EXAMPLE.color'), args[1])
+f['EXAMPLE*'] = function (n, args, o)
+  return heading_and_text_inline('Example', o('EXAMPLE.color'), args[1])
 end
 
-s.NOTE = { color = 'Mahogany' }
+o:append 'color = Mahogany'
 a.NOTE = 1
-f.NOTE = function (n, args, sr)
-  return heading_and_text_indent('Note', sr('NOTE.color'), args[1])
+f.NOTE = function (n, args, o)
+  return heading_and_text_indent('Note', o('NOTE.color'), args[1])
 end
 
 a['NOTE*'] = 1
-f['NOTE*'] = function (n, args, sr)
-  return heading_and_text_inline('Note', sr('NOTE.color'), args[1])
+f['NOTE*'] = function (n, args, o)
+  return heading_and_text_inline('Note', o('NOTE.color'), args[1])
 end
 
-s.CHALLENGE = { color = 'Plum' }
+o:append 'color = Plum'
 a.CHALLENGE = 1
-f.CHALLENGE = function (n, args, sr)
+f.CHALLENGE = function (n, args, o)
   lbt.api.counter_reset('qq')
-  return heading_and_text_indent('Challenge', sr('CHALLENGE.color'), args[1])
+  return heading_and_text_indent('Challenge', o('CHALLENGE.color'), args[1])
 end
 
 a['CHALLENGE*'] = 1
-f['CHALLENGE*'] = function (n, args, sr)
+f['CHALLENGE*'] = function (n, args, o)
   lbt.api.counter_reset('qq')
-  return heading_and_text_inline('Challenge', sr('CHALLENGE.color'), args[1])
+  return heading_and_text_inline('Challenge', o('CHALLENGE.color'), args[1])
 end
 
 a.HEADING = '2-3'
@@ -174,7 +174,7 @@ return {
   init      = init,
   expand    = expand,
   functions = f,
-  styles    = s,
+  default_options = o,
   arguments = a,
   macros    = m,
 }

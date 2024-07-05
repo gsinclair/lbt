@@ -31,14 +31,14 @@ end
 -- 
 -- TODO update to use ocr and ol.
 --
-lbt.util.latex_expand_content_list = function (key, pc, tr, sr)
-  local list = lbt.fn.pc.content_list_or_nil(pc, key)
+lbt.util.latex_expand_content_list = function (key, pc, ocr, ol)
+  local list = pc:list_or_nil(key)
   if list == nil then
     lbt.log(2, "Asked to expand content list '%s' but it is not included in the content", key)
     -- TODO ^^^ add contextual information
     return ''
   end
-  lines = lbt.fn.parsed_content_to_latex_multi(list, tr, sr)
+  lines = lbt.fn.latex_for_commands(list, ocr, ol)
   return lines:concat('\n')
 end
 
@@ -79,7 +79,7 @@ lbt.util.normalise_latex_output = function (x)
 end
 
 lbt.util.content_meta_or_nil = function (pc, key)
-  local meta = lbt.fn.pc.meta(pc)
+  local meta = pc:meta()
   return meta[key]
 end
 
@@ -96,11 +96,7 @@ lbt.util.content_meta_or_error = function (pc, key)
 end
 
 lbt.util.content_dictionary_or_nil = function (pc, key)
-  -- TODO I think it would be good for content lists and dictionaries to go
-  -- in separate slots. So we would have pc.META and pc.list.BODY and
-  -- pc.dict.INTRO, for example.
-  local dict = lbt.fn.pc.content_dictionary_or_nil(pc, key)
-  return dict
+  return pc:dict_or_nil(key)
 end
 
 lbt.util.content_dictionary_or_error = function (pc, key)

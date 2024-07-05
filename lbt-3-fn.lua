@@ -93,8 +93,14 @@ function ParsedContent:template_object_or_error()
   return t
 end
 
+-- HACK: I don't even know what data type I will get from META.SOURCES
 function ParsedContent:extra_sources()
-  return self:meta().SOURCES or {}
+  local sources = self:meta().SOURCES or {}
+  if type(sources) == 'string' then
+    return { sources }
+  else
+    return sources
+  end
 end
 
 function ParsedContent:local_options()
@@ -178,7 +184,7 @@ end
 
 -- Supporting option lookup below.
 local qualified_key = function(ol, key)
-  if key:find('%.') then
+  if string.find(key, '%.') then
     return key
   elseif ol[_opcode_] then
     return ol[_opcode_] .. '.' .. key
@@ -208,29 +214,43 @@ end
 -- Doing an option lookup is complex.
 --  * First of all, the key is probably a simple one ('color') and needs to be
 --    qualified ('QQ.color').
---  * Then, it might be set as a local option.
+--  * Then, it might be set as an opcode-local option.
+--    However, it is possible to resolve an option without even having an opcode.
+--    A template could be rendering a title page, for example. It hasn't even
+--    got to BODY yet.
 --  * Otherwise, it might be in the cache, from a previous access.
 --  * Otherwise, it might be a document-narrow option.
 --  * Otherwise, it might be a document-wide option.
 --  * Otherwise, it might be a default in a template.
 OptionLookup.__index = function(self, key)
+  lbt.assert_string(2, key)
   local qk = qualified_key(self, key)
   local v
   -- 1. Local option.
-  if self[_local_] == nil then lbt.err.E193_no_local_options_to_look_up(qk) end
-  v = self[_local_][key]
-  if v then return v end
+  if rawget(self, _local_) ~= nil then
+    v = rawget(self, _local_)[key]
+    if v then return v end
+  end
   -- 2. Cache.
-  v = self[_cache_][qk]
+  v = rawget(self, _cache_)[qk]
   if v then return v end
   -- 3. Other.
   v = multi_level_lookup(self, qk)
   if v then
-    self[_cache_][qk] = v
+    rawget(self, _cache_)[qk] = v
     return v
   else
-    lbt.err.E192_option_lookup_failed(self[_opcode_], key)
+    lbt.err.E192_option_lookup_failed(rawget(self, _opcode_), key)
   end
+end
+
+-- A function call is just a convenient alternative for a table reference.
+-- Even more convenient, because you can resolve more than one option at a time.
+--   o('Q.vspace Q.color')   --> '30pt', 'blue'
+OptionLookup.__call = function(self, keys_string)
+  local keys = lbt.util.space_split(keys_string)
+  local values = keys:map(function(k) return self[k] end)
+  return table.unpack(values)
 end
 
 OptionLookup.__tostring = function(self)
@@ -242,9 +262,9 @@ OptionLookup.__tostring = function(self)
     if pl.tablex.size(x) == 0 then return '{}' else return pl.pretty.write(x) end
   end
   add('OptionLookup:')
-  add('  opcode: %s', self[_opcode_])
-  add('  local options: %s', pretty(self[_local_]))
-  add('  cache: %s', pretty(self[_cache_]))
+  add('  opcode: %s', rawget(self, _opcode_))
+  add('  local options: %s', pretty(rawget(self, _local_)))
+  add('  cache: %s', pretty(rawget(self, _cache_)))
   return x:concat('\n')
 end
 
@@ -405,7 +425,7 @@ end
 --
 -- TODO rename this function to `latex_for_commands`.
 --      (That means changing several template expand functions.)
-lbt.fn.parsed_content_to_latex_multi = function (commands, ocr, ol)
+lbt.fn.latex_for_commands = function (commands, ocr, ol)
   local buffer = pl.List()
   for command in commands:iter() do
     local status, latex = lbt.fn.latex_for_command(command, ocr, ol)

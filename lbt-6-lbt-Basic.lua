@@ -106,12 +106,12 @@ end
 -- Paragraph
 
 a.PARAGRAPH = 2
-f.PARAGRAPH = function(n, args, sr)
+f.PARAGRAPH = function(n, args, o)
   return F([[\paragraph{%s}{%s} \par]], args[1], args[2])
 end
 
 a['PARAGRAPH*'] = 2
-f['PARAGRAPH*'] = function(n, args, sr)
+f['PARAGRAPH*'] = function(n, args, o)
   return F([[\paragraph{%s}{%s}]], args[1], args[2])
 end
 
@@ -293,7 +293,7 @@ end
 -- Arguments: [options] :: content :: caption
 -- Centering is applied by default; specify nocenter if you want to.
 a.FIGURE = '2-3'
-f.FIGURE = function (n, args, sr)
+f.FIGURE = function (n, args, o)
   local options, args = lbt.util.extract_option_argument(args)
   local opts = { centering = true }
   local opts = figure_options(options)
@@ -355,7 +355,7 @@ end
 
 -- Table (using tabularray)
 a.TABLE = '2+'
-f.TABLE = function(n, args, sr)
+f.TABLE = function(n, args, o)
   -- \begin{tblr}{ ... specification (first argument) ...}
   --   arg 2 \\
   --   arg 3 \\         note that if the argument is \hline then there is no \\

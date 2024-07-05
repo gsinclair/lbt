@@ -259,7 +259,7 @@ end
 -- to do this, so it can lean on this default implementation.
 --
 -- The default expansion is to run the contents of BODY through
--- `lbt.fn.parsed_content_to_latex_multi`. That means this expansion is
+-- `lbt.fn.latex_for_commands`. That means this expansion is
 -- assuming that the author content includes a '+BODY' somewhere. We raise an
 -- error if it does not exist.
 lbt.api.default_template_expand = function()
@@ -271,7 +271,7 @@ lbt.api.default_template_expand = function()
     if body == nil then
       lbt.err.E301_default_expand_failed_no_body()
     end
-    return lbt.fn.parsed_content_to_latex_multi(body, ocr, ol)
+    return lbt.fn.latex_for_commands(body, ocr, ol)
   end
 end
 

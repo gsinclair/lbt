@@ -85,8 +85,8 @@ local function expand(pc, tr, sr)
   local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
   local course   = lbt.util.content_meta_or_error(pc, 'COURSE')
   local tnotes   = lbt.util.content_meta_or_nil(pc, 'TEACHERNOTES') or '(none specified)'
-  local titlecol = sr('WS1.title_color')
-  local tncol    = sr('WS1.teacher_notes_color')
+  local titlecol = o('WS1.title_color')
+  local tncol    = o('WS1.teacher_notes_color')
 
   -- 1. Preamble
   local a = [[
