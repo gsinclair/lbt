@@ -34,6 +34,7 @@ local Cp = lpeg.Cp -- position capture
 -- (sp * Cp() * word)^0   match  "one three two"  --> 1  5  11"
 local Ct = lpeg.Ct -- table capture
 local Cs = lpeg.Cs -- string capture [read more about this]
+local Cc = lpeg.Cs -- constant capture [read more about this]
 local V = lpeg.V
 
 -- }}}
@@ -69,16 +70,29 @@ local process_kvlist = function(data)
   local result = {}
   for _, x in ipairs(data) do
     local k = x.value[1]
-    local v = x.value[2] or true
-    result[k] = v
-    -- TODO collect solo keys (those with no values) in a list
+    local v = x.value[2]
+    result[k] = (v == nil and true) or v
+    -- TODO: consider collecting solo keys (those with no values) in a list
   end
   return result
+end
+local parsed_value = P{'value',
+  general = C(P(1)^1),
+  btrue = (P'true' * -1) / function() return true end,
+  bfalse = (P'false' * -1) / function() return false end,
+  zero = (P('0') * -1) / tonumber,
+  integer = (P('-')^-1 * R'19' * (R'09')^0 * -1) / tonumber,
+  value = V'zero' + V'integer' + V'btrue' + V'bfalse' + V'general',
+}
+local process_value = function(text)
+  local x = parsed_value:match(text)
+  -- if x == 'false' then return false else return x end
+  return x
 end
 local kvlist = P({'kvlist',
   key = C(identifier),
   -- TODO allow for quoted values so that commas can be used
-  val = C( (P(1)-',')^1 ),
+  val = C( (P(1)-',')^1 ) / process_value,
   entry = Ct( Pos * hsp * V('key') * hsp * ('=' * hsp * V('val'))^-1 * hsp ) / tag('entry'),
   kvlist = Ct( V('entry') * (',' * V('entry'))^0 ) / process_kvlist
 })
@@ -254,6 +268,8 @@ local IN4 = [[
     TEMPLATE Basic
     TRAIN    Bar :: Baz
     BUS      .d capacity=55, color=purple
+    CAR      .d bool1 = false, bool2 = true, n1 = 56, n2 = -3, n3 = 0
+    MOPED    .d slow
 ]]
 
 -- IN5: a BODY block
@@ -307,7 +323,7 @@ local run_tests = function()
   local d = test(dictionary_block):match(IN4)
   local e = test(list_block):match(IN5)
   local f = document:match(IN6)
-  D(f)
+  D(d)
 end
 -- run_tests()
 

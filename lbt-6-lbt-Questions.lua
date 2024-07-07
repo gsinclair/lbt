@@ -117,7 +117,7 @@ f.Q = function(n, args, o)
 end
 
 a.QQ = 1
-o:append 'vspace = 0pt'
+o:append 'QQ.vspace = 0pt'
 f.QQ = function(n, args, o)
   local qq = lbt.api.counter_inc('qq')
   local vsp = o('QQ.vspace')
@@ -167,7 +167,7 @@ end
 
 -- MC lays out vertically as many options as are given using A, B, C, ...
 a.MC = '1+'
-o:append 'format = (A)'
+o:append 'MC.format = (A)'
 f.MC = function(n, args, o)
   -- We employ an enumerate environment with one line1, many line2 and one line3.
   local line0 = [[ \begin{adjustwidth}{2em}{}]]

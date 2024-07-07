@@ -96,12 +96,12 @@ lbt.api.author_content_emit_latex = function()
     return
   elseif pc.pragmas.skip then
     lbt.log(3, '  * SKIP pragma detected - no further action for eID %d', eid)
-    local skipmsg = F([[{\noindent\color{red}\bfseries Explicitly instructed to skip content (eID=%d).
+    local skipmsg = F([[{\noindent\color{DeepPink3}\bfseries Explicitly instructed to skip content (eID=%d).
       Title is `%s` }]], eid, pc:title())
     tex.print(skipmsg)
     return
   elseif pc.pragmas.draft == false and lbt.api.get_draft_mode() == true then
-    local draftskipmsg = F([[{\noindent\color{red}\bfseries Skipping non-draft content (eID=%d).
+    local draftskipmsg = F([[{\noindent\color{DeepPink3}\bfseries Skipping non-draft content (eID=%d).
       Title is `%s' }]], eid, pc:title())
     tex.print(draftskipmsg)
     lbt.log(3, '  * DRAFT pragma _not_ detected - no further action for eID %d', eid)

@@ -107,7 +107,7 @@ local function heading_and_text_inline(heading, color, text)
   return F([[ {%s \bfseries %s} \quad %s \par ]], colorsetting, heading, text)
 end
 
-o:append 'color = blue'
+o:append 'EXAMPLE.color = blue'
 a.EXAMPLE = 1
 f.EXAMPLE = function (n, args, o)
   return heading_and_text_indent('Example', o('EXAMPLE.color'), args[1])
@@ -118,7 +118,7 @@ f['EXAMPLE*'] = function (n, args, o)
   return heading_and_text_inline('Example', o('EXAMPLE.color'), args[1])
 end
 
-o:append 'color = Mahogany'
+o:append 'NOTE.color = Mahogany'
 a.NOTE = 1
 f.NOTE = function (n, args, o)
   return heading_and_text_indent('Note', o('NOTE.color'), args[1])
@@ -129,7 +129,7 @@ f['NOTE*'] = function (n, args, o)
   return heading_and_text_inline('Note', o('NOTE.color'), args[1])
 end
 
-o:append 'color = Plum'
+o:append 'CHALLENGE.color = Plum'
 a.CHALLENGE = 1
 f.CHALLENGE = function (n, args, o)
   lbt.api.counter_reset('qq')

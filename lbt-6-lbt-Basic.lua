@@ -117,16 +117,31 @@ end
 
 -- Itemize and enumerate
 
+o:append 'ITEMIZE.notop = false, ITEMIZE.compact = false'
 a.ITEMIZE = '1+'
-f.ITEMIZE = function (n, args)
-  local options, args = lbt.util.extract_option_argument(args)
+f.ITEMIZE = function (n, args, o, k)
+  if args[1]:startswith('[') then
+    IX('old-style ITEMIZE')
+  end
+  -- customisations come from options 'notop/compact' and keyword 'spec'
+  local spec = pl.List()
+  if k.spec then spec:append(k.spec) end
+  if o.notop then
+    spec:append('topsep=0pt')
+  end
+  if o.compact then
+    spec:append('topsep=-\\parskip, itemsep=0pt')
+  end
+  spec = spec:concat(', ')
+  -- build result
   local prepend_item = function(text) return [[\item ]] .. text end
   local items = args:map(prepend_item):join("\n  ")
   local result = F([[
 \begin{itemize}[%s]
   %s
 \end{itemize}
-  ]], options or '', items)
+  ]], spec, items)
+  I('result', result)
   return result
 end
 

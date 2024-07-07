@@ -203,9 +203,10 @@ local multi_level_lookup = function(ol, qk)
   v = ol[_wide_][qk]
   if v then return v end
   -- 3. template defaults
-  for t in pl.List(ol[_sources_]):reverse():iter() do
+  -- NOTE: the next line originally had reverse() in it. I don't think it belongs, but am not 100% sure.
+  for t in pl.List(ol[_sources_]):iter() do
     v = t.default_options[qk]
-    if v then return v end
+    if v ~= nil then return v end
   end
   -- 4. Nothing found
   return nil
@@ -236,7 +237,7 @@ OptionLookup.__index = function(self, key)
   if v then return v end
   -- 3. Other.
   v = multi_level_lookup(self, qk)
-  if v then
+  if v ~= nil then
     rawget(self, _cache_)[qk] = v
     return v
   else
@@ -466,12 +467,14 @@ end
 --  * lbt.var.line_count is increased (unless this is a register allocation)
 --  * lbt.var.registers might be updated
 lbt.fn.latex_for_command = function (command, ocr, ol)
-  lbt.log(4, 'latex_for_command: %s', pl.pretty.write(command))
-  lbt.log('emit', '')
-  lbt.log('emit', 'Line: %s', pl.pretty.write(command))
   local opcode = command[1]
   local args  = command.a
   local nargs = #args
+  local cmdstr = F('[%s] %s', opcode, table.concat(args, ' :: '))
+  lbt.log(4, 'latex_for_command: %s', cmdstr)
+  lbt.log('emit', '')
+  lbt.log('emit', 'Line: %s', cmdstr)
+  -- DEBUGGER()
   -- 1. Handle a register allocation. Do not increment command count.
   if opcode == 'STO' then
     lbt.fn.impl.assign_register(args)
@@ -951,11 +954,11 @@ lbt.fn.impl.template_normalise_default_options = function (x)
 end
 
 lbt.fn.impl.latex_message_token_not_resolved = function (token)
-  return F([[{\color{red}\bfseries Token \verb|%s| not resolved} \par]], token)
+  return F([[{\color{lbtError}\bfseries Token \verb|%s| not resolved} \par]], token)
 end
 
 lbt.fn.impl.latex_message_token_raised_error = function (token, err)
-  return F([[{\color{red}\bfseries Token \verb|%s| raised error: \emph{%s}} \par]], token, err)
+  return F([[{\color{lbtError}\bfseries Token \verb|%s| raised error: \emph{%s}} \par]], token, err)
 end
 
 lbt.fn.impl.assign_register = function (args)

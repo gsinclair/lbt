@@ -31,7 +31,7 @@ lbt.log = function (channel, format, ...)
     if ... == nil then
       message = format
     else
-      local message = F(format, ...)
+      message = F(format, ...)
     end
     local name = channel_name[channel] or channel
     local line = F('[#%-10s] %s\n', name, message)
