@@ -358,9 +358,9 @@ f.CENTER = function (n, args)
   ]], args[1])
 end
 
-a.VERBATIM = '1+'
+a.VERBATIM = 1
 f.VERBATIM = function (n, args)
-  local lines = args:concat('\n')
+  local lines = args[1]
   return F([[
     \begin{verbatim}
       %s
