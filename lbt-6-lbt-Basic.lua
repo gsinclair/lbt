@@ -9,6 +9,16 @@ local a = {}   -- number of arguments
 local m = {}   -- macros
 local o = pl.List()  -- options
 
+-- --------------------------------------------------------------------
+local starchar = function(star)
+  if star then
+    return '*'
+  else
+    return ''
+  end
+end
+-- --------------------------------------------------------------------
+
 -- Text (TEXT puts a paragraph after, TEXT* does not)
 
 -- f.TEXT = function(text) return F([[%s \par]], text) end
@@ -141,20 +151,35 @@ f.ITEMIZE = function (n, args, o, k)
   %s
 \end{itemize}
   ]], spec, items)
-  I('result', result)
   return result
 end
 
+-- TODO: Factor out code from ITEMIZE and ENUMERATE.
+-- TODO: Support custom environments via .o env=...
+o:append 'ENUMERATE.notop = false, ENUMERATE.compact = false'
 a.ENUMERATE = '1+'
-f.ENUMERATE = function (n, args)
-  local options, args = lbt.util.extract_option_argument(args)
+f.ENUMERATE = function (n, args, o, k)
+  if args[1]:startswith('[') then
+    IX('old-style ENUMERATE')
+  end
+  -- customisations come from options 'notop/compact' and keyword 'spec'
+  local spec = pl.List()
+  if k.spec then spec:append(k.spec) end
+  if o.notop then
+    spec:append('topsep=0pt')
+  end
+  if o.compact then
+    spec:append('topsep=-\\parskip, itemsep=0pt')
+  end
+  spec = spec:concat(', ')
+  -- build result
   local prepend_item = function(text) return [[\item ]] .. text end
   local items = args:map(prepend_item):join("\n  ")
   local result = F([[
 \begin{enumerate}[%s]
   %s
 \end{enumerate}
-  ]], options or '', items)
+  ]], spec, items)
   return result
 end
 
@@ -209,22 +234,34 @@ end
 --    » :: E &= mc^2
 --    » :: F = ma
 
-a.ALIGN = 1
-f.ALIGN = function(n, args)
-  return F([[
-\begin{align}
+local align_impl = function (star, args, o)
+  local result = pl.List()
+  local spr = o.spreadlines
+  if spr then
+    result:append(F([[\begin{spreadlines}{%s}]], spr))
+  end
+  local contents = args:concat([[ \\]] .. '\n')
+  local b = F([[
+\begin{align%s}
   %s
-\end{align}
-  ]], args[1])
+\end{align%s}
+  ]], starchar(star), contents, starchar(star))
+  if spr then
+    result:append([[\end{spreadlines}]])
+  end
+  return result:concat('\n')
 end
 
-a['ALIGN*'] = 1
-f['ALIGN*'] = function(n, args)
-  return F([[
-\begin{align*}
-  %s
-\end{align*}
-  ]], args[1])
+o:append 'ALIGN.spreadlines = nil'
+a.ALIGN = '1+'
+f.ALIGN = function(n, args, o)
+  return align_impl(false, args, o)
+end
+
+o:append 'ALIGN*.spreadlines = nil'
+a['ALIGN*'] = '1+'
+f['ALIGN*'] = function(n, args, o)
+  return align_impl(true, args, o)
 end
 
 ----- f.HEADING = function(text)
