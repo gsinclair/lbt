@@ -27,8 +27,8 @@
   require('lbt-2-util')
   require('lbt-3-fn')
   require('lbt-4-api')
-  require('lbt-5a-parser')
-  require('lbt-5-err')
+  require('lbt-5-parser')
+  require('lbt-6-err')
 
   -- Load the builtin templates.
   local register_builtin = function (lua_file)
@@ -37,21 +37,21 @@
     lbt.fn.register_template(td, path)
   end
 
-  register_builtin('lbt-6-lbt-Basic')
-  register_builtin('lbt-6-lbt-Math')
-  register_builtin('lbt-6-lbt-Questions')
-  register_builtin('lbt-6-lbt-WS0')
-  register_builtin('lbt-6-lbt-Quiz')
-  register_builtin('lbt-6-lbt-WS1')
-  register_builtin('lbt-6-lbt-Play')
-  register_builtin('lbt-6-lbt-Letter')
-  register_builtin('lbt-6-lbt-Article')
-  register_builtin('lbt-6-lbt-CourseNotes')
+  register_builtin('lbt-7-lbt-Basic')
+  register_builtin('lbt-7-lbt-Math')
+  register_builtin('lbt-7-lbt-Questions')
+  register_builtin('lbt-7-lbt-WS0')
+  register_builtin('lbt-7-lbt-Quiz')
+  register_builtin('lbt-7-lbt-WS1')
+  register_builtin('lbt-7-lbt-Play')
+  register_builtin('lbt-7-lbt-Letter')
+  register_builtin('lbt-7-lbt-Article')
+  register_builtin('lbt-7-lbt-CourseNotes')
 
-  require('lbt-7-test')
+  require('lbt-8-test')
 
   lbt.log(0, 'LBT starting up at %s', os.date('%Y %B %d %X', os.time()))
-  lbt.log(3, "lbt-{0,1,2,3,4,5,6,7}-*.lua files have been loaded")
+  lbt.log(3, "lbt-{0,1,2,3,4,5,6,7,8}-*.lua files have been loaded")
 \end{luacode*}
 
 \newenvironment{lbt}%
