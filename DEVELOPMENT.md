@@ -114,11 +114,11 @@ One solution is as follows. Say I have a content template called `Math`. It defi
 OK, so how are they used? For a start, they can only be used in a LBT environment. The author might write
 
     \begin{lbt}
-        @META
+        [@META]
             TEMPLATE   lbt.WS0
             SOURCES    Math
             MACROS     defint,indefint,myvec
-        +BODY
+        [+BODY]
             TEXT Consider the vector \myvec{PQ} where ...
             Q Evaluate \indefint{e^{2x},dx}.
     \end{lbt}
@@ -162,10 +162,10 @@ The word "template" is a good choice for a key aspect of what LBT does, like for
     \begin{document}
     ...
     \begin{lbt}
-      @META
+      [@META]
         TEMPLATE lbt.Basic
         SOURCES  Poetry
-      +BODY
+      [+BODY]
         LIMERICK There once was a pirate named Bates
          » ::    Who rolled round the deck on his skates
          » ::    He fell on his cutlass
@@ -285,10 +285,10 @@ When implementing styles I was at one point going to write `lbt.api.style(key)` 
     --   \lbtStyle{Q.vspace 12pt :: MC.alphabet :: arabic }
     --
     --   \begin{lbt}
-    --     @META
+    --     [@META]
     --       TEMPLATE    Exam
     --       STYLE       Q.vspace 30pt :: Q.color gray :: MC.alphabet roman
-    --     +BODY
+    --     [+BODY]
     --       TEXT  You have 30 minutes.
     --       Q  Evaluate:
     --       QQ $2+2$
@@ -433,3 +433,55 @@ This would be a good way to give the user the ability to exercise some control o
 ## Simplemath improvements via lpeg
 
 Hopefully I can use lpeg to recognise 'words' without needing spaces. For example, 'int_0^infty frac 1 x \, dx' should be able to pick up the 'int' and the 'infty'.
+
+
+## Major updates: lpeg parsing, option and keyword args, flexible linebreaks
+
+(June 2024) I have been running some lpeg tests in lbt-7-test.lua to get the hang of it, and it is good. Now I have made a new branch 'lpeg-parsing' to implement the following:
+ * Each command will automatically support option arguments and keyword arguments, in addition to the normal positional arguments. For example:
+```
+     TABLE .o float, pos=htbp
+       :: (colspec) llX
+       :: (rows[1]) font=bold
+       :: (hlines) 1
+       :: (caption) Employees at at June 2023
+       :: (label) table: employees june 2023
+       :: Name & Years of service & Division
+       :: Terry & 11 & Finance
+       :: Joan & 7 & Marketing
+       ::    ...
+```
+ * Flexible newlines in commands, with little or no need for ». This is demonstrated above, with `::` starting each line. You can also end a line with `::`. Therefore, » should almost never be necessary.
+ * lpeg parsing of individual commands into an intermediate structure.
+ * command functions have signature like `c.TABLE = function(n, args, o, kw)`. 
+ * Maybe, lpeg-assisted parsing of the whole lbt document. Perhaps one line at a time to better isolate errors. We'll see.
+ * `[[ ... ]]` for verbatim argument text. Good for code listing. For example:
+```
+      MINTED .o lineno=true :: python :: [[
+        for name in names:
+            print(name)
+      ]]
+```
+ * (This is one reason lpeg could be good to parse out commands.)
+ * No more "styles" -- call them "options" instead. When a command resolves an option, it looks here, in order:
+    - In the command itself, like `QQ [color=blue] :: How many ways...?`
+    - A `CRTL` command \[discussed in another development note, but not yet implemented\], like `CTRL .o QQ.color=green`. This code will set the QQ.color option until overriden with another such command, or until deactivated with `CTRL .o ~QQ.color`.
+    - The document's `META` settings: `OPTIONS QQ.color=gray`.
+    - Globally-applied options in Latex code: `\lbtSetOption{QQ.color=navy}`.
+    - Defaults set up in the command code: `o.QQ = { vspace = '6pt', color = 'blue'}`.
+ * Implementation of *lbt environments* using a syntax like `+COLUMNS 2` and `-COLUMNS`. Unfortunately this clashes with `+BODY` and that can't be overlooked. An alternative might be `[+COLUMNS 2]` and `[-COLUMNS]`. Or maybe reverse it, so that lbt documents have `[@META]` and `[+BODY]` and that means we can use `+COLUMNS 2` and `-COLUMNS` as originally hoped. I think I like that idea. A lot of documents will have to be updated, but that's OK.
+     - I am implementing the [@META] and [+BODY] idea now (June 2024).
+
+### Progress towards lpeg parsing
+
+(June 2024) It is going great. The lpeg-parsing branch is making great progress. It is working well, with just the following improvements planned:
+ * Allow quoted values in dictionaries so that commas can be included if necessary.
+ * Tidy up some of the code by using grammars instead of lots of local variables.
+
+Flexible linebreaks is implemented.
+
+lbt environments have not been implemented. Picking them up in parsing is fine, but they need to be implemented in lbt.fn.
+
+### Progress towards opargs and kwargs
+
+The parser picks them up, and now I need to write the code that acts on them.

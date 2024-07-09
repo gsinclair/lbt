@@ -7,27 +7,41 @@ local F = string.format
 local f = {}   -- functions
 local a = {}   -- number of arguments
 local m = {}   -- macros
+local o = pl.List()  -- options
+
+-- --------------------------------------------------------------------
+local starchar = function(star)
+  if star then
+    return '*'
+  else
+    return ''
+  end
+end
+-- --------------------------------------------------------------------
 
 -- Text (TEXT puts a paragraph after, TEXT* does not)
 
 -- f.TEXT = function(text) return F([[%s \par]], text) end
 -- f["TEXT*"] = function(text) return F([[%s]], text) end
 
-a["TEXT*"] = '1-2'
-f["TEXT*"] = function (n, args)
-  if n == 1 then
+o:append'TEXT*.vspace=0pt'
+a["TEXT*"] = 1
+f["TEXT*"] = function (n, args, o)
+  -- DEBUGGER()
+  if o.vspace == '0pt' then
     return args[1]
-  elseif n == 2 then
-    return F([[\vspace{%s} %s]], args[1], args[2])
+  else
+    return F([[\vspace{%s} %s]], o.vspace, args[1])
   end
 end
 
-a.TEXT = '1-2'
-f.TEXT = function (n, args)
-  if n == 1 then
+o:append'TEXT.vspace=0pt'
+a.TEXT = 1
+f.TEXT = function (n, args, o)
+  if o.vspace == '0pt' then
     return F([[%s \par]], args[1])
-  elseif n == 2 then
-    return F([[\vspace{%s} %s \par]], args[1], args[2])
+  else
+    return F([[\vspace{%s} %s \par]], o.vspace, args[1])
   end
 end
 
@@ -102,40 +116,70 @@ end
 -- Paragraph
 
 a.PARAGRAPH = 2
-f.PARAGRAPH = function(n, args, sr)
+f.PARAGRAPH = function(n, args, o)
   return F([[\paragraph{%s}{%s} \par]], args[1], args[2])
 end
 
 a['PARAGRAPH*'] = 2
-f['PARAGRAPH*'] = function(n, args, sr)
+f['PARAGRAPH*'] = function(n, args, o)
   return F([[\paragraph{%s}{%s}]], args[1], args[2])
 end
 
 -- Itemize and enumerate
 
+o:append 'ITEMIZE.notop = false, ITEMIZE.compact = false'
 a.ITEMIZE = '1+'
-f.ITEMIZE = function (n, args)
-  local options, args = lbt.util.extract_option_argument(args)
+f.ITEMIZE = function (n, args, o, k)
+  if args[1]:startswith('[') then
+    IX('old-style ITEMIZE')
+  end
+  -- customisations come from options 'notop/compact' and keyword 'spec'
+  local spec = pl.List()
+  if k.spec then spec:append(k.spec) end
+  if o.notop then
+    spec:append('topsep=0pt')
+  end
+  if o.compact then
+    spec:append('topsep=-\\parskip, itemsep=0pt')
+  end
+  spec = spec:concat(', ')
+  -- build result
   local prepend_item = function(text) return [[\item ]] .. text end
   local items = args:map(prepend_item):join("\n  ")
   local result = F([[
 \begin{itemize}[%s]
   %s
 \end{itemize}
-  ]], options or '', items)
+  ]], spec, items)
   return result
 end
 
+-- TODO: Factor out code from ITEMIZE and ENUMERATE.
+-- TODO: Support custom environments via .o env=...
+o:append 'ENUMERATE.notop = false, ENUMERATE.compact = false'
 a.ENUMERATE = '1+'
-f.ENUMERATE = function (n, args)
-  local options, args = lbt.util.extract_option_argument(args)
+f.ENUMERATE = function (n, args, o, k)
+  if args[1]:startswith('[') then
+    IX('old-style ENUMERATE')
+  end
+  -- customisations come from options 'notop/compact' and keyword 'spec'
+  local spec = pl.List()
+  if k.spec then spec:append(k.spec) end
+  if o.notop then
+    spec:append('topsep=0pt')
+  end
+  if o.compact then
+    spec:append('topsep=-\\parskip, itemsep=0pt')
+  end
+  spec = spec:concat(', ')
+  -- build result
   local prepend_item = function(text) return [[\item ]] .. text end
   local items = args:map(prepend_item):join("\n  ")
   local result = F([[
 \begin{enumerate}[%s]
   %s
 \end{enumerate}
-  ]], options or '', items)
+  ]], spec, items)
   return result
 end
 
@@ -190,22 +234,34 @@ end
 --    » :: E &= mc^2
 --    » :: F = ma
 
-a.ALIGN = 1
-f.ALIGN = function(n, args)
-  return F([[
-\begin{align}
+local align_impl = function (star, args, o)
+  local result = pl.List()
+  local spr = o.spreadlines
+  if spr then
+    result:append(F([[\begin{spreadlines}{%s}]], spr))
+  end
+  local contents = args:concat([[ \\]] .. '\n')
+  local b = F([[
+\begin{align%s}
   %s
-\end{align}
-  ]], args[1])
+\end{align%s}
+  ]], starchar(star), contents, starchar(star))
+  if spr then
+    result:append([[\end{spreadlines}]])
+  end
+  return result:concat('\n')
 end
 
-a['ALIGN*'] = 1
-f['ALIGN*'] = function(n, args)
-  return F([[
-\begin{align*}
-  %s
-\end{align*}
-  ]], args[1])
+o:append 'ALIGN.spreadlines = nil'
+a.ALIGN = '1+'
+f.ALIGN = function(n, args, o)
+  return align_impl(false, args, o)
+end
+
+o:append 'ALIGN*.spreadlines = nil'
+a['ALIGN*'] = '1+'
+f['ALIGN*'] = function(n, args, o)
+  return align_impl(true, args, o)
 end
 
 a.EQUATION = 1
@@ -298,7 +354,7 @@ end
 -- Arguments: [options] :: content :: caption
 -- Centering is applied by default; specify nocenter if you want to.
 a.FIGURE = '2-3'
-f.FIGURE = function (n, args, sr)
+f.FIGURE = function (n, args, o)
   local options, args = lbt.util.extract_option_argument(args)
   local opts = { centering = true }
   local opts = figure_options(options)
@@ -348,9 +404,9 @@ f.CENTER = function (n, args)
   ]], args[1])
 end
 
-a.VERBATIM = '1+'
+a.VERBATIM = 1
 f.VERBATIM = function (n, args)
-  local lines = args:concat('\n')
+  local lines = args[1]
   return F([[
     \begin{verbatim}
       %s
@@ -360,7 +416,7 @@ end
 
 -- Table (using tabularray)
 a.TABLE = '2+'
-f.TABLE = function(n, args, sr)
+f.TABLE = function(n, args, o)
   -- \begin{tblr}{ ... specification (first argument) ...}
   --   arg 2 \\
   --   arg 3 \\         note that if the argument is \hline then there is no \\
@@ -402,6 +458,7 @@ return {
   init      = lbt.api.default_template_init(),
   expand    = lbt.api.default_template_expand(),
   functions = f,
-  arguments = a
+  arguments = a,
+  default_options = o,
 }
 

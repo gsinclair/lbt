@@ -35,18 +35,35 @@ lbt.err.E001_internal_logic_error = function(details)
   end
 end
 
+-- no longer needed
 lbt.err.E100_invalid_token = function(line)
   E("E100: Invalid token encountered in content line:\n  <<%s>>", line)
 end
 
-lbt.err.E102_invalid_pragma = function(line)
-  E("E100: Invalid pragma encountered in content line:\n  <<%s>>", line)
+lbt.err.E102_invalid_pragma = function(p)
+  E("E100: Invalid pragma encountered:\n  <<%s>>", p)
 end
 
+-- no longer needed
 lbt.err.E101_line_out_of_place = function(line)
-  E("E101: Line out of place (not contained in @META or +BODY or similar):\n  <<%s>>", line)
+  E("E101: Line out of place (not contained in [@META] or [+BODY] or similar):\n  <<%s>>", line)
 end
 
+lbt.err.E110_unable_to_parse_content = function(text, pos)
+  local message = [[
+
+  (lbt) *** Attempt to parse LBT content failed ***'
+  (lbt) position: %d    text: %s'
+
+%s
+
+  (lbt) end of report'
+
+]]
+  E(message, pos, text:sub(pos,pos+50), text)
+end
+
+-- no longer needed
 lbt.err.E105_dictionary_key_without_value = function(line)
   E("E105: Content dictionary has key with no value:\n  <<%s>>", line)
 end
@@ -64,11 +81,11 @@ lbt.err.E213_failed_template_load = function(path, error_details)
   E("E213: Failed to load template:\n * path: %s\n * msg: %s", path, error_details)
 end
 
-lbt.err.E215_invalid_template_details = function(td, error_details)
+lbt.err.E215_invalid_template_details = function(td, path, error_details)
   message = [[
-E215: Invalid template details. An attempt was made to register a template
-with a table that has missing or invalid information. A Lua file that
-describes a template should have at the bottom:
+E215: Invalid template details. An attempt was made to register a
+template with a table that has missing or invalid information. A Lua
+file that describes a template should have at the bottom:
   
   return {
     name      = <string>,
@@ -81,13 +98,20 @@ describes a template should have at the bottom:
     styles    = <table of styles>            # can be omitted
   }
 
+Error template path:
+  %s
+
 The error detected in your template description was:
   %s
 
 Your template description is below.
 
-%s]]
-  E(message, error_details, pl.pretty.write(td))
+<description>
+%s
+</description>
+
+]]
+  E(message, path, error_details, pl.pretty.write(td))
 end
 
 lbt.err.E301_default_expand_failed_no_body = function()
@@ -150,11 +174,15 @@ lbt.err.E976_no_META_field = function (pc)
   E(errormsg)
 end
 
-lbt.err.E318_invalid_register_assignment_nargs = function (x)
+lbt.err.E318_invalid_register_assignment_nargs = function (args)
   E('When calling STO to set a register, you need to give three arguments:\n'..
     '  name, ttl, definition')
 end
 
 lbt.err.E325_invalid_return_from_template_function = function (token, result)
   E('When calling function for token %s, the result was invalid\nResult: %s', token, lbt.pp(result))
+end
+
+lbt.err.E192_option_lookup_failed = function (opcode, key)
+  E('Attempt to resolve option "%s" failed (opcode: %s)', key, opcode)
 end

@@ -125,6 +125,8 @@ lbt.init.reset_const = function ()
   -- processing by lbt.fn.parsed_content(). Line continuation with » is handled
   -- by the code that populates this list.
   lbt.const.author_content = pl.List()
+
+  -- TODO set debug_mode and draft_mode?
 end
 
 lbt.init.reset_var = function ()
@@ -139,12 +141,12 @@ lbt.init.reset_var = function ()
   lbt.var.data = {}
   -- Current register values and expiry times.
   lbt.var.registers = pl.Map()
-  -- We need to know what token number we are on so that we know when registers
+  -- We need to know what command number we are on so that we know when registers
   -- expire. Ideally this would be a local variable but it's too much trouble
   -- as it would be passed to functions and back again.
-  -- Start at zero and increment when we are about to act on a token.
-  -- Do not increment if the "token" is a register allocation.
-  lbt.var.token_count = 0
+  -- Start at zero and increment when we are about to act on a command.
+  -- Do not increment if the "command" is a register allocation.
+  lbt.var.command_count = 0
 end
 
 
@@ -153,6 +155,7 @@ end
 -- api          [functions called by Latex or templates]
 -- fn           [functions supporting the API]
 -- util         [functions useful in template code]
+-- parser       [a function that comprehensivly parses document text]
 -- err          [centralised error messages]
 -- test         [unit testing]
 --------------------------------------------------------------------------------
@@ -176,6 +179,10 @@ lbt.fn = {}
 -- Arguably the two concerns should be separate, and the latter functions
 -- might migrate to fn.impl in due course.
 lbt.util = {}
+
+
+-- lbt.parser contains a function that parses LBT documents.
+lbt.parser = {}
 
 
 -- lbt.err contains functions that assist in error handling.

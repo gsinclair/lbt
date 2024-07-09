@@ -11,10 +11,270 @@ end
 -- }}}
 
 --------------------------------------------------------------------------------
+-- {{{ ParsedContent class
+--
+--  * ParsedContent.new(pc0, pragmas)
+--  * pc:meta()
+--  * pc:title()
+--  * pc:dict_or_nil(name)
+--  * pc:list_or_nil(name)
+--  * pc:template_name()
+--  * pc:template_object()
+--  * pc:extra_sources()
+--  * pc:local_options()
+--  * pc:toString()       -- a compact representation
+--------------------------------------------------------------------------------
+
+-- Class for storing and providing access to parsed content.
+-- The actual parsing is done in lbt.parser and the result (pc0) is fed in
+-- here. We generate an index to facilitate lookups.
+local ParsedContent = {}
+ParsedContent.mt = { __index = ParsedContent }
+
+local mkindex = function(pc0)
+  local result = { dicts = {}, lists = {} }
+  for _, x in ipairs(pc0) do
+    if x.type == 'dict_block' then
+      result.dicts[x.name] = x
+    elseif x.type == 'list_block' then
+      result.lists[x.name] = x
+    end
+  end
+  return result
+end
+
+-- The idea of using metatables to build a class comes from Section 16.1 of the
+-- free online 'Programming in Lua'.
+function ParsedContent.new(pc0, pragmas)
+  lbt.assert_table(1, pc0)
+  lbt.assert_table(2, pragmas)
+  local o = {
+    type = 'ParsedContent',
+    data = pc0,
+    index = mkindex(pc0),
+    pragmas = pragmas
+  }
+  setmetatable(o, ParsedContent.mt)
+  return o
+end
+
+-- Return a dictionary given a name. The actual keys and values are returned
+-- in a table, not all the metadata that is stored in pc0.
+function ParsedContent:dict_or_nil(name)
+  local d = self.index.dicts[name]
+  return d and d.entries
+end
+
+-- Return a list given a name. The actual values are returned in a table, not
+-- all the metadata that is stored in pc0.
+function ParsedContent:list_or_nil(name)
+  local l = self.index.lists[name]
+  return l and pl.List(l.commands)
+end
+
+-- Return the META dictionary block, or raise an error if it doesn't exist.
+function ParsedContent:meta()
+  local m = self:dict_or_nil('META')
+  return m or lbt.err.E976_no_META_field()
+end
+
+-- Return the TITLE value from the META block, or '(no title)' if it doesn't exist.
+function ParsedContent:title()
+  return self:meta().TITLE or '(no title)'
+end
+
+function ParsedContent:template_name()
+  return self:meta().TEMPLATE
+end
+
+function ParsedContent:template_object_or_error()
+  local tn = self:template_name()
+  local t = lbt.fn.template_object_or_error(tn)
+  return t
+end
+
+-- HACK: I don't even know what data type I will get from META.SOURCES
+function ParsedContent:extra_sources()
+  local sources = self:meta().SOURCES or {}
+  if type(sources) == 'string' then
+    return { sources }
+  else
+    return sources
+  end
+end
+
+function ParsedContent:local_options()
+  local options = self:meta().OPTIONS or self:meta().STYLES
+  if type(options) == 'table' then
+    return options
+  elseif type(options) == 'string' then
+    return lbt.fn.style_string_to_map(styles)
+  else
+    return pl.Map()
+  end
+end
+
+-- }}}
+
+--------------------------------------------------------------------------------
+-- {{{ OptionLookup class
+--
+--  * OptionLookup.new { document_wide = ..., document_narrow = ..., sources = ...}
+--  * o:set_opcode_and_options(opcode, options)
+--  * o:unset_opcode_and_options()
+-- 
+-- Then use like so:
+--   ol = OptionLookup.new {...}
+--   ol:set_opcode_and_options('ITEMIZE', {compact=true})
+--   ...
+--   if ol.compact then ... end
+--   if ol['vector.format'] == 'bold' then ... end
+--   ...
+--   ol:unset_opcode_and_options()
+--------------------------------------------------------------------------------
+
+local OptionLookup = {}
+local _sources_ = {}   -- template defaults
+local _wide_    = {}   -- document-wide options   (from \lbtOptions)
+local _narrow_  = {}   -- document-narrow options (from META.OPTIONS)
+local _cache_   = {}
+local _opcode_  = {}   -- e.g. 'ITEMIZE'
+local _local_   = {}   -- command-local options (not provided on initialisation)
+local _err_     = lbt.err.E190_invalid_OptionLookup
+
+-- OptionLookup.new {
+--   document_wide   = (dictionary of options)
+--   document_narrow = (dictionary of options)
+--   sources         = (list of template objects)
+-- }
+--
+-- We store the wide, narrow and sources information for our future use.
+-- We initialise an empty cache for future speedy access to information.
+-- We initialise an opcode to nil. In future, when we want to resolve a key
+-- (say, o.color), we need to know what opcode is at play. Are we looking
+-- for TEXT.color or QQ.color or ...?
+OptionLookup.new = function(t)
+  local o      = {}
+  o[_wide_]    = t.document_wide   or _err_('document_wide')
+  o[_narrow_]  = t.document_narrow or _err_('document_narrow')
+  o[_sources_] = t.sources         or _err_('sources')
+  o[_cache_]   = {}
+  o[_opcode_]  = nil   -- 'ITEMIZE', provided later
+  o[_local_]   = nil   -- 'compact=true, bullet=>', provided later
+  -- We need to put explicit methods in so that __index is not triggered.
+  o.set_opcode_and_options = OptionLookup.set_opcode_and_options
+  o.unset_opcode_and_options = OptionLookup.unset_opcode_and_options
+  -- Apart from that, any field reference is handled by __index, to perform
+  -- an option lookup.
+  setmetatable(o, OptionLookup)
+  return o
+end
+
+-- Call this before trying to resolve any options. The opcode needs to be known.
+function OptionLookup:set_opcode_and_options(opcode, options)
+  self[_opcode_] = opcode
+  self[_local_]  = options
+end
+
+-- Call this after completing a command, to refresh the option lookup for later.
+function OptionLookup:unset_opcode_and_options()
+  self[_opcode_] = nil
+  self[_local_]  = nil
+end
+
+-- Supporting option lookup below.
+local qualified_key = function(ol, key)
+  if string.find(key, '%.') then
+    return key
+  elseif ol[_opcode_] then
+    return ol[_opcode_] .. '.' .. key
+  else
+    lbt.err.E191_cannot_qualify_key_for_option_lookup(key)
+  end
+end
+
+-- Supporting option lookup below.
+local multi_level_lookup = function(ol, qk)
+  local v
+  -- 1. document-narrow
+  v = ol[_narrow_][qk]
+  if v then return v end
+  -- 2. document-wide
+  v = ol[_wide_][qk]
+  if v then return v end
+  -- 3. template defaults
+  -- NOTE: the next line originally had reverse() in it. I don't think it belongs, but am not 100% sure.
+  for t in pl.List(ol[_sources_]):iter() do
+    v = t.default_options[qk]
+    if v ~= nil then return v end
+  end
+  -- 4. Nothing found
+  return nil
+end
+
+-- Doing an option lookup is complex.
+--  * First of all, the key is probably a simple one ('color') and needs to be
+--    qualified ('QQ.color').
+--  * Then, it might be set as an opcode-local option.
+--    However, it is possible to resolve an option without even having an opcode.
+--    A template could be rendering a title page, for example. It hasn't even
+--    got to BODY yet.
+--  * Otherwise, it might be in the cache, from a previous access.
+--  * Otherwise, it might be a document-narrow option.
+--  * Otherwise, it might be a document-wide option.
+--  * Otherwise, it might be a default in a template.
+OptionLookup.__index = function(self, key)
+  lbt.assert_string(2, key)
+  local qk = qualified_key(self, key)
+  local v
+  -- 1. Local option.
+  if rawget(self, _local_) ~= nil then
+    v = rawget(self, _local_)[key]
+    if v then return v end
+  end
+  -- 2. Cache.
+  v = rawget(self, _cache_)[qk]
+  if v then return v end
+  -- 3. Other.
+  v = multi_level_lookup(self, qk)
+  if v ~= nil then
+    rawget(self, _cache_)[qk] = v
+    return v
+  else
+    lbt.err.E192_option_lookup_failed(rawget(self, _opcode_), key)
+  end
+end
+
+-- A function call is just a convenient alternative for a table reference.
+-- Even more convenient, because you can resolve more than one option at a time.
+--   o('Q.vspace Q.color')   --> '30pt', 'blue'
+OptionLookup.__call = function(self, keys_string)
+  local keys = lbt.util.space_split(keys_string)
+  local values = keys:map(function(k) return self[k] end)
+  return table.unpack(values)
+end
+
+OptionLookup.__tostring = function(self)
+  local x = pl.List()
+  local add = function(fmt, ...)
+    x:append(F(fmt, ...))
+  end
+  local pretty = function(x)
+    if pl.tablex.size(x) == 0 then return '{}' else return pl.pretty.write(x) end
+  end
+  add('OptionLookup:')
+  add('  opcode: %s', rawget(self, _opcode_))
+  add('  local options: %s', pretty(rawget(self, _local_)))
+  add('  cache: %s', pretty(rawget(self, _cache_)))
+  return x:concat('\n')
+end
+
+-- }}}
+
+--------------------------------------------------------------------------------
 -- {{{ Author content:
 --  * author_content_clear      (reset lbt.const and lbt.var data)
---  * author_content_append     (append stripped line to lbt.const.author_content,
---                               handling » continuations)
+--  * author_content_append     (append line to lbt.const.author_content)
 --------------------------------------------------------------------------------
 
 lbt.fn.author_content_clear = function()
@@ -24,17 +284,25 @@ lbt.fn.author_content_clear = function()
 end
 
 lbt.fn.author_content_append = function(line)
-  line_list = lbt.const.author_content
-  line = line:strip()
-  if line == "" or line:startswith('%') then return end
-  if line:sub(1,2) == "»" then
-    -- Continuation of previous line
-    prev_line = line_list:pop()
-    if prev_line == nil then
-      lbt.err.E103_invalid_line_continuation(line)
-    end
-    line = prev_line .. " " .. line:sub(3,-1)
-  end
+  -- NOTE we used to strip the line and handle » continuations here. That is
+  -- no longer desirable or necessary. We can easily handle all » at once with
+  -- string substitution. And stripping prevents us from supporting verbatim
+  -- text like code listings.
+  --
+  -- The code and the comment will be deleted when the lpeg parsing approach
+  -- is completed and the branch is merged.
+  --
+  -- line_list = lbt.const.author_content
+  -- line = line:strip()
+  -- if line == "" or line:startswith('%') then return end
+  -- if line:sub(1,2) == "»" then
+  --   -- Continuation of previous line
+  --   prev_line = line_list:pop()
+  --   if prev_line == nil then
+  --     lbt.err.E103_invalid_line_continuation(line)
+  --   end
+  --   line = prev_line .. " " .. line:sub(3,-1)
+  -- end
   lbt.const.author_content:append(line)
 end
 -- }}}
@@ -45,237 +313,221 @@ end
 --  * latex_expansion(pc)      (Latex representation based on the parsed content)
 --------------------------------------------------------------------------------
 
--- parsed_content(c)
---
--- Input: list of raw stripped lines from the `lbt` environment
---        (no need to worry about line continuations)
--- Output: { pragmas: Set(...),
---           META: {...},
---           BODY: List(...),
---           ...}
---
--- Note: each item in META, BODY etc. is of the form
---   {token:'BEGIN' nargs:2, args:List('multicols','2') raw:'multicols 2'}
---
-lbt.fn.parsed_content = function (content_lines)
-  lbt.assert_table(1, content_lines)
-  -- Obtain pragmas (set) and non-pragma lines (list), and set up result table.
-  local pragmas, lines = lbt.fn.impl.pragmas_and_other_lines(content_lines)
-  local result = { pragmas = pragmas }
+
+lbt.fn.parsed_content = function(content_lines)
+  -- The content lines are in a list. For lpeg parsing, we want the content as
+  -- a single string. But there could be pragmas in there like !DRAFT, and it
+  -- is better to extract them now that we have separate lines. Hence we call
+  -- a function to do this for us. This function handles » line continuations
+  -- as well. It also removes comments lines. This is a pre-parsing stage.
+  local pragmas, content = lbt.fn.impl.pragmas_and_content(content_lines)
   -- Detect ignore and act accordingly.
   if pragmas.ignore then
-    return result
+    return ParsedContent.new(nil, pragmas)
   end
   -- Detect debug and act accordingly.
   if pragmas.debug then
     lbt.fn.set_log_channels_for_debugging_single_expansion()
   end
-  -- Local variables know whether we are appending to a list or a dictionary,
-  -- and what current key in the results table we are appending to.
-  local append_mode = nil
-  local current_key = nil
-  -- Process each line. It could be something like @META or something like +BODY,
-  -- or something like "TEXT There once was a man from St Ives...".
-  for line in lines:iter() do
-    lbt.log('parse', "Parsing line: <<%s>>", line)
-    if line:at(1) == '@' then
-      -- We have @META or similar, which acts as a dictionary.
-      current_key = lbt.fn.impl.validate_content_key(line, result)
-      append_mode = 'dict'
-      result[current_key] = {}
-    elseif line:at(1) == '+' then
-      -- We have +BODY or similar, which acts as a list.
-      current_key = lbt.fn.impl.validate_content_key(line, result)
-      append_mode = 'list'
-      result[current_key] = pl.List()
-    else
-      -- We have a (hopefully valid) token, possibly with some text afterwards.
-      local token, text = lbt.fn.impl.token_and_text(line)
-      if token == nil then
-        lbt.err.E001_internal_logic_error('somehow token is nil')
-      end
-      if not lbt.fn.impl.valid_token(token) then
-        lbt.err.E100_invalid_token(token)
-      end
-      if append_mode == nil or current_key == nil then
-        lbt.err.E101_line_out_of_place(line)
-      end
-      if append_mode == 'dict' then
-        -- Put key and value in dictionary (note...no splitting...this may change)
-        if text == nil then lbt.err.E105_dictionary_key_without_value(line) end
-        result[current_key][token] = text
-      elseif append_mode == 'list' and text == nil then
-        local parsedline = {
-          token = token,
-          nargs = 0,
-          args  = pl.List(),
-          raw   = ""
-        }
-        result[current_key]:append(parsedline)
-      elseif append_mode == 'list' and text ~= nil then
-        -- The text needs to be split into arguments.
-        local args = pl.utils.split(text, "%s+::%s+")
-        local parsedline = {
-          token = token,
-          nargs = #args,
-          args  = pl.List.new(args),
-          raw   = text
-        }
-        result[current_key]:append(parsedline)
-      else
-        lbt.err.E001_internal_logic_error("append_mode: %s", append_mode)
-      end
-    end
+  -- Now we are ready to parse the actual content, courtesy of lbt.parser.
+  if content:find('[@META]', 1, true) then
+    -- we're good
+  else
+    content = content:gsub('@META', '[@META]')
+    content = content:gsub('+BODY', '[+BODY]')
   end
-  return result
+  local x = lbt.parser.parsed_content_0(content)
+  if x.ok then
+    lbt.log('parse', 'Content parsed with lbt.parser.parsed_content_0. Result:')
+    lbt.log('parse', pl.pretty.write(x.pc0))
+    return ParsedContent.new(x.pc0, pragmas)
+  else
+    lbt.err.E110_unable_to_parse_content(content, x.maxposition)
+  end
 end
 
+-- old code - still needed?
 lbt.fn.validate_parsed_content = function (pc)
   -- We check that META and META.TEMPLATE are present.
-  local m = pc.META
-  if m == nil then
+  if pc:meta() == nil then
     lbt.err.E203_no_META_defined()
   end
-  local t = pc.META.TEMPLATE
-  if t == nil then
+  if pc:template_name() == nil then
     lbt.err.E204_no_TEMPLATE_defined()
   end
   return nil
 end
 
 -- Returns a List.
-lbt.fn.latex_expansion = function (parsed_content)
-  local pc = parsed_content
-  local t = lbt.fn.pc.template_object(pc)
-  -- Obtain token and style resolvers so that expansion can occur.
-  local tr, sr = lbt.fn.token_and_style_resolvers(pc)
-  -- Store the token and style resolvers for potential use by other functions.
-  lbt.const.token_resolver = sr
-  lbt.const.style_resolver = sr
+-- Updating in June 2024 to include a better OptionLookup instead of the style
+-- resolver.
+--
+-- lbt.fn.latex_expansion(pc)
+--
+-- A very important function, turning parsed content into Latex, using the main
+-- template and any extra chosen sources to resolve each command.
+--
+-- We need a template object t on which we call t.init() for any initialisation
+-- and t.expand(pc, or, ol) to produce the Latex in line with the template's
+-- implementation. (Consider that an Article, Exam and Worksheet template will
+-- all produce different-looking documents, without even considering their
+-- different contents.)
+--
+-- We need to know what sources are being used. The template itself will name
+-- some, and the document may name more. Thus we have the helper function
+-- consolidated_sources(pc, t) to produce a list of template objects in which
+-- we can search for command implementations.
+--
+-- We need an opcode resolver ('ocr') so that 'ITEMIZE' in a document can be
+-- resolved into a Lua function (template lbt.Basic -> functions -> ITEMIZE).
+-- Thus we call the helper function opcode_resolver(sources). This returns a
+-- function we can call to provide the template function for any opcode.
+--
+-- We need an option lookup ('ol') so that commands may have access to options
+-- that are defined in various places: document-wide with \lbtOptions{...},
+-- document-narrow with META.OPTIONS, and command-local with '.o ...'. For
+-- example, 'QQ .o color=red :: Evaluate $3 \times 5$'. The implementation of
+-- QQ needs to be able to access 'o.color' and 'o.vspace' easily. Thus we call
+-- OptionLookup.new{...}.
+--
+-- With everything set up, we can call t.init() and t.expand(pc, or, ol).
+--
+-- We return a list of Latex strings, ready to be printed into the document at
+-- compile time.
+--
+lbt.fn.latex_expansion = function (pc)
+  local t = pc:template_object_or_error()
+  local sources = lbt.fn.impl.consolidated_sources(pc, t)
+  local ocr = lbt.fn.opcode_resolver(sources)
+  local ol = OptionLookup.new {
+    document_wide = lbt.system.document_wide_styles,
+    document_narrow = pc:local_options(),
+    sources = sources,
+  }
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
-  lbt.log(4, 'About to latex-expand template <%s>', lbt.fn.pc.template_name(pc))
-  local result = t.expand(pc, tr, sr)
+  lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
+  local result = t.expand(pc, ocr, ol)
   lbt.log(4, ' ~> result has %d bytes', #result)
   return result
 end
+
 
 -- Return List of strings, each containing Latex for a line of author content.
 -- If a line cannot be evaluated (no function to support a given token) then
 -- we insert some bold red information into the Latex so the author can see,
 -- rather than halt the processing.
 --
--- body: List of parsed lines
--- tr:   template resolver       call tr('Q') to resolve token Q to a function
--- sr:   style resolver          call s.get('Q.vspace') to get the value
-lbt.fn.parsed_content_to_latex_multi = function (body, tr, sr)
+-- commands: List of parsed commands like {'TEXT', o = {}, k = {}, a = {'Hello'}}
+-- ocr:      opcode resolver         call ocr('Q') to get function for opcode Q
+-- ol:       option lookup           call o.color to get option for current opcode
+--                                   or o['Q.color'] to be specific
+--
+-- TODO rename this function to `latex_for_commands`.
+--      (That means changing several template expand functions.)
+lbt.fn.latex_for_commands = function (commands, ocr, ol)
   local buffer = pl.List()
-  for line in body:iter() do
-    local status, latex = lbt.fn.parsed_content_to_latex_single(line, tr, sr)
+  for command in commands:iter() do
+    local status, latex = lbt.fn.latex_for_command(command, ocr, ol)
     if status == 'ok' then
       buffer:append(latex)
     elseif status == 'notfound' then
-      local msg = lbt.fn.impl.latex_message_token_not_resolved(line.token)
+      local msg = lbt.fn.impl.latex_message_token_not_resolved(command[1])
       buffer:append(msg)
     elseif status == 'error' then
       local err = latex
-      local msg = lbt.fn.impl.latex_message_token_raised_error(line.token, err)
+      local msg = lbt.fn.impl.latex_message_token_raised_error(command[1], err)
       buffer:append(msg)
     end
   end
   return buffer
 end
 
--- Take a single line of parsed author content (table with keys token, nargs,
--- args and raw) and produce a string of Latex.
+-- Take a single command of parsed author content like
+--   { 'ITEMIZE', o = { float = true}, k = {}, a = {'One', 'Two', 'Three'} }
+-- and produce a string of Latex.
 --
--- Before sending the arguments to the token function, any register references
--- like ◊ABC are expanded.
+-- Before sending the arguments to the opcode function, any register references
+-- like ◊ABC are expanded. Also, STO is treated specially. And, in the future,
+-- CTRL.
 --
 -- Parameters:
---  * line: parsed author content
---  * tr:   a token resolver that we call to get a token function
---  * sr:   a style resolver that we pass to the function for token expansion
+--  * command: parsed author content
+--  * or:      an opcode resolver that we call to get an opcode function
+--  * ol:      an options lookup that we pass to the function
 --
 -- Return:
 --  * 'ok', latex       [succesful]
 --  * 'sto', nil        [STO register allocation]
---  * 'notfound', nil   [token not found among sources]
---  * 'error', details  [error occurred while processing token]
+--  * 'notfound', nil   [opcode not found among sources]
+--  * 'error', details  [error occurred while processing command]
 --
 -- Side effect:
 --  * lbt.var.line_count is increased (unless this is a register allocation)
 --  * lbt.var.registers might be updated
-lbt.fn.parsed_content_to_latex_single = function (line, tr, sr)
-  lbt.log(4, 'parsed_content_to_latex_single: %s', lbt.fn.pc.compact_representation_line(line))
+lbt.fn.latex_for_command = function (command, ocr, ol)
+  local opcode = command[1]
+  local args  = command.a
+  local nargs = #args
+  local cmdstr = F('[%s] %s', opcode, table.concat(args, ' :: '))
+  lbt.log(4, 'latex_for_command: %s', cmdstr)
   lbt.log('emit', '')
-  lbt.log('emit', 'Line: %s', lbt.fn.pc.compact_representation_line(line))
-  local token = line.token
-  local nargs = line.nargs
-  local args  = line.args
-  -- 1. Handle a register allocation. Do not increment linecount.
-  if token == 'STO' then
-    lbt.fn.impl.assign_register(line)
+  lbt.log('emit', 'Line: %s', cmdstr)
+  -- DEBUGGER()
+  -- 1. Handle a register allocation. Do not increment command count.
+  if opcode == 'STO' then
+    lbt.fn.impl.assign_register(args)
     return 'sto', nil
   end
-  -- 2. Search for a token function and return if we did not find one.
-  local findings = tr(token)
-  if findings == nil then
+  -- 2. Search for an opcode function (and argspec) and return if we did not find one.
+  local x = ocr(opcode)   --> { opcode_function = ..., argspec = ... }
+  if x == nil then
     lbt.log('emit', '    --> NOTFOUND')
-    lbt.log(2, 'Token not resolved: %s', token)
+    lbt.log(2, 'opcode not resolved: %s', opcode)
     return 'notfound', nil
   end
-  local token_function, argspec = table.unpack(findings)
   -- 3. Check we have a valid number of arguments.
-  if argspec then
-    local a = argspec
+  if x.argspec then
+    local a = x.argspec
     if nargs < a.min or nargs > a.max then
       local msg = F("%d args given but %s expected", nargs, a.spec)
       lbt.log('emit', '    --> ERROR: %s', msg)
-      lbt.log(1, 'Error attempting to expand token:\n    %s', msg)
+      lbt.log(1, 'Error attempting to expand opcode:\n    %s', msg)
       return 'error', msg
     end
   end
-  -- 4. We really are processing a token, so we can increase the token_count.
-  lbt.fn.impl.inc_token_count()
+  -- 4. We really are processing a command, so we can increase the command_count.
+  lbt.fn.impl.inc_command_count()
   -- 5. Expand register references where necessary.
   --    We are not necessarily in mathmode, hence false.
   args = args:map(lbt.fn.impl.expand_register_references, false)
-  -- 6. Call the token function and return 'ok', ... or 'error', ...
-  local result = token_function(nargs, args, sr)
+  -- 6. Call the opcode function and return 'ok', ... or 'error', ...
+  local in_development = true -- (June 2024 changes)
+  local result
+  if in_development then
+    ol:set_opcode_and_options(opcode, command.o)
+    local k = command.k
+    result = x.opcode_function(nargs, args, ol, k)
+    ol:unset_opcode_and_options()
+  else
+    result = opcode_function(nargs, args, sr)
+  end
   if type(result) == 'string' then
     lbt.log('emit', '    --> %s', result)
     return 'ok', result
   elseif type(result) == 'table' and type(result.error) == 'string' then
     local errormsg = result.error
     lbt.log('emit', '    --> ERROR: %s', errormsg)
-    lbt.log(1, 'Error occurred while processing token %s\n    %s', token, errormsg)
+    lbt.log(1, 'Error occurred while processing opcode %s\n    %s', opcode, errormsg)
     return 'error', errormsg
   elseif type(result) == 'table' then
     result = table.concat(result, "\n")
     lbt.log('emit', '    --> %s', result)
     return 'ok', result
   else
-    lbt.err.E325_invalid_return_from_template_function(token, result)
+    lbt.err.E325_invalid_return_from_template_function(opcode, result)
   end
-end
-
--- From one parsed-content object, we can derive a token resolve and a style
--- resolver.
-lbt.fn.token_and_style_resolvers = function (pc)
-  -- The name of the template allows us to retrieve the template object.
-  local t = lbt.fn.pc.template_object(pc)
-  -- From the pc we can look for added sources. The template object has sources
-  -- too. So we can calculate "consolidated sources".
-  local src = lbt.fn.impl.consolidated_sources(pc, t)
-  -- Styles can come from three places: doc-wide, written into the content,
-  -- and from the consolidated sources that are in use. 
-  local sty = lbt.fn.impl.consolidated_styles(lbt.system.document_wide_styles, pc, src)
-  -- With consolidated sources and styles, we can make the resolvers.
-  local tr = lbt.fn.token_resolver(src)
-  local sr = lbt.fn.style_resolver(sty)
-  return tr, sr
 end
 
 -- Produce a function that resolves tokens using the sources provided here.
@@ -288,18 +540,18 @@ end
 -- legitimately be nil, although we will put a warning in the log file.
 --
 -- TODO make this impl
-lbt.fn.token_resolver = function (sources)
+lbt.fn.opcode_resolver = function (sources)
   return pl.utils.memoize(function (token)
     for s in sources:iter() do
       -- Each 'source' is a template object, with properties 'functions'
       -- and 'arguments'.
       local f = s.functions[token]
-      local a = s.arguments and s.arguments[token]
+      local a = s.arguments[token]
       if f then
         if a == nil then
-          lbt.log(2, 'WARN: no argspec provided for token <%s>', token)
+          lbt.log(2, 'WARN: no argspec provided for opcode <%s>', token)
         end
-        return {f, a}
+        return { opcode_function = f, argspec = a }
       end
     end
     -- No token function found :(
@@ -307,113 +559,6 @@ lbt.fn.token_resolver = function (sources)
   end)
 end
 
--- Produce a function that resolves styles using global, template, and local
--- style information, as contained in the consolidated style_map parameter.
---
--- The resolver function takes a style key like 'Q.color' and returns a string
--- like 'RoyalBlue'. If there is no such style, a program-halting error occurs.
--- That's because the only place this resolver is called is in a token
--- expansion function, and if no style is found, it means the coder has
--- probably made a typo. They will want to know about it.
---
--- As a convenience for the template author, the resolver function can take
--- many keys and return many values. For example:
---
---   local col, vsp = sr('Q.color Q.vspace')        ->  'blue', '12pt'
---
--- TODO make this impl
-lbt.fn.style_resolver = function (style_map)
-  return function (multikeystring)
-    local x = multikeystring    -- e.g. 'Q.vspace Q.color'
-    local keys = pl.List(pl.utils.split(x, '[, ]%s*'))
-    local result = pl.List()
-    for k in keys:iter() do
-      local value = style_map[k]
-      if value then
-        result:append(value)
-      else
-        lbt.err.E387_style_not_found(k)
-      end
-    end
-    return table.unpack(result)
-  end
-end
-
--- }}}
-
---------------------------------------------------------------------------------
--- {{{ Functions associated with parsed content
---  * meta(pc)
---  * title(pc)
---  * dictionary(pc, "META")
---  * list(pc, "BODY")
---  * template_name(pc)
---  * template_object(pc)
---  * extra_sources(pc)
---  * extra_styles(pc)
---  * compact_representation(pc)       for debugging
---------------------------------------------------------------------------------
-
-lbt.fn.pc = {}
-
-lbt.fn.pc.meta = function (pc)
-  local meta = pc.META
-  if meta == nil then
-    lbt.err.E976_no_META_field(pc)
-  end
-  return meta
-end
-
-lbt.fn.pc.title = function (pc)
-  return lbt.fn.pc.meta(pc).TITLE or "(no title)"
-end
-
-lbt.fn.pc.template_name = function (pc)
-  return lbt.fn.pc.meta(pc).TEMPLATE
-end
-
-lbt.fn.pc.template_object = function (pc)
-  local tn = lbt.fn.pc.template_name(pc)
-  local t = lbt.fn.template_object_or_error(tn)
-  return t
-end
-
-lbt.fn.pc.content_dictionary_or_nil = function (pc, key)
-  local d = pc[key]
-  return d
-end
-
-lbt.fn.pc.content_list_or_nil = function (pc, key)
-  local l = pc[key]
-  return l
-end
-
--- Return a List of template names given in META.SOURCES.
--- May be empty.
-lbt.fn.pc.extra_sources = function (pc)
-  local sources = pc.META.SOURCES
-  if sources then
-    local bits = sources:split(",")
-    return pl.List(bits):map(pl.stringx.strip)
-  else
-    return pl.List()
-  end
-end
-
--- Return a Map of style settings given in META.STYLES.
--- May be empty.
-lbt.fn.pc.extra_styles = function (pc)
-  local styles = pc.META.STYLES
-  if styles then
-    return lbt.fn.style_string_to_map(styles)
-  else
-    return pl.Map()
-  end
-end
-
-lbt.fn.pc.compact_representation_line = function(pc_line)
-  return F("%s | %s", pc_line.token, pc_line.raw:shorten(60))
-end
 -- }}}
 
 --------------------------------------------------------------------------------
@@ -470,14 +615,13 @@ lbt.fn.register_template = function(template_details, path)
       lbt.err.E215_invalid_template_details(td, path, x)
     end
   end
-  -- Same as above, but with styles.
-  if td.styles then
-    local ok, x = lbt.fn.impl.template_styles_specification(td.styles)
-    if ok then
-      td.styles = x
-    else
-      lbt.err.E215_invalid_template_details(td, path, x)
-    end
+  -- Likewise with default options. They are specified as strings and need to be
+  -- turned into a map.
+  local ok, x = lbt.fn.impl.template_normalise_default_options(td.default_options)
+  if ok then
+    td.default_options = x
+  else
+    lbt.err.E215_invalid_template_details(td, path, x)
   end
   return nil
 end
@@ -639,8 +783,8 @@ end
 
 lbt.fn.impl = {}
 
-local update_pragma_set = function(pragmas, line)
-  p = line:match("!(%u+)$")
+local update_pragma_set = function(pragmas, setting)
+  local p = setting
   if     p == 'DRAFT'    then pragmas.draft  = true
   elseif p == 'NODRAFT'  then pragmas.draft  = false
   elseif p == 'SKIP'     then pragmas.skip   = true
@@ -650,52 +794,33 @@ local update_pragma_set = function(pragmas, line)
   elseif p == 'DEBUG'    then pragmas.debug  = true
   elseif p == 'NODEBUG'  then pragmas.debug  = false
   else
-    lbt.err.E102_invalid_pragma(line)
+    lbt.err.E102_invalid_pragma(p)
   end
 end
 
 -- Extract pragmas from the lines into a table.
--- Return a table of pragmas (draft, debug, ignore) and a List of non-pragma lines.
-lbt.fn.impl.pragmas_and_other_lines = function(input_lines)
+-- Return a table of pragmas (draft, debug, ignore) and a consolidated string of
+-- the actual content, with » line continations taken care of.
+lbt.fn.impl.pragmas_and_content = function(input_lines)
   pragmas = { draft = false, ignore = false, debug = false }
   lines   = pl.List()
   for line in input_lines:iter() do
-    if line:at(1) == '!' then
-      update_pragma_set(pragmas, line)
+    p = line:match("!(%u+)%s*$")
+    if p then
+      update_pragma_set(pragmas, p)
+    elseif line:match('^%s*%%') then
+      -- ignore comment line
     else
       lines:append(line)
     end
   end
-  return pragmas, lines
-end
-
--- Validate that a content key like @META or +BODY comprises only upper-case
--- characters, except for the sigil, and is the only thing on the line.
--- Also, it must not already exist in the dictionary.
--- It is known before calling this that the first character is @ or +.
--- Return the key (META, BODY).
-lbt.fn.impl.validate_content_key = function(line, dictionary)
-  if line:find(" ") then
-    lbt.err.E103_invalid_content_key(line, "internal spaces")
-  end
-  name = line:match("^.(%u+)$")
-  if name == nil then
-    lbt.err.E103_invalid_content_key(line, "name can only be upper-case letters")
-  end
-  return name
-end
-
-lbt.fn.impl.token_and_text = function (line)
-  local x = pl.utils.split(line, '%s+', false, 2)
-  return table.unpack(x)
-end
-
--- A valid token must begin with a capital letter and contain only capital
--- letters, digits, and symbols. I would like to restrict the symbols to
--- tasteful ones like [!*_.], but perhaps that is too restricting, and it is
--- more hassle to implement.
-lbt.fn.impl.valid_token = function (token)
-  return token == token:upper()
+  local content = lines:concat('\n')
+  -- Handle » line continuations, which would normally happen at the beginning
+  -- of a line, but we will allow them at the end, or at both.
+  content = content:gsub('»[ \t]*\n[ \t]*»', '')
+  content = content:gsub('»[ \t]*\n[ \t]*', '')
+  content = content:gsub('[ \t]*\n[ \t]*»', '')
+  return pragmas, content
 end
 
 -- lbt.fn.impl.consolidated_sources(pc,t)
@@ -711,12 +836,12 @@ end
 -- Error: if any template name cannot be resolved into a template object.
 --
 lbt.fn.impl.consolidated_sources = function (pc, t)
-  local src1 = lbt.fn.pc.extra_sources(pc)  -- optional specific source names (List)
-  local src2 = pl.List(t.sources)           -- source names baked in to the template (List)
+  local src1 = pc:extra_sources()    -- optional specific source names (List)
+  local src2 = pl.List(t.sources)    -- source names baked in to the template (List)
   local sources = pl.List();
   do
     sources:extend(src1);
-    sources:append(t.name)                  -- the template itself has to go in there
+    sources:append(t.name)           -- the template itself has to go in there
     sources:extend(src2)
   end
   local result = pl.List()
@@ -730,57 +855,6 @@ lbt.fn.impl.consolidated_sources = function (pc, t)
   end
   local basic = lbt.fn.template_object_or_error("lbt.Basic")
   result:append(basic)
-  return result
-end
-
--- lbt.fn.impl.consolidated_styles(docwide, pc, sources)
---
--- There are three places that styles can be defined.
---  * In templates, with code such as `s.Q = { vspace = '12pt', color = 'blue' }`
---  * Document-wide, with code such as `\lbtStyles{Q.vspace 30pt}`
---  * Expansion-local, with code such as `STYLES Q.color red :: MC.alphabet Roman`
---
--- The precedence is expansion-local, then document-wide, then the templates.
---
--- There are potentially many templates at play (the list of sources). In the
--- expansion, there can be only one STYLES setting. Document-wide, there can be
--- several `\lbtStyles` commands, but they all end up affecting the one piece
--- of data: `lbt.system.document_wide_styles`.
---
--- In this function we create a single dictionary (pl.Map) that contains all styles
--- set, respecing precedence. It will be used to resolve styles in all token
--- evaluations for the whole expansion.
---
--- Input:
---  * docwide        a Map of document-wide styles (i.e. lbt.system.d_w_s)
---  * pc             parsed content, which gives us access to STYLES
---  * templates      consolidated list of templates in precedence order
---                   (we extract the 'styles' map from each)
--- 
--- Return:
---  * a pl.Map of all style mappings, respecting precedence
---
--- Errors:
---  * none that I can think of
---
-lbt.fn.impl.consolidated_styles = function (docwide, pc, sources)
-  lbt.log('styles', '')
-  local result = pl.Map()
-  local styles = nil
-  for s in pl.List(sources):reverse():iter() do
-    styles = s.styles or pl.Map()
-    lbt.log('styles', 'extracting styles from <%s>: %s', s.name, styles)
-    result:update(styles)
-    -- I(result)
-  end
-  styles = docwide
-  lbt.log('styles', 'extracting document-wide styles:', styles)
-  result:update(styles)
-  -- I(result)
-  styles = lbt.fn.pc.extra_styles(pc)
-  lbt.log('styles', 'extracting styles from parsed content: %s', styles)
-  result:update(styles)
-  -- IX(result)
   return result
 end
 
@@ -859,41 +933,39 @@ lbt.fn.impl.template_arguments_specification = function (arguments)
   return true, result
 end
 
--- Convert { Q = { vspace = '12pt', color = 'blue' }, MC = { alphabet = 'roman' }}
--- to { 'Q.vspace' = '12pt', 'Q.color' = 'blue', 'MC.alphabet' = 'roman'}
---
--- In other words, flatten the dictionary and preseve the prefix.
---
--- Return type: pl.Map
---
--- Return true, result  or  false, errormsg
---
--- TODO implement and test error checking
-lbt.fn.impl.template_styles_specification = function (styles)
+-- Input x is a list of strings, each of which is like
+--   'Q.color = blue, Q.vsp = 10pt'
+-- Output is a map { 'Q.color' = 'blue', Q.vsp = '10pt', ... }
+-- Return  true, output   or   false, error string
+lbt.fn.impl.template_normalise_default_options = function (x)
   local result = pl.Map()
-  for k1,map in pairs(styles) do
-    for k2,v in pairs(map) do
-      local style_key = F('%s.%s', k1, k2)
-      local style_value = v
-      result[style_key] = style_value
+  for s in pl.List(x):iter() do
+    if type(s) ~= 'string' then
+      lbt.err.E581_invalid_default_option_value(s)
+    end
+    local options = lbt.parser.parse_dictionary(s)
+    if options then
+      result:update(options)
+    else
+      return false, s
     end
   end
   return true, result
 end
 
 lbt.fn.impl.latex_message_token_not_resolved = function (token)
-  return F([[{\color{red}\bfseries Token \verb|%s| not resolved} \par]], token)
+  return F([[{\color{lbtError}\bfseries Token \verb|%s| not resolved} \par]], token)
 end
 
 lbt.fn.impl.latex_message_token_raised_error = function (token, err)
-  return F([[{\color{red}\bfseries Token \verb|%s| raised error: \emph{%s}} \par]], token, err)
+  return F([[{\color{lbtError}\bfseries Token \verb|%s| raised error: \emph{%s}} \par]], token, err)
 end
 
-lbt.fn.impl.assign_register = function (line)
-  if line.nargs ~= 3 then
-    lbt.err.E318_invalid_register_assignment_nargs(line)
+lbt.fn.impl.assign_register = function (args)
+  if #args ~= 3 then
+    lbt.err.E318_invalid_register_assignment_nargs(args)
   end
-  local regname, ttl, defn = table.unpack(line.args)
+  local regname, ttl, defn = table.unpack(args)
   local mathmode = false
   if defn:startswith('$') and defn:endswith('$') then
     mathmode = true
@@ -901,7 +973,7 @@ lbt.fn.impl.assign_register = function (line)
   end
   local value = lbt.fn.impl.expand_register_references(defn, mathmode)
   local record = { name     = regname,
-                   exp      = lbt.fn.impl.current_token_count() + ttl,
+                   exp      = lbt.fn.impl.current_command_count() + ttl,
                    mathmode = mathmode,
                    value    = value }
   lbt.fn.impl.register_store(record)
@@ -937,20 +1009,20 @@ lbt.fn.impl.expand_register_references = function (str, math_context)
   return result
 end
 
-lbt.fn.impl.current_token_count = function ()
-  local token_count = lbt.var.token_count
-  if token_count == nil then
-    lbt.err.E001_internal_logic_error('current token_count not set')
+lbt.fn.impl.current_command_count = function ()
+  local command_count = lbt.var.command_count
+  if command_count == nil then
+    lbt.err.E001_internal_logic_error('current command_count not set')
   end
-  return token_count
+  return command_count
 end
 
-lbt.fn.impl.inc_token_count = function ()
-  local token_count = lbt.var.token_count
-  if token_count == nil then
-    lbt.err.E001_internal_logic_error('current token_count not set')
+lbt.fn.impl.inc_command_count = function ()
+  local command_count = lbt.var.command_count
+  if command_count == nil then
+    lbt.err.E001_internal_logic_error('current command_count not set')
   end
-  lbt.var.token_count = token_count + 1
+  lbt.var.command_count = command_count + 1
 end
 
 lbt.fn.impl.register_store = function (record)
@@ -963,10 +1035,9 @@ end
 lbt.fn.impl.register_value = function (name)
   local r = lbt.var.registers
   local re = lbt.var.registers[name]
-  -- DEBUGGER()
   if re == nil then
     return 'nonexistent', nil
-  elseif lbt.fn.impl.current_token_count() > re.exp then
+  elseif lbt.fn.impl.current_command_count() > re.exp then
     return 'stale', nil
   else
     return 'ok', re.value, re.mathmode

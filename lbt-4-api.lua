@@ -56,6 +56,7 @@ end
 --
 --------------------------------------------------------------------------------
 
+-- This is called at the start of an lbt environment. See above and lby.sty.
 lbt.api.author_content_collect = function()
   -- Reset constants and variables ready for a new lbt expansion.
   lbt.fn.author_content_clear()
@@ -78,6 +79,7 @@ lbt.api.author_content_collect = function()
   lbt.log(3, "  * line:           %s", status.linenumber)
 end
 
+-- This is called at the end of an lbt environment. See above and lby.sty.
 lbt.api.author_content_emit_latex = function()
   local c  = lbt.const.author_content
   local eid = lbt.fn.current_expansion_id()
@@ -94,13 +96,13 @@ lbt.api.author_content_emit_latex = function()
     return
   elseif pc.pragmas.skip then
     lbt.log(3, '  * SKIP pragma detected - no further action for eID %d', eid)
-    local skipmsg = F([[{\noindent\color{red}\bfseries Explicitly instructed to skip content (eID=%d).
-      Title is `%s` }]], eid, lbt.fn.pc.title(pc))
+    local skipmsg = F([[{\noindent\color{DeepPink3}\bfseries Explicitly instructed to skip content (eID=%d).
+      Title is `%s` }]], eid, pc:title())
     tex.print(skipmsg)
     return
   elseif pc.pragmas.draft == false and lbt.api.get_draft_mode() == true then
-    local draftskipmsg = F([[{\noindent\color{red}\bfseries Skipping non-draft content (eID=%d).
-      Title is `%s' }]], eid, lbt.fn.pc.title(pc))
+    local draftskipmsg = F([[{\noindent\color{DeepPink3}\bfseries Skipping non-draft content (eID=%d).
+      Title is `%s' }]], eid, pc:title())
     tex.print(draftskipmsg)
     lbt.log(3, '  * DRAFT pragma _not_ detected - no further action for eID %d', eid)
     return
@@ -108,8 +110,14 @@ lbt.api.author_content_emit_latex = function()
   lbt.log('parse', 'Parsed content below. eID=%d', eid)
   lbt.log('parse', lbt.pp(pc))
   lbt.fn.validate_parsed_content(pc)
-  lbt.log(3, '  * template:       %s', lbt.fn.pc.template_name(pc))
-  local l  = lbt.fn.latex_expansion(pc)
+  lbt.log(3, '  * template:       %s', pc:template_name())
+  local development = false
+  local l
+  if development then
+    l = F([[\par\textbf{Expansion for LBT object %d (title `%s')}\par]], eid, pc:title())
+  else
+    l  = lbt.fn.latex_expansion(pc)
+  end
   local output = lbt.util.normalise_latex_output(l)
   lbt.log(3, '  * latex expansion complete (eid=%d)', eid)
   lbt.util.print_tex_lines(output)
@@ -251,19 +259,19 @@ end
 -- to do this, so it can lean on this default implementation.
 --
 -- The default expansion is to run the contents of BODY through
--- `lbt.fn.parsed_content_to_latex_multi`. That means this expansion is
+-- `lbt.fn.latex_for_commands`. That means this expansion is
 -- assuming that the author content includes a '+BODY' somewhere. We raise an
 -- error if it does not exist.
 lbt.api.default_template_expand = function()
-  return function (pc, tr, sr)
-    -- abbreviations for: parsed content, token resolver, style resolver
-    lbt.log(4, 'Inside default_template_expand for template <%s>', lbt.fn.pc.template_name(pc))
-    local body = lbt.fn.pc.content_list_or_nil(pc, 'BODY')
+  return function (pc, ocr, ol)
+    -- abbreviations for: parsed content, opcode resolver, option lookup
+    lbt.log(4, 'Inside default_template_expand for template <%s>', pc:template_name())
+    local body = pc:list_or_nil('BODY')
     lbt.log(4, ' * BODY has <%d> items to expand', body:len())
     if body == nil then
       lbt.err.E301_default_expand_failed_no_body()
     end
-    return lbt.fn.parsed_content_to_latex_multi(body, tr, sr)
+    return lbt.fn.latex_for_commands(body, ocr, ol)
   end
 end
 

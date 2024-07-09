@@ -25,7 +25,7 @@ local function expand(pc, tr, sr)
   local author   = lbt.util.content_meta_or_error(pc, 'AUTHOR')
   local date     = lbt.util.content_meta_or_nil(pc, 'DATE')
   local tsize    = lbt.util.content_meta_or_nil(pc, 'TITLE_SIZE') or 'Large'
-  local parstyle = sr('Article.parstyle')
+  local parstyle = o('Article.parstyle')
 
   -- 1. Preamble
   local a = ''
@@ -33,12 +33,12 @@ local function expand(pc, tr, sr)
     a = F([[
       \setlength{\parindent}{%s}
       \setlength{\parskip}{0pt}
-    ]]), sr('Article.parindent')
+    ]]), o('Article.parindent')
   elseif parstyle == 'skip' then
     a = F([[
       \setlength{\parindent}{0pt}
       \setlength{\parskip}{%s}
-    ]], sr('Article.parskip'))
+    ]], o('Article.parskip'))
   end
 
   -- 2. New page and table-of-contents addition
@@ -74,7 +74,7 @@ end
 
 
 a.ABSTRACT = '1+'
-f.ABSTRACT = function(n, args, sr)
+f.ABSTRACT = function(n, args, o)
   -- Each argument is a paragraph. We set the abstract with thinner margins and
   -- an inline heading, and in smaller text.
   local a = [[\begin{adjustwidth}{4em}{4em}]]
@@ -94,10 +94,10 @@ f.ABSTRACT = function(n, args, sr)
 end
 
 a.HEADING = '1'
-f.HEADING = function(n, args, sr)
+f.HEADING = function(n, args, o)
   local prespace = '1em'
   local postspace = nil
-  if sr('Article.parstyle') == 'indent' then
+  if o('Article.parstyle') == 'indent' then
     postspace = '1em'
   else
     postspace = '0pt'

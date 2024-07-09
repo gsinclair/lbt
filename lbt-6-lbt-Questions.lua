@@ -9,7 +9,7 @@ local F = string.format
 
 local f = {}
 local a = {}
-local s = {}
+local o = pl.List()
 
 -- Support function to lay out horizontal subquestions or ---------------------
 -- multiple-choice options horizontally in fixed columns  ---------------------
@@ -103,11 +103,11 @@ end
 -- Questions, subquestions ----------------------------------------------------
 
 a.Q = 1
-s.Q = { vspace = '6pt', color = 'blue' }
-f.Q = function(n, args, s)
+o:append 'Q.vspace = 6pt, Q.color = blue'
+f.Q = function(n, args, o)
   lbt.api.counter_reset('qq')
   lbt.api.counter_reset('mc')
-  local vsp, col = s('Q.vspace Q.color')
+  local vsp, col = o('Q.vspace Q.color')
   local q = lbt.api.counter_inc('q')
   local template = [[
     \vspace{%s}
@@ -117,10 +117,10 @@ f.Q = function(n, args, s)
 end
 
 a.QQ = 1
-s.QQ = { vspace = '0pt' }
-f.QQ = function(n, args, s)
+o:append 'QQ.vspace = 0pt'
+f.QQ = function(n, args, o)
   local qq = lbt.api.counter_inc('qq')
-  local vsp = s('QQ.vspace')
+  local vsp = o('QQ.vspace')
   local label_style = [[\textcolor{blue}{(\alph*)}]]
   local template = [[
     \begin{enumerate}[align=left, topsep=3pt, start=%d, label=%s, left=1em .. 3.2em]
@@ -132,7 +132,7 @@ f.QQ = function(n, args, s)
 end
 
 a['QQ*'] = '2+'
-f['QQ*'] = function(n, args, s)
+f['QQ*'] = function(n, args, o)
   -- 1. Parse options to get ncols and vspace and hpack.
   local t = get_options_ncols_vspace_hpack('QQ*', args)
   local options
@@ -167,8 +167,8 @@ end
 
 -- MC lays out vertically as many options as are given using A, B, C, ...
 a.MC = '1+'
-s.MC = { format = '(A)' }
-f.MC = function(n, args, sr)
+o:append 'MC.format = (A)'
+f.MC = function(n, args, o)
   -- We employ an enumerate environment with one line1, many line2 and one line3.
   local line0 = [[ \begin{adjustwidth}{2em}{}]]
   local line1 = [[ \begin{enumerate}[%s, align=left, topsep=3pt, left=1em .. 3.5em] ]]
@@ -177,7 +177,7 @@ f.MC = function(n, args, sr)
   local line4 = [[ \end{adjustwidth} ]]
   local result = pl.List()
   result:append(line0)
-  result:append(F(line1, sr('MC.format')))
+  result:append(F(line1, o('MC.format')))
   for x in args:iter() do
     result:append(F(line2, x))
   end
@@ -189,8 +189,8 @@ end
 -- MC* lays out horizontally just like QQ*, with the same options:
 --   hpack = [columns|hfill], ncols, vspace
 a['MC*'] = '1+'
-s['MC*'] = {}        -- think about format = (A)
-f['MC*'] = function (n, args, sr)
+-- s['MC*'] = {}        -- think about format = (A)
+f['MC*'] = function (n, args, o)
   -- 1. Parse options to get ncols and vspace and hpack.
   local t = get_options_ncols_vspace_hpack('MC*', args)
   local options
@@ -226,7 +226,7 @@ end
 
 
 a.HINT = 1
-f.HINT = function(n, args, sr)
+f.HINT = function(n, args, o)
   local q = lbt.api.counter_value("q")
   local hints = lbt.api.data_get("hints", pl.OrderedMap())
   hints[q] = args[1]
@@ -234,7 +234,7 @@ f.HINT = function(n, args, sr)
 end
 
 a.ANSWER = 1
-f.ANSWER = function(n, args, sr)
+f.ANSWER = function(n, args, o)
   local q = lbt.api.counter_value("q")
   local answers = lbt.api.data_get("answers", pl.OrderedMap())
   answers[q] = args[1]
@@ -242,7 +242,7 @@ f.ANSWER = function(n, args, sr)
 end
 
 a.SHOWHINTS = 0
-f.SHOWHINTS = function(n, args, sr)
+f.SHOWHINTS = function(n, args, o)
   local text = pl.List()
   local hints = lbt.api.data_get("hints", pl.OrderedMap())
   text:append([[\begin{small}]])
@@ -255,31 +255,24 @@ f.SHOWHINTS = function(n, args, sr)
 end
 
 a.SHOWANSWERS = 0
-f.SHOWANSWERS = function(n, args, sr)
-  if false then
-    return [[\textbf{answers\dots}]]
-  else
-    local text = pl.List()
-    local answers = lbt.api.data_get("answers", pl.OrderedMap())
-    -- DEBUGGER()
-    text:append([[\begin{small}]])
-    for q, a in answers:iter() do
-      local x = F([[\par\textcolor{Mulberry}{\textbf{%d}} \enspace \textcolor{darkgray}{%s}]], q, a)
-      text:append(x)
-    end
-    text:append([[\end{small}]])
-    return text:concat('\n')
+f.SHOWANSWERS = function(n, args, o)
+  local text = pl.List()
+  local answers = lbt.api.data_get("answers", pl.OrderedMap())
+  table.insert(text, [[\begin{small}]])
+  for q, a in answers:iter() do
+    local x = F([[\par\textcolor{Mulberry}{\textbf{%d}} \enspace \textcolor{darkgray}{%s}]], q, a)
+    text:append(x)
   end
 end
 
 a.HINTRESET = 0
-f.HINTRESET = function(n, args, sr)
+f.HINTRESET = function(n, args, o)
   lbt.api.data_set("hints", pl.OrderedMap())
   return '{}'
 end
 
 a.ANSWERRESET = 0
-f.ANSWERRESET = function(n, args, sr)
+f.ANSWERRESET = function(n, args, o)
   lbt.api.data_set("answers", pl.OrderedMap())
   return '{}'
 end
@@ -302,6 +295,7 @@ return {
   expand    = nil,
   functions = f,
   arguments = a,
-  styles    = s
+  -- styles    = s,
+  default_options = o
 }
 
