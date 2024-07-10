@@ -27,7 +27,6 @@ end
 o:append'TEXT*.vspace=0pt'
 a["TEXT*"] = 1
 f["TEXT*"] = function (n, args, o)
-  -- DEBUGGER()
   if o.vspace == '0pt' then
     return args[1]
   else
@@ -127,7 +126,7 @@ end
 
 -- Itemize and enumerate
 
-o:append 'ITEMIZE.notop = false, ITEMIZE.compact = false'
+o:append 'ITEMIZE.notop = false, ITEMIZE.compact = false, ITEMIZE.sep=nil'
 a.ITEMIZE = '1+'
 f.ITEMIZE = function (n, args, o, k)
   if args[1]:startswith('[') then

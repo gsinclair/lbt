@@ -103,14 +103,30 @@ function ParsedContent:extra_sources()
   end
 end
 
+-- Inside META you can set, for example
+--   OPTIONS   vector.format = tilde, QQ.vspace = 18pt
+-- Here we grab that content, parse it, and return it as a dictionary.
+-- Notes:
+--  * if the user wrote ".d vector.format = tilde, QQ.vspace = 18pt"
+--    then it is already parsed as a dictionary, so we return that
+--  * if the user has set STYLES, that is old-fashioned and we exit
+--    fast so they can fix it
+--  * if we try to parse a dictionary and fail, we quit with error
 function ParsedContent:local_options()
-  local options = self:meta().OPTIONS or self:meta().STYLES
+  if self:meta().STYLES then
+    IX('Old-fashioned STYLES is set. Use OPTIONS instead', self:meta().STYLES)
+  end
+  local options = self:meta().OPTIONS
   if type(options) == 'table' then
     return options
   elseif type(options) == 'string' then
-    return lbt.fn.style_string_to_map(styles)
-  else
+    local text = options
+    options = lbt.parser.parse_dictionary(text)
+    return options or lbt.err.E946_invalid_option_dictionary_narrow(text)
+  elseif options == nil then
     return pl.Map()
+  else
+    lbt.err.E001_internal_logic_error('OPTIONS not a string or table')
   end
 end
 
@@ -140,7 +156,7 @@ local _narrow_  = {}   -- document-narrow options (from META.OPTIONS)
 local _cache_   = {}
 local _opcode_  = {}   -- e.g. 'ITEMIZE'
 local _local_   = {}   -- command-local options (not provided on initialisation)
-local _err_     = lbt.err.E190_invalid_OptionLookup
+local _err_     = function(x) lbt.err.E190_invalid_OptionLookup(x) end
 
 -- OptionLookup.new {
 --   document_wide   = (dictionary of options)
@@ -164,6 +180,7 @@ OptionLookup.new = function(t)
   -- We need to put explicit methods in so that __index is not triggered.
   o.set_opcode_and_options = OptionLookup.set_opcode_and_options
   o.unset_opcode_and_options = OptionLookup.unset_opcode_and_options
+  o._lookup = OptionLookup._lookup
   -- Apart from that, any field reference is handled by __index, to perform
   -- an option lookup.
   setmetatable(o, OptionLookup)
@@ -198,13 +215,15 @@ local multi_level_lookup = function(ol, qk)
   local v
   -- 1. document-narrow
   v = ol[_narrow_][qk]
+  v = rawget(ol, _narrow_)[qk]
   if v then return v end
   -- 2. document-wide
-  v = ol[_wide_][qk]
+  v = rawget(ol, _wide_)[qk]
   if v then return v end
   -- 3. template defaults
   -- NOTE: the next line originally had reverse() in it. I don't think it belongs, but am not 100% sure.
-  for t in pl.List(ol[_sources_]):iter() do
+  -- NOTE: I now see that it does belong. If a template T lists sources as (say) A, B, C, then the 'sources' list will be T, A, B, C, Basic. Now say they want an option QQ.color, which is provided in both A and C. We want to be able to override options, so we have to go from the right end of the list. But I need to think about Basic. It could be that looking up options among our sources is more complicated than I thought. (And what about nested dependencies? I haven't really thought about that.) Perhaps a stack of tables like { desc = 'docwide', templates = {...} } is necessary; then the lookup just makes its way through the stack.
+  for t in pl.List(rawget(ol, _sources_)):iter() do
     v = t.default_options[qk]
     if v ~= nil then return v end
   end
@@ -223,25 +242,39 @@ end
 --  * Otherwise, it might be a document-narrow option.
 --  * Otherwise, it might be a document-wide option.
 --  * Otherwise, it might be a default in a template.
-OptionLookup.__index = function(self, key)
-  lbt.assert_string(2, key)
+-- If the key cannot be found anywhere, we return nil. A missing option should
+-- be an error, but we leave that up to the caller because we want to provide
+-- different errors depending on whether the lookup was for a command or for
+-- a macro.
+function OptionLookup:_lookup(key)
+  lbt.assert_string(1, key) -- TODO: make an lbt.err for this
   local qk = qualified_key(self, key)
   local v
   -- 1. Local option.
   if rawget(self, _local_) ~= nil then
     v = rawget(self, _local_)[key]
-    if v then return v end
+    if v ~= nil then return v end
   end
   -- 2. Cache.
   v = rawget(self, _cache_)[qk]
-  if v then return v end
+  if v ~= nil then return v end
   -- 3. Other.
   v = multi_level_lookup(self, qk)
   if v ~= nil then
     rawget(self, _cache_)[qk] = v
     return v
   else
+    return nil
+  end
+end
+
+-- ol['QQ.color'] either returns the value or raises an error.
+OptionLookup.__index = function(self, key)
+  local v = self:_lookup(key)
+  if v == nil then
     lbt.err.E192_option_lookup_failed(rawget(self, _opcode_), key)
+  else
+    return v
   end
 end
 
@@ -260,12 +293,21 @@ OptionLookup.__tostring = function(self)
     x:append(F(fmt, ...))
   end
   local pretty = function(x)
-    if pl.tablex.size(x) == 0 then return '{}' else return pl.pretty.write(x) end
+    if x == nil then
+      return 'nil'
+    elseif pl.tablex.size(x) == 0 then
+      return '{}'
+    else
+      local dump = pl.pretty.write(x)
+      return dump:gsub('\n', '\n  '):gsub('^', '  ')
+    end
   end
   add('OptionLookup:')
   add('  opcode: %s', rawget(self, _opcode_))
   add('  local options: %s', pretty(rawget(self, _local_)))
   add('  cache: %s', pretty(rawget(self, _cache_)))
+  add('  doc-narrow: %s', pretty(rawget(self, _narrow_)))
+  add('  doc-wide: %s', pretty(rawget(self, _wide_)))
   return x:concat('\n')
 end
 
@@ -323,7 +365,9 @@ lbt.fn.parsed_content = function(content_lines)
   local pragmas, content = lbt.fn.impl.pragmas_and_content(content_lines)
   -- Detect ignore and act accordingly.
   if pragmas.ignore then
-    return ParsedContent.new(nil, pragmas)
+    -- NOTE: the line below fails because ParsedContent.new checks that argument 1 is a table.
+    -- return ParsedContent.new(nil, pragmas)
+    return { pragmas = pragmas }
   end
   -- Detect debug and act accordingly.
   if pragmas.debug then
@@ -358,10 +402,6 @@ lbt.fn.validate_parsed_content = function (pc)
   return nil
 end
 
--- Returns a List.
--- Updating in June 2024 to include a better OptionLookup instead of the style
--- resolver.
---
 -- lbt.fn.latex_expansion(pc)
 --
 -- A very important function, turning parsed content into Latex, using the main
@@ -400,10 +440,12 @@ lbt.fn.latex_expansion = function (pc)
   local sources = lbt.fn.impl.consolidated_sources(pc, t)
   local ocr = lbt.fn.opcode_resolver(sources)
   local ol = OptionLookup.new {
-    document_wide = lbt.system.document_wide_styles,
+    document_wide = lbt.system.document_wide_options,
     document_narrow = pc:local_options(),
     sources = sources,
   }
+  -- Save the option lookup for access by macros like Math.vector.
+  lbt.const.option_lookup = ol
   -- Allow the template to initialise counters, etc.
   t.init()
   -- And...go!
@@ -474,7 +516,6 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   lbt.log(4, 'latex_for_command: %s', cmdstr)
   lbt.log('emit', '')
   lbt.log('emit', 'Line: %s', cmdstr)
-  -- DEBUGGER()
   -- 1. Handle a register allocation. Do not increment command count.
   if opcode == 'STO' then
     lbt.fn.impl.assign_register(args)
@@ -697,23 +738,7 @@ end
 
 --------------------------------------------------------------------------------
 -- {{{ Miscellaneous functions
---  * style_string_to_map(text)
 --------------------------------------------------------------------------------
-
--- 'Q.color gray :: MC.alphabet roman'
---    --> { 'Q.color' = 'gray', 'MC.alphabet' = 'roman'}
---
--- Return type is a pl.Map, at least for now. This is probably helpful for
--- calling 'update'.
-lbt.fn.style_string_to_map = function(text)
-  local result = pl.Map()
-  for style_string in lbt.util.double_colon_split(text):iter() do
-    -- sty is something like 'Q.color PeachPuff'
-    local key, val = table.unpack(lbt.util.space_split(style_string, 2))
-    result[key] = val
-  end
-  return result
-end
 
 lbt.fn.set_log_channels_for_debugging_single_expansion = function ()
   lbt.var.saved_log_channels = pl.List(lbt.system.log_channels)

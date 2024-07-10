@@ -80,9 +80,10 @@ lbt.init.init_system = function ()
   -- and once a template has been referenced (and hence loaded) once, it is
   -- available for use from then on.
   lbt.system.template_register = pl.Map()
-  -- Style mapping that the author wants applied in every template expansion.
-  -- Set via (for example) \lbtStyles{Q.color purple :: MC.alphabet roman}
-  lbt.system.document_wide_styles = pl.Map()
+  -- Option mapping that the author wants applied in every template expansion.
+  -- Set via (for example)
+  --    \lbtDocumentWideOptions{Q.color = purple, vector.format = arrow}
+  lbt.system.document_wide_options = pl.Map()
   -- If we have a system-wide draft mode, then only content labeled !DRAFT
   -- will be expanded.
   -- Set via \lbtDraftMode{true}
@@ -105,7 +106,7 @@ end
 --  * leave draft mode as it was
 --  * set log channels to the default empty list
 lbt.init.soft_reset_system = function ()
-  lbt.system.document_wide_styles = pl.Map()
+  lbt.system.document_wide_options = pl.Map()
   for name, t in lbt.system.template_register:iter() do
     if name:startswith('lbt.') then
       -- do nothing

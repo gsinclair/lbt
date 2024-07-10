@@ -9,8 +9,9 @@ local F = string.format
 
 local f = {}   -- functions
 local a = {}   -- number of arguments
-local s = {}   -- styles
+local o = pl.List()  -- options
 local m = {}   -- macros
+
 
 --------------------------------------------------------------------------------
 
@@ -30,7 +31,8 @@ local m = {}   -- macros
 --  if needed.
 
 local function vector_pronumeral(x)
-  local format = lbt.util.get_style('vector.format')
+  local format = lbt.util.get_option_for_macro('vector.format')
+  -- if format ~= 'bold' then DEBUGGER() end
   if format == 'bold' then
     return F([[\ensuremath{\mathbf{%s}}]], x)
   elseif format == 'arrow' then
@@ -41,7 +43,9 @@ local function vector_pronumeral(x)
     return F([[\ensuremath{\underaccent{\tilde}{%s}}]], x)
   else
     local errormsg1 = F('Invalid style value for vector.format: <%s>', format)
-    local errormsg2 = 'Valid options: boldrm | boldit | arrow | tilde'
+    local errormsg2 = 'Valid options: bold | arrow | tilde'
+    -- NOTE: the options listed above was once boldrm | boldit | ...
+    -- Should I implement those?
     return lbt.util.latex_macro_error(errormsg1 .. '\n' .. errormsg2)
   end
 end
@@ -50,7 +54,7 @@ local function vector_segment(ab)
   return F([[\ensuremath{\vv{\mathit{%s}}}]], ab)
 end
 
-s.vector = { format = 'bold' }
+o:append 'vector.format = bold'
 m.vector = function (text)
   local args
   if text:find(',') then
@@ -278,7 +282,7 @@ return {
   expand    = nil,
   functions = f,
   arguments = a,
-  styles    = s,
+  default_options = o,
   macros    = m,
 }
 

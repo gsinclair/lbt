@@ -90,6 +90,7 @@ lbt.api.author_content_emit_latex = function()
   lbt.log('read', pl.pretty.write(c))
   lbt.log('read', ">>>")
   lbt.log('read', "")
+  -- if eid == 109 then DEBUGGER() end
   local pc = lbt.fn.parsed_content(c)
   if pc.pragmas.ignore then
     lbt.log(3, '  * IGNORE pragma detected - no further action for eID %d', eid)
@@ -275,14 +276,17 @@ lbt.api.default_template_expand = function()
   end
 end
 
-lbt.api.add_styles = function (text)
-  local map = lbt.fn.style_string_to_map(text)
-  lbt.log(3, 'Document-wide styles are being updated:')
-  lbt.log(3, lbt.pp(map))
-  lbt.system.document_wide_styles:update(map)
-  return nil
+lbt.api.add_document_wide_options = function (text)
+  local options = lbt.parser.parse_dictionary(text)
+  if options then
+    lbt.log(3, 'Document-wide options are being updated:')
+    lbt.log(3, lbt.pp(options))
+    lbt.system.document_wide_options:update(options)
+    return nil
+  else
+    lbt.err.E945_invalid_option_dictionary_wide(text)
+  end
 end
-
 
 lbt.api.set_log_channels = function (csv)
   lbt.system.log_channels = pl.List()

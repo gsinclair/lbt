@@ -63,7 +63,8 @@
 
 \newcommand{\lbtTemplateDirectory}[1]{\directlua{lbt.api.add_template_directory("#1")}} 
 
-\newcommand{\lbtStyles}[1]{\directlua{lbt.api.add_styles("#1")}} 
+\newcommand{\lbtDocumentWideOptions}[1]{%
+  \directlua{lbt.api.add_document_wide_options("#1")}} 
 
 \newcommand{\lbtLogChannels}[1]{\directlua{lbt.api.set_log_channels("#1")}} 
 

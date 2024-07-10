@@ -183,6 +183,34 @@ lbt.err.E325_invalid_return_from_template_function = function (token, result)
   E('When calling function for token %s, the result was invalid\nResult: %s', token, lbt.pp(result))
 end
 
-lbt.err.E192_option_lookup_failed = function (opcode, key)
-  E('Attempt to resolve option "%s" failed (opcode: %s)', key, opcode)
+lbt.err.E192_option_lookup_failed = function (opcode, key, ol)
+  E('Attempt to resolve option "%s" failed (opcode: %s)\n\n' ..
+    'Information about option-lookup:\n\n%s', key, opcode, ol)
+end
+
+lbt.err.E945_invalid_option_dictionary_wide = function (text)
+  E([[The text provided to \lbtDocumentWideOptions is invalid:
+      %s
+Use format: key1 = value1, key2 = value2, ...]], text)
+end
+
+lbt.err.E946_invalid_option_dictionary_narrow = function (text)
+  E([[The text provided to OPTIONS is invalid:
+      %s
+Use format: key1 = value1, key2 = value2, ...]], text)
+end
+
+lbt.err.E190_invalid_OptionLookup = function (field)
+  E('Some kind of error involving OptionLookup: %s', field)
+end
+
+lbt.err.E193_option_lookup_for_macro_failed = function (key, ol)
+  local a = F('Attempt to resolve option in a macro failed.  key: %s', key)
+  local b = '' ..
+  'Please note that macros can only get option values from document-wide\n' ..
+  'settings or document-narrow settings. They cannot rely upon a default value\n' ..
+  'in the way commands can. Therefore, please set the value of this option\n' ..
+  'using \\lbtDocumentWideOptions{key = value} or OPTIONS key = value.\n'
+  local c = F('Information about option-lookup: \n\n%s', ol)
+  E('%s\n\n%s\n\n%s\n\n', a, b, c)
 end

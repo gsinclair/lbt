@@ -8,24 +8,25 @@
 
 local F = string.format
 local f = {}
-local s = {}
 local a = {}
+local o = pl.List()
 local m = {}
 
-s.Article = { parstyle = 'skip',
-              parskip = '6pt plus 2pt minus 2pt',
-              parindent = '1em' }
+-- s.Article = { parstyle = 'skip',
+--               parskip = '6pt plus 2pt minus 2pt',
+--               parindent = '1em' }
+o:append 'Article.parstyle = skip, Article.parskip = 6pt plus 2pt minus 2pt, Article.parindent = 1em'
 
 local function init()
 end
 
--- Input: (pc) parsed content   (tr) token resolver   (sr) style resolver
-local function expand(pc, tr, sr)
+-- Input: (pc) parsed content   (ocr) opcode resolver   (ol) option lookup
+local function expand(pc, ocr, ol)
   local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
   local author   = lbt.util.content_meta_or_error(pc, 'AUTHOR')
   local date     = lbt.util.content_meta_or_nil(pc, 'DATE')
   local tsize    = lbt.util.content_meta_or_nil(pc, 'TITLE_SIZE') or 'Large'
-  local parstyle = o('Article.parstyle')
+  local parstyle = ol('Article.parstyle')
 
   -- 1. Preamble
   local a = ''
@@ -33,12 +34,12 @@ local function expand(pc, tr, sr)
     a = F([[
       \setlength{\parindent}{%s}
       \setlength{\parskip}{0pt}
-    ]]), o('Article.parindent')
+    ]]), ol('Article.parindent')
   elseif parstyle == 'skip' then
     a = F([[
       \setlength{\parindent}{0pt}
       \setlength{\parskip}{%s}
-    ]], o('Article.parskip'))
+    ]], ol('Article.parskip'))
   end
 
   -- 2. New page and table-of-contents addition
@@ -66,7 +67,7 @@ local function expand(pc, tr, sr)
     \bigskip
 
     %s
-  ]], lbt.util.latex_expand_content_list('BODY', pc, tr, sr))
+  ]], lbt.util.latex_expand_content_list('BODY', pc, ocr, ol))
 
   -- Put it all together!
   return lbt.util.combine_latex_fragments(a,b,c,d)
@@ -118,7 +119,7 @@ return {
   init      = init,
   expand    = expand,
   functions = f,
-  styles    = s,
+  default_options = o,
   arguments = a,
   macros    = m,
 }

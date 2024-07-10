@@ -45,7 +45,7 @@ end
 -- This is designed for use only in macro expansion, and only rarely.
 -- Commands should use the resolver passed to them.
 --
--- TODO update to use OptionLookup instead.
+-- TODO: remove this
 --
 lbt.util.get_style = function (key)
   local sr = lbt.const.style_resolver
@@ -53,6 +53,21 @@ lbt.util.get_style = function (key)
     lbt.err.E001_internal_logic_error('lbt.const.style_resolver not available')
   end
   return sr(key)
+end
+
+-- This is designed for use only in macro expansion, and only rarely.
+-- Commands should use the option lookup passed to them.
+lbt.util.get_option_for_macro = function (key)
+  local ol = lbt.const.option_lookup
+  if ol == nil then
+    lbt.err.E001_internal_logic_error('lbt.const.option_lookup not available')
+  end
+  local value = ol:_lookup(key)
+  if value == nil then
+    print(ol)
+    lbt.err.E193_option_lookup_for_macro_failed(key, ol)
+  end
+  return value
 end
 
 -- `x` may be a string or a table.
