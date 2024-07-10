@@ -191,7 +191,7 @@ end
 -- This function helps you format a red flag for the Latex output.
 function lbt.util.latex_macro_error(errormsg)
   local emsg1 = F('LBT Latex macro error occurred: %s', errormsg)
-  local emsg2 = F([[\textrm{\color{DeepPink3}\bfseries %s}]], emsg1)
+  local emsg2 = F([[\textrm{\color{lbtError}\bfseries %s}]], emsg1)
   return emsg2
 end
 
