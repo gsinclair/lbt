@@ -201,7 +201,7 @@ do
   end
   local makemap = function (text)
     local bits = lbt.util.space_split(text)
-    local map  = pl.Map()
+    local map  = {}
     for i = 1,#bits,2 do
       local key = bits[i]
       local val = bits[i+1]

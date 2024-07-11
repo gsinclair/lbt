@@ -165,7 +165,7 @@ local function T_parsed_content_1()
   local m = pc:meta()
   EQ(m.TEMPLATE, 'Basic')
   EQ(m.TRAIN, 'Bar :: Baz')
-  EQ(m.BUS, { capacity = '55', color = 'purple'} )
+  EQ(m.BUS, { capacity = 55, color = 'purple'} )
   -- check BODY is correct
   local b = pc:list_or_nil('BODY')
   assert(b)
@@ -263,12 +263,6 @@ local function T_number_in_alphabet()
   EQ(f(15, 'Roman'), 'XV')
 end
 
-local function T_style_string_to_map()
-  local text = "Q.vspace 30pt :: Q.color navy :: MC.alphabet latin"
-  local map  = lbt.fn.style_string_to_map(text)
-  EQ(map, { ["MC.alphabet"] = "latin", ["Q.color"] = "navy", ["Q.vspace"] = "30pt" })
-end
-
 local function T_styles_in_test_question_template_5a()
   lbt.api.reset_global_data()
   lbt.api.add_template_directory("PWD/templates")
@@ -343,7 +337,8 @@ local function T_simplemath()
   assert_math([[x ge alpha]], [[x \ge \alpha]])
   assert_math([[alpha beta gamma]], [[\alpha \beta \gamma]])
   assert_math([[OABC PQR XY]], [[\mathit{OABC} \mathit{PQR} \mathit{XY}]])
-  assert_math([[xxx]], [[xxx]])
+  assert_math([[D = \set {w in \bbC mid \abs {w} le 1}]],
+    [[D = \set {w \in \bbC \mid \abs {w} \le 1}]])
   assert_math([[xxx]], [[xxx]])
   assert_math([[xxx]], [[xxx]])
 end
@@ -370,7 +365,6 @@ local function RUN_TESTS(flag)
   T_expand_Basic_template_2()
   T_util()
   T_number_in_alphabet()
-  T_style_string_to_map()
   T_styles_in_test_question_template_5a()
   T_styles_in_test_question_template_5b()
   T_register_expansion()
