@@ -236,7 +236,7 @@ end
 local align_impl = function (star, args, o)
   local result = pl.List()
   local spr = o.spreadlines
-  if spr then
+  if spr ~= 'nil' then
     result:append(F([[\begin{spreadlines}{%s}]], spr))
   end
   local contents = args:concat([[ \\]] .. '\n')
@@ -245,7 +245,7 @@ local align_impl = function (star, args, o)
   %s
 \end{align%s}
   ]], starchar(star), contents, starchar(star))
-  if spr then
+  if spr ~= 'nil' then
     result:append([[\end{spreadlines}]])
   end
   return result:concat('\n')
