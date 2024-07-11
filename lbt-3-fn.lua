@@ -481,8 +481,11 @@ lbt.fn.latex_for_commands = function (commands, ocr, ol)
       local err = latex
       local msg = lbt.fn.impl.latex_message_token_raised_error(command[1], err)
       buffer:append(msg)
+    elseif status == 'stop-processing' then
+      goto early_exit
     end
   end
+  ::early_exit::
   return buffer
 end
 
@@ -500,10 +503,11 @@ end
 --  * ol:      an options lookup that we pass to the function
 --
 -- Return:
---  * 'ok', latex       [succesful]
---  * 'sto', nil        [STO register allocation]
---  * 'notfound', nil   [opcode not found among sources]
---  * 'error', details  [error occurred while processing command]
+--  * 'ok', latex              [succesful]
+--  * 'sto', nil               [STO register allocation]
+--  * 'stop-processing', nil   [CTRL stop]
+--  * 'notfound', nil          [opcode not found among sources]
+--  * 'error', details         [error occurred while processing command]
 --
 -- Side effect:
 --  * lbt.var.line_count is increased (unless this is a register allocation)
@@ -516,10 +520,18 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   lbt.log(4, 'latex_for_command: %s', cmdstr)
   lbt.log('emit', '')
   lbt.log('emit', 'Line: %s', cmdstr)
-  -- 1. Handle a register allocation. Do not increment command count.
+  -- 1a. Handle a register allocation. Do not increment command count.
   if opcode == 'STO' then
     lbt.fn.impl.assign_register(args)
     return 'sto', nil
+  end
+  -- 1b. Handle a CTRL dirctive.
+  if opcode == 'CTRL' then
+    if args[1] == 'stop' then
+      return 'stop-processing', nil
+    else
+      lbt.err.E938_unknown_CTRL_directive(args)
+    end
   end
   -- 2. Search for an opcode function (and argspec) and return if we did not find one.
   local x = ocr(opcode)   --> { opcode_function = ..., argspec = ... }
