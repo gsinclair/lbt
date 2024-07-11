@@ -30,7 +30,7 @@ f["TEXT*"] = function (n, args, o)
   if o.vspace == '0pt' then
     return args[1]
   else
-    return F([[\vspace{%s} %s]], o.vspace, args[1])
+    return F('\\vspace{%s}\n%s', o.vspace, args[1])
   end
 end
 
@@ -40,7 +40,7 @@ f.TEXT = function (n, args, o)
   if o.vspace == '0pt' then
     return F([[%s \par]], args[1])
   else
-    return F([[\vspace{%s} %s \par]], o.vspace, args[1])
+    return F('\\vspace{%s}\n%s \\par', o.vspace, args[1])
   end
 end
 
@@ -240,11 +240,10 @@ local align_impl = function (star, args, o)
     result:append(F([[\begin{spreadlines}{%s}]], spr))
   end
   local contents = args:concat([[ \\]] .. '\n')
-  local b = F([[
-\begin{align%s}
-  %s
-\end{align%s}
-  ]], starchar(star), contents, starchar(star))
+  local env = 'align' .. starchar(star)
+  result:append(F([[\begin{%s}]], env))
+  result:append(contents)
+  result:append(F([[\end{%s}]], env))
   if spr ~= 'nil' then
     result:append([[\end{spreadlines}]])
   end

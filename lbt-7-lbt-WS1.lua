@@ -33,10 +33,10 @@ local F = string.format
 
 local f = {}
 local a = {}
-local s = {}
+local o = pl.List()
 local m = {}
 
-s.WS1 = { title_color = 'MidnightBlue', teacher_notes_color = 'blue' }
+o:append 'WS1.title_color = MidnightBlue, WS1.teacher_notes_color = blue'
 
 -- Set styles to headings in WS0.   (Consering this...)
 -- s.WS0 = { heading_color = 'MidnightBlue' }
@@ -79,14 +79,14 @@ local function intro_box(data)
 end
 
 
--- Input: (pc) parsed content   (tr) token resolver   (sr) style resolver
-local function expand(pc, tr, sr)
+-- Input: (pc) parsed content   (ocr) opcode resolver   (ol) option lookup
+local function expand(pc, ocr, ol)
   local n        = lbt.api.persistent_counter_inc('WS1-worksheet')
   local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
   local course   = lbt.util.content_meta_or_error(pc, 'COURSE')
   local tnotes   = lbt.util.content_meta_or_nil(pc, 'TEACHERNOTES') or '(none specified)'
-  local titlecol = o('WS1.title_color')
-  local tncol    = o('WS1.teacher_notes_color')
+  local titlecol = ol('WS1.title_color')
+  local tncol    = ol('WS1.teacher_notes_color')
 
   -- 1. Preamble
   local a = [[
@@ -134,14 +134,14 @@ local function expand(pc, tr, sr)
     \bigskip
 
     %s
-  ]], lbt.util.latex_expand_content_list('BODY', pc, tr, sr))
+  ]], lbt.util.latex_expand_content_list('BODY', pc, ocr, ol))
 
   -- 7. Outro
   local g = F([[
     \vfill
 
     %s
-  ]], lbt.util.latex_expand_content_list('OUTRO', pc, tr, sr))
+  ]], lbt.util.latex_expand_content_list('OUTRO', pc, ocr, ol))
 
   -- Put it all together!
   return lbt.util.combine_latex_fragments(a,b,c,d,e,f,g)
@@ -155,7 +155,7 @@ return {
   init      = lbt.api.default_template_init,
   expand    = expand,
   functions = f,
-  styles    = s,
+  default_options = o,
   arguments = a,
   macros    = m,
 }

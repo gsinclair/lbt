@@ -481,6 +481,8 @@ lbt.fn.latex_for_commands = function (commands, ocr, ol)
       local err = latex
       local msg = lbt.fn.impl.latex_message_token_raised_error(command[1], err)
       buffer:append(msg)
+    elseif status == 'noop' then
+      -- do nothing
     elseif status == 'stop-processing' then
       goto early_exit
     end
@@ -506,6 +508,7 @@ end
 --  * 'ok', latex              [succesful]
 --  * 'sto', nil               [STO register allocation]
 --  * 'stop-processing', nil   [CTRL stop]
+--  * 'noop', nil              [a CTRL directive requiring no output]
 --  * 'notfound', nil          [opcode not found among sources]
 --  * 'error', details         [error occurred while processing command]
 --
@@ -529,6 +532,9 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   if opcode == 'CTRL' then
     if args[1] == 'stop' then
       return 'stop-processing', nil
+    elseif args[1] == 'eid' then
+      I('eid', lbt.fn.current_expansion_id())
+      return 'noop', nil
     else
       lbt.err.E938_unknown_CTRL_directive(args)
     end
