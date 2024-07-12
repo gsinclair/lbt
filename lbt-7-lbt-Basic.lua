@@ -436,6 +436,48 @@ f.TABLE = function(n, args, o)
   return x:concat('\n')
 end
 
+-- TWOPANEL .o ratio=2:3, align=bt :: \DiagramOne :: ◊DiagramOneText
+a.TWOPANEL = 2
+o:append 'TWOPANEL.ratio = 1:1, TWOPANEL.align = tt'
+f.TWOPANEL = function(n, args, o)
+  local ratio = lbt.parser.parse_ratio(2, o.ratio)
+  local align = lbt.parser.parse_align(2, o.align)
+  local w1 = ratio[1] / (ratio[1] + ratio[2])
+  local w2 = ratio[2] / (ratio[1] + ratio[2])
+  local a1, a2 = table.unpack(align)
+  local c1, c2 = table.unpack(args)
+  local template = [[
+      \begin{minipage}[%s]{%s\textwidth}
+        \vspace{0pt}
+        %s
+      \end{minipage}\hfill
+      \begin{minipage}[%s]{%s\textwidth}
+        %s
+      \end{minipage}
+    ]]
+  return F(template, a1, w1, c1, a2, w2, c2)
+end
+
+-- Example:
+--   SIDEBYSIDE* 0.6 :: 0.4 :: t :: c :: ◊A :: ◊B
+-- Note: this will be replaced with a more generic TWOPANE in Basic with a
+-- better syntax.
+a['SIDEBYSIDE*'] = 6
+f['SIDEBYSIDE*'] = function (n, args, sr)
+  -- width 1 and 2, content 1 and 2
+  local w1, w2, j1, j2, c1, c2 = table.unpack(args)
+  local template = [[
+      \begin{minipage}[%s]{%s\textwidth}
+        \vspace{0pt}
+        %s
+      \end{minipage}\hfill
+      \begin{minipage}[%s]{%s\textwidth}
+        %s
+      \end{minipage}
+    ]]
+  return F(template, j1, w1, c1, j2, w2, c2)
+end
+
 -- +---------------------------------------+
 -- | Macros                                |
 -- +---------------------------------------+

@@ -35,6 +35,10 @@ lbt.err.E001_internal_logic_error = function(details)
   end
 end
 
+lbt.err.E002_general = function(fmt, ...)
+  E(fmt, ...)
+end
+
 -- no longer needed
 lbt.err.E100_invalid_token = function(line)
   E("E100: Invalid token encountered in content line:\n  <<%s>>", line)

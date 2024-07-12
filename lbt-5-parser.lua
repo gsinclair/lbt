@@ -329,34 +329,7 @@ end
 
 -- }}}
 
--- {{{ Functions used by other parts of the code
--- 
--- We have lbt.parser.parsed_content(text) which returns a result object
--- containing a success flag, the max position reached, and a 'pc' object.
---
---   local x = lbt.parser.parsed_content(text)
---   if x.ok then
---     emit_latex(x.pc)
---   else
---     emit_error_message(text, x.maxposition)
---   end
---
--- The 'pc' object is defined in this file: the ParsedContent class. It contains
--- methods for accessing the parsed content, like the 'BODY' list or the 'META'
--- dictionary. This is what currently exists in fn.lua. Not all will make sense
--- here. We shall see.
---
---  * [ ] meta(pc)
---  * [ ] title(pc)
---  * [ ] dictionary(pc, "META")
---  * [ ] list(pc, "BODY")
---  * [ ] template_name(pc)
---  * [ ] template_object(pc)
---  * [ ] extra_sources(pc)
---  * [ ] extra_styles(pc)
---  * [ ] compact_representation(pc)       for debugging
-
-local ParsedContent = { }
+-- {{{ Functions: fundamental parsing (parsed_content_0, parse_dictionary)
 
 -- lbt.parser.parsed_content_0
 --   * Does the actual parsing
@@ -377,9 +350,60 @@ lbt.parser.parsed_content_0 = function(text)
   end
 end
 
+-- lbt.parser.parse_dictionary
 local dictionary_only = kvlist * hsp * -1
 lbt.parser.parse_dictionary = function(s)
   return dictionary_only:match(s)
+end
+
+-- }}}
+
+-- {{{ Functions: other parsing to support built-in templates
+-- 
+--   parse_ratio(n, text)
+--   parse_align(n, text)
+--
+--   parse_ratio(2, '3.5:2') -> { 3.5, 2 }
+--   parse_ratio(3, '3.5:2') -> error
+--   set n = -1 to accept any number of parts
+
+local ratio = P{'ratio',
+  number = C(Digit^1 * ('.' * Digit^1)^0) / tonumber,
+  part = V'number',
+  sep = P':',
+  ratio = Ct(V'part' * (V'sep' * V'part')^0 * -1)
+}
+
+lbt.parser.parse_ratio = function(n, text)
+  local r = ratio:match(text)
+  if not r then
+    lbt.err.E002_general('Unable to parse ratio from <<%s>>', text)
+  elseif #r == -1 or #r == n then
+    return r
+  else
+    lbt.err.E002_general('Ratio <<%s>> is supposed to have %d parts', text, n)
+  end
+end
+
+-- parse_align
+--  * 'tbm' -> { 't', 'b', 'm' }
+--  * 'tbx' -> error
+--  * like parse_ratio, specify the expected #parts, or -1
+
+local align = P{'align',
+  letter = C(S'tmb'),
+  align = Ct( (V'letter')^1 )
+}
+
+lbt.parser.parse_align = function(n, text)
+  local a = align:match(text)
+  if not a then
+    lbt.err.E002_general('Unable to parse align spec from <<%s>>', text)
+  elseif #a == -1 or #a == n then
+    return a
+  else
+    lbt.err.E002_general('Align spec <<%s>> is supposed to have %d parts', text, n)
+  end
 end
 
 -- }}}

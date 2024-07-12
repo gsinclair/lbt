@@ -145,6 +145,16 @@ local good_input_7 = content_lines([[
     Q The reverse of the number 129 is 921, and these add to 1050, which is divisible by 30. How many three-digit numbers have the property that, when added to their reverse, the sum is divisible by 30?
 ]])
 
+-- For testing various Basic commands
+local good_input_8 = content_lines([[
+  [@META]
+    TEMPLATE   lbt.Basic
+
+  [+BODY]
+    TEXT Hello
+    TWOPANEL Content 1 :: Content 2
+]])
+
 ----------------------------------------------------------------------
 
 local function T_pragmas_and_other_lines()
@@ -345,6 +355,16 @@ local function T_simplemath()
   assert_math([[xxx]], [[xxx]])
 end
 
+local function T_Basic_various()
+  lbt.api.reset_global_data()
+  lbt.fn.template_register_to_logfile()
+  local pc = lbt.fn.parsed_content(good_input_8)
+  lbt.fn.validate_parsed_content(pc)
+  local l  = lbt.fn.latex_expansion(pc)
+  I(l)
+  assert(l[2]:lfind('Content 1'))
+end
+
 ----------------------------------------------------------------------
 
 -- flag:
@@ -371,6 +391,7 @@ local function RUN_TESTS(flag)
   T_styles_in_test_question_template_5b()
   T_register_expansion()
   T_simplemath()
+  T_Basic_various()
 
   if flag == 1 then
     print("======================= </TESTS> (exiting)")
