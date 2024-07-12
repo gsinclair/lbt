@@ -4,6 +4,7 @@ nmap ,, <leader>bt
 
 nnoremap <silent> <leader>bt :!tmux send-keys -t right './runtest.sh' Enter <CR><CR>
 nnoremap <silent> <leader>be :!tmux send-keys -t right Enter<CR><CR>
+nnoremap <silent> <leader>bq :!tmux send-keys -t right q<CR><CR>
 nnoremap <silent> <leader>bx :!tmux send-keys -t right ^D<CR><CR>
 
 inoremap ,l ◊

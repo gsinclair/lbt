@@ -227,7 +227,8 @@ local function T_expand_Basic_template_1()
   assert(l[2]:lfind("\\item Bear"))
   assert(l[2]:lfind("\\item Chameleon"))
   assert(l[2]:lfind("\\item Frog"))
-  EQ(l[3], [[\vspace{30pt} Have you seen any of these?]])
+  EQ(l[3], [[\vspace{30pt}
+Have you seen any of these?]])
 end
 
 local function T_expand_Basic_template_2()
@@ -236,13 +237,13 @@ local function T_expand_Basic_template_2()
   local pc = lbt.fn.parsed_content(bad_input_1)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
-  assert(l[1]:lfind([[Token \verb|TEXT| raised error]]))
+  assert(l[1]:lfind([[Opcode \verb|TEXT| raised error]]))
   assert(l[1]:lfind([[0 args given but 1 expected]]))
-  assert(l[2]:lfind([[Token \verb|TEXT| raised error]]))
+  assert(l[2]:lfind([[Opcode \verb|TEXT| raised error]]))
   assert(l[2]:lfind([[3 args given but 1 expected]]))
-  assert(l[3]:lfind([[Token \verb|ITEMIZE| raised error]]))
+  assert(l[3]:lfind([[Opcode \verb|ITEMIZE| raised error]]))
   assert(l[3]:lfind([[0 args given but 1+ expected]]))
-  assert(l[4]:lfind([[Token \verb|XYZ| not resolved]]))
+  assert(l[4]:lfind([[Opcode \verb|XYZ| not resolved]]))
 end
 
 local function T_util()
@@ -290,7 +291,8 @@ local function T_styles_in_test_question_template_5b()
   local pc = lbt.fn.parsed_content(good_input_5b)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
-  EQ(l[1], [[\vspace{30pt} Complete these questions in the space below. \par]])
+  EQ(l[1], [[\vspace{30pt}
+Complete these questions in the space below. \par]])
   EQ(l[2], [[{\vspace{18pt}
               \bsferies\color{blue}Question~1}\enspace Evaluate:]])
   EQ(l[3], [[(a)~$2+2$]])

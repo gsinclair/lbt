@@ -475,11 +475,11 @@ lbt.fn.latex_for_commands = function (commands, ocr, ol)
     if status == 'ok' then
       buffer:append(latex)
     elseif status == 'notfound' then
-      local msg = lbt.fn.impl.latex_message_token_not_resolved(command[1])
+      local msg = lbt.fn.impl.latex_message_opcode_not_resolved(command[1])
       buffer:append(msg)
     elseif status == 'error' then
       local err = latex
-      local msg = lbt.fn.impl.latex_message_token_raised_error(command[1], err)
+      local msg = lbt.fn.impl.latex_message_opcode_raised_error(command[1], err)
       buffer:append(msg)
     elseif status == 'noop' then
       -- do nothing
@@ -996,12 +996,12 @@ lbt.fn.impl.template_normalise_default_options = function (x)
   return true, result
 end
 
-lbt.fn.impl.latex_message_token_not_resolved = function (token)
-  return F([[{\color{lbtError}\bfseries Token \verb|%s| not resolved} \par]], token)
+lbt.fn.impl.latex_message_opcode_not_resolved = function (opcode)
+  return F([[{\color{lbtError}\bfseries Opcode \verb|%s| not resolved} \par]], opcode)
 end
 
-lbt.fn.impl.latex_message_token_raised_error = function (token, err)
-  return F([[{\color{lbtError}\bfseries Token \verb|%s| raised error: \emph{%s}} \par]], token, err)
+lbt.fn.impl.latex_message_opcode_raised_error = function (opcode, err)
+  return F([[{\color{lbtError}\bfseries Opcode \verb|%s| raised error: \emph{%s}} \par]], opcode, err)
 end
 
 lbt.fn.impl.assign_register = function (args)
