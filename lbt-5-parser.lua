@@ -111,7 +111,8 @@ local commalist = P({'commalist',
 -- {{{ Meaty parsing units, like opcode, argument, command0, command1, commandn
 -- opcode is all upper case followed by optional star
 --   (this will have to evolve, not least for environments)
-local opcode = Pos * C(Upper^1 * (P'*')^-1) / tag('opcode')
+local opcodechar = Upper + Digit
+local opcode = Pos * C(Upper * opcodechar^0 * (P'*')^-1) / tag('opcode')
 -- separator
 local sep = space * '::' * hspace
 -- end of command: end-of-text or (a newline with no separator following)
@@ -211,7 +212,7 @@ local dictionary_block = P{ 'block',
   value = RestOfLine,
 }
 
-local list_header = Pos * '[+' * (Upper^1 / tag('list_header')) * ']' * hsp * nl
+local list_header = Pos * '[+' * (Upper^1 / tag('list_header')) * ']' * hsp * nl * sp
 local process_list_block = function(tags)
   return { type = 'list_block', name = tags[1].value, commands = tags[2] }
 end
