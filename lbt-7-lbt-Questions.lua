@@ -120,7 +120,7 @@ a.QQ = 1
 o:append 'QQ.vspace = 0pt'
 f.QQ = function(n, args, o)
   local qq = lbt.api.counter_inc('qq')
-  local vsp = o('QQ.vspace')
+  local vsp = o.vspace
   local label_style = [[\textcolor{blue}{(\alph*)}]]
   local template = [[
     \begin{enumerate}[align=left, topsep=3pt, start=%d, label=%s, left=1em .. 3.2em]
