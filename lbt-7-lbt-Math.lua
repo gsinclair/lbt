@@ -274,6 +274,103 @@ end
 
 --------------------------------------------------------------------------------
 
+-- mathlistand macro
+--
+-- Example invocation: \mathlistand{a,b,c,d}
+-- Output: $a$, $b$, $c$ and $d$
+
+m.mathlistand = function (text)
+  local values = lbt.util.comma_split(text)
+  local n = values:len()
+  values:transform(function(x) return F('$%s$', pl.stringx.strip(x)) end)
+  local last = values[n]
+  local rest = values:remove(n)
+  return rest:concat(', ') .. ' and ' .. last
+end
+
+--------------------------------------------------------------------------------
+
+-- mathlistor macro
+--
+-- Example invocation: \mathlistor{a,b,c,d}
+-- Output: $a$, $b$, $c$ or $d$
+
+m.mathlistor = function (text)
+  local values = lbt.util.comma_split(text)
+  local n = values:len()
+  values:transform(function(x) return F('$%s$', pl.stringx.strip(x)) end)
+  local last = values[n]
+  local rest = values:remove(n)
+  return rest:concat(', ') .. ' or ' .. last
+end
+
+--------------------------------------------------------------------------------
+
+-- mathlist macro
+--
+-- Example invocation: \mathlist{11,13,17,19}
+-- Output: $11$,$13$,$17$,$19$
+--
+-- Note: no 'and' before final element
+
+m.mathlist = function (text)
+  local values = lbt.util.comma_split(text)
+  values:transform(function(x) return F('$%s$', pl.stringx.strip(x)) end)
+  return values:concat(', ')
+end
+
+--------------------------------------------------------------------------------
+
+-- mathsum macro
+--
+-- Example invocation: \mathsum{a,b,c,d}
+-- Output: $a+b+c+d+e$
+
+m.mathsum = function (text)
+  local values = lbt.util.comma_split(text)
+  values:transform(pl.stringx.strip)
+  return '\\ensuremath{' .. values:concat('+') .. '}'
+end
+
+--------------------------------------------------------------------------------
+
+-- primefactorisation macro
+--
+-- Example invocation: \primefactorisation{2,2,2,5,7,7,19}
+-- Output: $2^3 \cdot 5 \cdot 7^2 \cdot 19$
+--
+-- Example invocation: \primefactorisation{explicit 2,2,2,5,7,7,19}
+-- Output: $2^3 \cdot 5^1 \cdot 7^2 \cdot 19^1$
+
+m.primefactorisation = function (text)
+  local explicit = false
+  if text:startswith('explicit ') then
+    explicit = true
+    text = text:sub(10)
+  end
+  local values = lbt.util.comma_split(text)
+  values:transform(pl.stringx.strip)
+  local tally = pl.OrderedMap()
+  for x in values:iter() do
+    if tally[x] then
+      tally[x] = tally[x] + 1
+    else
+      tally[x] = 1
+    end
+  end
+  local body = pl.List()
+  for p, n in tally:iter() do
+    if n == 1 and not explicit then
+      body:append(p)
+    else
+      body:append(F('%s^%s', p, n))
+    end
+  end
+  return '\\ensuremath{' .. body:concat(' \\cdot ') .. '}'
+end
+
+--------------------------------------------------------------------------------
+
 return {
   name      = 'lbt.Math',
   desc      = 'Specific support for mathematical typesetting',

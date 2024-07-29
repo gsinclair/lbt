@@ -107,7 +107,7 @@ o:append 'Q.vspace = 6pt, Q.color = blue'
 f.Q = function(n, args, o)
   lbt.api.counter_reset('qq')
   lbt.api.counter_reset('mc')
-  local vsp, col = o('Q.vspace Q.color')
+  local vsp, col = o('vspace color')
   local q = lbt.api.counter_inc('q')
   local template = [[
     \vspace{%s}

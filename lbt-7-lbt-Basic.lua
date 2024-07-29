@@ -414,6 +414,7 @@ end
 
 -- Table (using tabularray)
 a.TABLE = '2+'
+o:append 'TABLE.center = false, TABLE.centre = false'
 f.TABLE = function(n, args, o)
   -- \begin{tblr}{ ... specification (first argument) ...}
   --   arg 2 \\
@@ -421,7 +422,9 @@ f.TABLE = function(n, args, o)
   --   arg 4 \\
   --   ...
   -- \end{tblr}
+  local centre = o.centre or o.center
   local x = pl.List()
+  if centre then x:append([[\begin{center}]]) end
   x:append(F([[\begin{tblr}{%s}]], args[1]))
   for i = 2,n do
     line = args[i]
@@ -433,6 +436,7 @@ f.TABLE = function(n, args, o)
     end
   end
   x:append([[\end{tblr}]])
+  if centre then x:append([[\end{center}]]) end
   return x:concat('\n')
 end
 
@@ -448,9 +452,8 @@ f.TWOPANEL = function(n, args, o)
   local c1, c2 = table.unpack(args)
   local template = [[
       \begin{minipage}[%s]{%s\textwidth}
-        \vspace{0pt}
         %s
-      \end{minipage}\hfill
+      \end{minipage}%%
       \begin{minipage}[%s]{%s\textwidth}
         %s
       \end{minipage}

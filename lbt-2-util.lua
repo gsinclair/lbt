@@ -148,6 +148,7 @@ end
 -- TODO Allow caller to specify which index to look at for the options.
 --      We currently only look at the first, but I think sometimes it
 --      would be useful to look at the second.
+-- XXX: Remove this code. Should be using normal option parsing!
 function lbt.util.extract_option_argument (args)
   if args:len() == 0 then
     return nil, pl.List()
@@ -163,6 +164,7 @@ end
 
 -- Input:   cols=3, vspace=2pt
 -- Output:  { cols = '3', vspace = 2pt }
+-- XXX: Remove this code. Should be using normal option parsing!
 function lbt.util.parse_options(text)
   local result = pl.Map()
   local bits   = lbt.util.comma_split(text)
