@@ -1,0 +1,12 @@
+{
+  "runtime.version": "Lua 5.1",
+  "runtime.path": [
+    "?.lua",
+  ],
+  "diagnostics.globals": ["tex", "lbt", "pl"],
+  "workspace.checkThirdParty": false,
+  "workspace.ignoreDir": [
+    "./media", "./test/vendor", "./vendor"
+  ]
+}
+
