@@ -24,23 +24,29 @@ end
 -- f.TEXT = function(text) return F([[%s \par]], text) end
 -- f["TEXT*"] = function(text) return F([[%s]], text) end
 
+local textparagraphs = function (args, starting_index)
+  return args:slice(starting_index,-1):concat([[ \par ]])
+end
+
 o:append'TEXT*.vspace=0pt'
-a["TEXT*"] = 1
+a["TEXT*"] = '1+'
 f["TEXT*"] = function (n, args, o)
+  local paragraphs = textparagraphs(args,1)
   if o.vspace == '0pt' then
-    return args[1]
+    return paragraphs
   else
-    return F('\\vspace{%s}\n%s', o.vspace, args[1])
+    return F('\\vspace{%s}\n%s', o.vspace, paragraphs)
   end
 end
 
 o:append'TEXT.vspace=0pt'
-a.TEXT = 1
+a.TEXT = '1+'
 f.TEXT = function (n, args, o)
+  local paragraphs = textparagraphs(args,1)
   if o.vspace == '0pt' then
-    return F([[%s \par]], args[1])
+    return F([[%s \par]], paragraphs)
   else
-    return F('\\vspace{%s}\n%s \\par', o.vspace, args[1])
+    return F('\\vspace{%s}\n%s \\par', o.vspace, paragraphs)
   end
 end
 
@@ -114,14 +120,25 @@ end
 
 -- Paragraph
 
-a.PARAGRAPH = 2
+a.PARAGRAPH = '2+'
 f.PARAGRAPH = function(n, args, o)
-  return F([[\paragraph{%s}{%s} \par]], args[1], args[2])
+  return F([[\paragraph{%s}{%s} \par]], args[1], textparagraphs(args,2))
 end
 
 a['PARAGRAPH*'] = 2
 f['PARAGRAPH*'] = function(n, args, o)
-  return F([[\paragraph{%s}{%s}]], args[1], args[2])
+  return F([[\paragraph{%s}{%s}]], args[1], textparagraphs(args,2))
+end
+
+-- tcolorbox (simple use only; will have to add options)
+a.BOX = 1
+f.BOX = function(n, args, o)
+  local result = F([[
+\begin{tcolorbox}
+  %s
+\end{tcolorbox}
+  ]], args[1])
+  return result
 end
 
 -- Itemize and enumerate
@@ -180,6 +197,35 @@ f.ENUMERATE = function (n, args, o, k)
 \end{enumerate}
   ]], spec, items)
   return result
+end
+
+-- Headings H1 H2 H3
+--   (plain design, specific templates can overwrite)
+a.H1 = 1
+f.H1 = function(n, args)
+  return F([[
+%% Heading 1
+\par \vspace{1.5em}
+{\Large %s}
+  ]], args[1])
+end
+
+a.H2 = 1
+f.H2 = function(n, args)
+  return F([[
+%% Heading 2
+\par \vspace{1em}
+{\large %s}
+  ]], args[1])
+end
+
+a.H3 = 1
+f.H3 = function(n, args)
+  return F([[
+%% Heading 3
+\par \vspace{0.7em}
+\textbf{%s}
+  ]], args[1])
 end
 
 -- Columns (because why not? And because multicols doesn't let you do 1 col)
@@ -414,7 +460,7 @@ end
 
 -- Table (using tabularray)
 a.TABLE = '2+'
-o:append 'TABLE.center = false, TABLE.centre = false'
+o:append 'TABLE.center = false, TABLE.centre = false, TABLE.indent = false'
 f.TABLE = function(n, args, o)
   -- \begin{tblr}{ ... specification (first argument) ...}
   --   arg 2 \\
@@ -423,8 +469,13 @@ f.TABLE = function(n, args, o)
   --   ...
   -- \end{tblr}
   local centre = o.centre or o.center
+  local indent = o.indent
   local x = pl.List()
-  if centre then x:append([[\begin{center}]]) end
+  if centre then
+    x:append([[\begin{center}]])
+  elseif indent then
+    x:append(F([[\begin{adjustwidth}{%s}{0pt}]], indent))
+  end
   x:append(F([[\begin{tblr}{%s}]], args[1]))
   for i = 2,n do
     line = args[i]
@@ -436,7 +487,11 @@ f.TABLE = function(n, args, o)
     end
   end
   x:append([[\end{tblr}]])
-  if centre then x:append([[\end{center}]]) end
+  if centre then
+    x:append([[\end{center}]])
+  elseif indent then
+    x:append([[\end{adjustwidth}]])
+  end
   return x:concat('\n')
 end
 
@@ -498,8 +553,8 @@ return {
   name      = 'lbt.Basic',
   desc      = 'Fundamental Latex macros for everyday use (built in to lbt)',
   sources   = {},
-  init      = lbt.api.default_template_init(),
-  expand    = lbt.api.default_template_expand(),
+  init      = lbt.api.default_template_init,
+  expand    = lbt.api.default_template_expand,
   functions = f,
   arguments = a,
   default_options = o,

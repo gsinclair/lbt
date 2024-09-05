@@ -23,7 +23,7 @@ local o = pl.List()
 local a = {}
 local m = {}
 
-o:append'WS0.title_color = CadetBlue, WS0.teacher_notes_color = blue'
+o:append'WS0.title_color = BlueViolet, WS0.teacher_notes_color = blue'
 
 local function init()
 end
@@ -41,7 +41,8 @@ local function expand(pc, ocr, ol)
     \setlength{\parindent}{0em}
     \setlength{\parskip}{6pt plus 2pt minus 2pt}
     \newcommand{\TitleSet}[2]{{\bfseries\color{#1}#2}}
-    \newcommand{\CourseSet}[1]{{\color{Gray}\itshape #1}}
+    \newcommand{\CourseSet}[1]{{\color{CadetBlue}\itshape #1}}
+    \tcbset{colback=blue!10!white}
   ]]
 
   -- 2. Teacher notes

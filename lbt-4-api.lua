@@ -73,7 +73,10 @@ lbt.api.author_content_collect = function()
   -- Register that function. It will be unregistered when the environment ends.
   luatexbase.add_to_callback('process_input_buffer', f, 'process_line')
   -- Informative log message.
-  lbt.log(3, "New lbt environment encountered")
+  lbt.log(3, " ")
+  lbt.log(3, "+---------------------------------+")
+  lbt.log(3, "| New lbt environment encountered |")
+  lbt.log(3, "+---------------------------------+")
   lbt.log(3, "  * expansion ID:   %d", lbt.fn.next_expansion_id())
   lbt.log(3, "  * filename:       %s", status.filename)
   lbt.log(3, "  * line:           %s", status.linenumber)

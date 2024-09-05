@@ -1,0 +1,2 @@
+edit:
+  nvim *.lua *.sty

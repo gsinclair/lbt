@@ -116,7 +116,7 @@ local function expand(pc, ocr, ol)
   -- 3. New page and table-of-contents addition
   local c = F([[
     \newpage
-    \addcontentsline{toc}{section}{Worksheet %d. %s}
+    \addcontentsline{toc}{\lbtCurrentContentsLevel}{Worksheet %d: %s}
   ]], n, title)
 
   -- 4. Worksheet title and horizontal rule

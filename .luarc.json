@@ -3,7 +3,7 @@
   "runtime.path": [
     "?.lua",
   ],
-  "diagnostics.globals": ["tex", "lbt", "pl"],
+  "diagnostics.globals": ["tex", "lbt", "pl", "luatexbase", "status"],
   "workspace.checkThirdParty": false,
   "workspace.ignoreDir": [
     "./media", "./test/vendor", "./vendor"

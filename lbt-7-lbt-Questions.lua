@@ -103,16 +103,21 @@ end
 -- Questions, subquestions ----------------------------------------------------
 
 a.Q = 1
-o:append 'Q.vspace = 6pt, Q.color = blue'
+o:append 'Q.vspace = 6pt, Q.color = blue, Q.newpage = false'
 f.Q = function(n, args, o)
   lbt.api.counter_reset('qq')
   lbt.api.counter_reset('mc')
-  local vsp, col = o('vspace color')
+  local vsp, col, newpage = o('vspace color newpage')
   local q = lbt.api.counter_inc('q')
-  local template = [[
+  local template = pl.List()
+  if newpage then
+    template:append [[\clearpage]]
+  end
+  template:append [[
     \vspace{%s}
     {\color{%s}\bfseries Question~%d}\quad %s \par
   ]]
+  template = template:concat('\n')
   return F(template, vsp, col, q, args[1])
 end
 
@@ -250,7 +255,7 @@ f.SHOWHINTS = function(n, args, o)
     local x = F([[\par\textcolor{Mulberry}{\textbf{%d}} \enspace \textcolor{darkgray}{%s}]], q, h)
     text:append(x)
   end
-  text:append([[\end{small}]])
+  text:append([[\end{small} \par]])
   return text:concat('\n')
 end
 
@@ -263,7 +268,7 @@ f.SHOWANSWERS = function(n, args, o)
     local x = F([[\par\textcolor{Mulberry}{\textbf{%d}} \enspace \textcolor{darkgray}{%s}]], q, a)
     text:append(x)
   end
-  text:append([[\end{small}]])
+  text:append([[\end{small} \par]])
   return text:concat('\n')
 end
 

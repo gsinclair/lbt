@@ -209,15 +209,20 @@ do
     end
     return map
   end
-  local trig = makeset'sin cos tan sec csc cot'
+  local trig = makeset'sin cos tan sec csc cot arcsin'
   local other = makeset[[equiv forall exists nexists implies to in notin mid nmid
-                         quad le ge ne iff sqrt frac tfrac dfrac not neg
+                         quad le ge ne iff sqrt frac tfrac dfrac not
+                         neg wedge vee
                          subset subseteq nsubseteq superset superseteq nsuperseteq
                          int sum infty prod lim
-                         cdot times divide
+                         cdot times divide div
                          dots cdots ldots
                          log ln
                          pm
+                         angle degree
+                         binom
+                         triangle
+                         text
                          ]]
   local alpha = makeset[[alpha beta gamma delta epsilon zeta eta theta iota
                          kappa lambda mu nu xi omicron pi rho sigma tau
@@ -319,6 +324,14 @@ m.mathlist = function (text)
   return values:concat(', ')
 end
 
+-- TODO: document
+m.mathlistdots = function (text)
+  local values = lbt.util.comma_split(text)
+  values:transform(function(x) return F('$%s$', pl.stringx.strip(x)) end)
+  values:insert(#values-1, [[\dots]])
+  return values:concat(', ')
+end
+
 --------------------------------------------------------------------------------
 
 -- mathsum macro
@@ -330,6 +343,76 @@ m.mathsum = function (text)
   local values = lbt.util.comma_split(text)
   values:transform(pl.stringx.strip)
   return '\\ensuremath{' .. values:concat('+') .. '}'
+end
+
+-- NOTE: Idea -- just use mathsum but transform DOTS into \dots.
+-- Thus gain flexibility over where the dots appear.
+m.mathsumdots = function (text)
+  local values = lbt.util.comma_split(text)
+  values:transform(pl.stringx.strip)
+  values:insert(#values, [[\dots]])
+  return '\\ensuremath{' .. values:concat('+') .. '}'
+end
+
+--------------------------------------------------------------------------------
+
+-- mathseq macros
+--
+-- Example invocations:
+--    \mathseq{T,1,2,3,4,5}           -->     $T_1, T_2, T_3, T_4, T_5$
+--    \mathseqsum{T,1,2,3,4,5}        -->     $T_1 + T_2 + T_3 + T_4 + T_5$
+--    \mathseqproduct{T,1,2,3,4,5}    -->     $T_1 \, T_2 \, T_3 \, T_4 \, T_5$
+--    \mathseqdots{p,1,2,3,n}         -->     $p_1, p_2, p_3, \dots, p_n$
+--    \mathseqdotssum{p,1,2,3,n}      -->     $p_1 + p_2 + p_3 + \dots + p_n$
+--    \mathseqdotsproduct{p,1,2,3,n}  -->     $p_1 p_2 p_3 \dots p_n$
+
+local mathseqterms = function (text)
+  local args = lbt.util.comma_split(text)
+  args:transform(pl.stringx.strip)
+  local n = args:len()
+  local pronumeral = args[1]
+  local terms = pl.List()
+  for i = 2,n do
+    local term = F('%s_%s', pronumeral, args[i])
+    terms:append(term)
+  end
+  return terms
+end
+
+local mathseqdotsterms = function (text)
+  local terms = mathseqterms(text)
+  terms:insert(#terms-1, '\\dots')
+  return terms
+end
+
+m.mathseq = function (text)
+  local terms = mathseqterms(text)
+  return '\\ensuremath{' .. terms:concat(', ') .. '}'
+end
+
+m.mathseqsum = function (text)
+  local terms = mathseqterms(text)
+  return '\\ensuremath{' .. terms:concat(' + ') .. '}'
+end
+
+m.mathseqproduct = function (text)
+  local terms = mathseqdotsterms(text)
+  return '\\ensuremath{' .. terms:concat(' \\, ') .. '}'
+end
+
+m.mathseqdots = function (text)
+  local terms = mathseqdotsterms(text)
+  return '\\ensuremath{' .. terms:concat(', ') .. '}'
+end
+
+m.mathseqdotssum = function (text)
+  local terms = mathseqdotsterms(text)
+  return '\\ensuremath{' .. terms:concat(' + ') .. '}'
+end
+
+m.mathseqdotsproduct = function (text)
+  local terms = mathseqdotsterms(text)
+  return '\\ensuremath{' .. terms:concat(' \\, ') .. '}'
 end
 
 --------------------------------------------------------------------------------

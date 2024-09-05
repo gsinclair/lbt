@@ -132,6 +132,10 @@ lbt.util.combine_latex_fragments = function (...)
   return table.concat({...}, '\n\n')
 end
 
+lbt.util.join_lines = function (...)
+  return table.concat({...}, '\n')
+end
+
 function lbt.util.wrap_braces(x)
   return '{' .. x .. '}'
 end
@@ -202,6 +206,22 @@ end
 function lbt.util.comma_split(text)
   local result = pl.utils.split(text, '%s*,%s*')
   return pl.List(result)
+end
+
+-- newline_split('a \n b \n c')    -> { 'a ', 'b ', 'c' }
+function lbt.util.newline_split(text)
+  local result = pl.utils.split(text, '\n')
+  return pl.List(result)
+end
+
+-- Replace curly quotes (single or double) with straight quotes.
+function lbt.util.straighten_quotes(text)
+  local x = text
+  -- if x:find('\226') then DEBUGGER() end
+  x = x:gsub('\226\128\156', '\034')
+  x = x:gsub('\226\128\157', '\034')
+  -- x = text:gsub('[‘’]', '\'')
+  return x
 end
 
 -- When expanding an LBT macro like lbt.Math.myvec, an error might occur.
