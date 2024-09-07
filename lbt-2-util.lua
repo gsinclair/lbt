@@ -128,6 +128,38 @@ lbt.util.content_dictionary_or_error = function (pc, key)
   return dict
 end
 
+-- Input: 'My name is !NAME! and I am !ADJ! to meet you',
+--        { NAME = 'Jon', ADJ = 'pleased', AGE = 37 }
+-- Output: 'My name is Jon and I am pleased to meet you'
+lbt.util.string_template_expand1 = function (template, values)
+  local substitute = function(s)
+    return values[s] or F('!!%s!!', s)
+  end
+  return template:gsub('!(%a+)!', substitute)
+end
+
+-- Like string_template_expand1 but you can provide as many 'templates' as you like.
+-- The output will concatenate 
+-- Example:
+--   string_template_expand {
+--     'My name is !NAME!.',
+--     'I am !ADJ! to meet you,',
+--     'and we will leave work at !TIME!.'
+--     values = { NAME = 'Allie', ADJ = 'miffed', TIME = '17:30'}
+--   }
+-- Output:
+--   My name is Allie.
+--   I am miffed to meet you,
+--   and we will leave work at 17:30.
+lbt.util.string_template_expand = function (t)
+  local lines = pl.List()
+  for _, x in ipairs(t) do
+    local transformed_line = lbt.util.string_template_expand1(x, t.values)
+    lines:append(transformed_line)
+  end
+  return lines:concat('\n')
+end
+
 lbt.util.combine_latex_fragments = function (...)
   return table.concat({...}, '\n\n')
 end

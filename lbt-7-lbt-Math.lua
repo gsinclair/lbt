@@ -211,7 +211,7 @@ do
   end
   local trig = makeset'sin cos tan sec csc cot arcsin'
   local other = makeset[[equiv forall exists nexists implies to in notin mid nmid
-                         quad le ge ne iff sqrt frac tfrac dfrac not
+                         quad le ge ne iff sqrt frac tfrac dfrac not approx sim
                          neg wedge vee
                          subset subseteq nsubseteq superset superseteq nsuperseteq
                          int sum infty prod lim

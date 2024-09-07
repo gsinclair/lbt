@@ -6,6 +6,7 @@
 -- +----------------------------------------+
 
 local F = string.format
+local T = lbt.util.string_template_expand
 
 local f = {}
 local a = {}
@@ -102,23 +103,42 @@ end
 
 -- Questions, subquestions ----------------------------------------------------
 
+-- Helper function for Q that renders in Latex the source of a question and
+-- a 'note'. Either or both arguments may be nil.
+local q_sourcenote = function(source, note)
+  local bits = pl.List()
+  if source then
+    local x = F([[\enspace {\color{Mulberry}\small [%s]}]], source)
+    bits:append(x)
+  end
+  if note then
+    local x = F([[\enspace {\color{CadetBlue}\small\itshape (%s)} ]], note)
+    bits:append(x)
+  end
+  return bits:concat()
+end
+
 a.Q = 1
 o:append 'Q.vspace = 6pt, Q.color = blue, Q.newpage = false'
-f.Q = function(n, args, o)
+f.Q = function(n, args, o, kw)
   lbt.api.counter_reset('qq')
   lbt.api.counter_reset('mc')
-  local vsp, col, newpage = o('vspace color newpage')
   local q = lbt.api.counter_inc('q')
   local template = pl.List()
-  if newpage then
+  if o.newpage then
     template:append [[\clearpage]]
   end
   template:append [[
-    \vspace{%s}
-    {\color{%s}\bfseries Question~%d}\quad %s \par
+    \vspace{!VSPACE!}
+    {\color{!COLOR!}\bfseries Question~!NUMBER!}{!SOURCENOTE!}\quad !TEXT! \par
   ]]
-  template = template:concat('\n')
-  return F(template, vsp, col, q, args[1])
+  template.values = {
+    VSPACE = o.vspace, COLOR = o.color, NUMBER = q,
+    SOURCENOTE = q_sourcenote(kw.source, kw.note),
+    TEXT = args[1] }
+  return T(template)
+  -- template = template:concat('\n')
+  -- return F(template, vsp, col, q, args[1])
 end
 
 a.QQ = 1
