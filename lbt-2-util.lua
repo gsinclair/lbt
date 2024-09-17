@@ -28,7 +28,7 @@ end
 --  * pc:          parsed content (passed to the `expand` function)
 --  * tr:          token resolver (passed to the `expand` function)
 --  * sr:          style resolver (passed to the `expand` function)
--- 
+--
 -- TODO update to use ocr and ol.
 --
 lbt.util.latex_expand_content_list = function (key, pc, ocr, ol)
@@ -139,7 +139,7 @@ lbt.util.string_template_expand1 = function (template, values)
 end
 
 -- Like string_template_expand1 but you can provide as many 'templates' as you like.
--- The output will concatenate 
+-- The output will concatenate
 -- Example:
 --   string_template_expand {
 --     'My name is !NAME!.',
@@ -170,6 +170,36 @@ end
 
 function lbt.util.wrap_braces(x)
   return '{' .. x .. '}'
+end
+
+-- kwargs: a table with keys 'content', 'environment' and 'args'.
+function lbt.util.wrap_environment(kwargs)
+  local t = pl.List()
+  t:append [[\begin{!ENV!}!ARGS!]]
+  t:append '!CONTENT!'
+  t:append [[\end{!ENV!}]]
+  t.values = {
+    ENV = kwargs.environment,
+    CONTENT = kwargs.content,
+    ARGS = pl.List(kwargs.args):map(lbt.util.wrap_braces):concat()
+  }
+  return lbt.util.string_template_expand(t)
+end
+
+-- x: latex content
+-- o: an options resolver; we are interested only in o.leftindent
+-- If leftindent is a value like '3em', wrap x in an adjustwidth environment
+-- to set the left margin.
+function lbt.util.leftindent(x, o)
+  if o.leftindent == nil or o.leftindent == 'nil' then
+    return x
+  else
+    return lbt.util.wrap_environment {
+      content = x,
+      environment = 'adjustwidth',
+      args = { o.leftindent, '' }
+    }
+  end
 end
 
 -- Given arguments to a token, see if the first one is an "options" argument.
@@ -328,5 +358,3 @@ function lbt.util.number_in_alphabet(n, alph)
     lbt.err.E402_invalid_alphabet(alph)
   end
 end
-
-

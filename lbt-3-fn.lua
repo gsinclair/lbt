@@ -138,7 +138,7 @@ end
 --  * OptionLookup.new { document_wide = ..., document_narrow = ..., sources = ...}
 --  * o:set_opcode_and_options(opcode, options)
 --  * o:unset_opcode_and_options()
--- 
+--
 -- Then use like so:
 --   ol = OptionLookup.new {...}
 --   ol:set_opcode_and_options('ITEMIZE', {compact=true})
@@ -269,10 +269,16 @@ function OptionLookup:_lookup(key)
 end
 
 -- ol['QQ.color'] either returns the value or raises an error.
+-- If the value is the string 'nil' then we return nil instead.
+-- (Just this one special case.) Note that 'true' and 'false' are
+-- handled by the lpeg, but 'nil' cannot be, because in that case
+-- the key would not be added to the table.
 OptionLookup.__index = function(self, key)
   local v = self:_lookup(key)
   if v == nil then
     lbt.err.E192_option_lookup_failed(rawget(self, _opcode_), key)
+  elseif v == 'nil' then
+    return nil
   else
     return v
   end
@@ -867,7 +873,7 @@ lbt.fn.impl.pragmas_and_content = function(input_lines)
 end
 
 -- lbt.fn.impl.consolidated_sources(pc,t)
--- 
+--
 -- A template itself has sources, starting with itself. For example, Exam might
 -- rely on Questions and Figures. A specific expansion optionally has extra
 -- sources defined in @META.SOURCES. The specific ones take precedence.
@@ -946,11 +952,11 @@ local convert_argspec = function(x)
   elseif type(x) ~= 'string' then
     return nil
   end
-  n = x:match('^(%d+)$') 
+  n = x:match('^(%d+)$')
   if n then
     return { spec = x, min = tonumber(n), max = tonumber(n) }
   end
-  n = x:match('^(%d+)[+]$') 
+  n = x:match('^(%d+)[+]$')
   if n then
     return { spec = x, min = tonumber(n), max = 9999 }
   end

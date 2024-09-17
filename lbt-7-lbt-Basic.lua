@@ -10,12 +10,10 @@ local m = {}   -- macros
 local o = pl.List()  -- options
 
 -- --------------------------------------------------------------------
-local starchar = function(star)
-  if star then
-    return '*'
-  else
-    return ''
-  end
+-- environment_name('align', true)  --> 'align*'
+-- environment_name('align', false) --> 'align'
+local environment_name = function (base, star)
+  return F('%s%s', base, star and '*' or '')
 end
 -- --------------------------------------------------------------------
 
@@ -58,7 +56,7 @@ a.CMD = '1+'
 f.CMD = function(n, args)
   local command = F([[\%s]], args[1])
   local arguments = args:slice(2,-1):map(lbt.util.wrap_braces):join()
-  return command..arguments  
+  return command..arguments
 end
 
 a.VSPACE = 1
@@ -131,13 +129,14 @@ f['PARAGRAPH*'] = function(n, args, o)
 end
 
 -- tcolorbox (simple use only; will have to add options)
-a.BOX = 1
+a.BOX = '1+'
 f.BOX = function(n, args, o)
+  local content = args:concat([[ \par \medskip ]])
   local result = F([[
 \begin{tcolorbox}
   %s
 \end{tcolorbox}
-  ]], args[1])
+  ]], content)
   return result
 end
 
@@ -280,29 +279,39 @@ end
 --    » :: F = ma
 
 local align_impl = function (star, args, o)
-  local result = pl.List()
-  local spr = o.spreadlines
-  if spr ~= 'nil' then
-    result:append(F([[\begin{spreadlines}{%s}]], spr))
+  local format_contents = function(text)
+    if o.leftindent then
+      return args:concat([[&& \\]] .. '\n')
+    else
+      return args:concat([[ \\]] .. '\n')
+    end
   end
-  local contents = args:concat([[ \\]] .. '\n')
-  local env = 'align' .. starchar(star)
-  result:append(F([[\begin{%s}]], env))
-  result:append(contents)
-  result:append(F([[\end{%s}]], env))
-  if spr ~= 'nil' then
-    result:append([[\end{spreadlines}]])
+  local t = pl.List()
+  if o.spreadlines then
+    t:append [[\begin{spreadlines}{!SPREADLINES!}]]
   end
-  return result:concat('\n')
+  t:append [[\begin{!ENVNAME!}]]
+  t:append '!CONTENTS!'
+  t:append [[\end{!ENVNAME!}]]
+  if o.spreadlines then
+    t:append [[\end{spreadlines}]]
+  end
+  t.values = {
+    SPREADLINES = o.spreadlines,
+    ENVNAME     = environment_name(o.leftindent and 'flalign' or 'align', star),
+    CONTENTS    = format_contents()
+  }
+  local x = lbt.util.string_template_expand(t)
+  return lbt.util.leftindent(x, o)
 end
 
-o:append 'ALIGN.spreadlines = nil'
+o:append 'ALIGN.spreadlines = nil, ALIGN.leftindent = nil'
 a.ALIGN = '1+'
 f.ALIGN = function(n, args, o)
   return align_impl(false, args, o)
 end
 
-o:append 'ALIGN*.spreadlines = nil'
+o:append 'ALIGN*.spreadlines = nil, ALIGN*.leftindent = nil'
 a['ALIGN*'] = '1+'
 f['ALIGN*'] = function(n, args, o)
   return align_impl(true, args, o)
@@ -325,7 +334,7 @@ end
 -----     return GSC.util.tex_error('HEADING requires two arguments separated by ::')
 -----   end
 ----- end
------ 
+-----
 ----- f.HEADING_INLINE = function(text)
 -----   local args = split(text, '::')
 -----   if #args == 2 then
@@ -334,7 +343,7 @@ end
 -----     return GSC.util.tex_error('HEADING_INLINE requires two arguments separated by ::')
 -----   end
 ----- end
------ 
+-----
 ----- f.SIDEBYSIDE = function (text)
 -----   local args = split(text, '::')
 -----   if #args == 2 then
@@ -343,7 +352,7 @@ end
 -----     return GSC.util.tex_error('SIDEBYSIDE requires two arguments separated by ::')
 -----   end
 ----- end
------ 
+-----
 ----- f['SIDEBYSIDE*'] = function (text)
 -----   local args = split(text, '::')
 -----   if #args == 6 then
@@ -363,7 +372,7 @@ end
 -----     return GSC.util.tex_error('SIDEBYSIDE requires four arguments -- w1, w2, just1, just2, cont1, cont2 -- separated by ::')
 -----   end
 ----- end
------ 
+-----
 
 -- FIGURE* for no caption
 
@@ -458,27 +467,9 @@ f.VERBATIM = function (n, args)
   ]], lines)
 end
 
--- Table (using tabularray)
-a.TABLE = '2+'
-o:append 'TABLE.center = false, TABLE.centre = false, TABLE.indent = false'
-f.TABLE = function(n, args, o)
-  -- \begin{tblr}{ ... specification (first argument) ...}
-  --   arg 2 \\
-  --   arg 3 \\         note that if the argument is \hline then there is no \\
-  --   arg 4 \\
-  --   ...
-  -- \end{tblr}
-  local centre = o.centre or o.center
-  local indent = o.indent
-  local x = pl.List()
-  if centre then
-    x:append([[\begin{center}]])
-  elseif indent then
-    x:append(F([[\begin{adjustwidth}{%s}{0pt}]], indent))
-  end
-  x:append(F([[\begin{tblr}{%s}]], args[1]))
+local table_contents_from_args = function (x, args)
   for i = 2,n do
-    line = args[i]
+    local line = args[i]
     if pl.stringx.lfind(line, [[\hline]]) then
       -- we do not put a \\ on this line
       x:append(line)
@@ -486,12 +477,69 @@ f.TABLE = function(n, args, o)
       x:append(line .. [[ \\]])
     end
   end
+end
+
+local table_contents_from_data = function (x, filename, sep)
+  local f = function()
+    for line in io.lines(filename) do
+      local content_line = line:gsub(sep, ' & ')
+      x:append(content_line .. [[ \\]])
+    end
+  end
+  local _, err = pcall(f)
+  return err
+end
+
+-- Table (using tabularray)
+a.TABLE = '1+'
+o:append 'TABLE.center = false, TABLE.centre = false, TABLE.indent = false'
+f.TABLE = function(n, args, o, kw)
+  -- \begin{tblr}{ ... specification (first argument) ...}
+  --   arg 2 \\
+  --   arg 3 \\         note that if the argument is \hline then there is no \\
+  --   arg 4 \\
+  --   ...
+  -- \end{tblr}
+  -- (0) Prelims
+  local centre = o.centre or o.center
+  local indent = o.indent
+  local x = pl.List()
+  -- (1) Centre and indent
+  if centre then
+    x:append([[\begin{center}]])
+  elseif indent then
+    x:append(F([[\begin{adjustwidth}{%s}{0pt}]], indent))
+  end
+  -- (2) Beginning of tblr environment
+  x:append(F([[\begin{tblr}{%s}]], args[1]))
+  -- (3) Contents of table, either with args or with tsv/csv file
+  local error = nil
+  if kw.tsv then
+    error = table_contents_from_data(x, kw.tsv, '\t')
+  elseif kw.csv then
+    error = table_contents_from_data(x, kw.csv, ',')
+  else
+    table_contents_from_args(x, args)
+  end
+  if error then
+    return { error = 'Failed to form table contents: ' .. error }
+  end
+  -- (4) End of tblr environment
   x:append([[\end{tblr}]])
+  -- (5) Caption
+  if kw.manualcaption then
+    x:append('')
+    x:append([[\smallskip]])
+    x:append(F([[\textbf{Table}\enspace %s]], kw.manualcaption))
+    x:append('')
+  end
+  -- (6) Close the centre or indent environment
   if centre then
     x:append([[\end{center}]])
   elseif indent then
     x:append([[\end{adjustwidth}]])
   end
+  -- (7) Done!
   return x:concat('\n')
 end
 
@@ -559,4 +607,3 @@ return {
   arguments = a,
   default_options = o,
 }
-
