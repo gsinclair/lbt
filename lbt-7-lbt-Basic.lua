@@ -287,6 +287,11 @@ local align_impl = function (star, args, o)
     end
   end
   local t = pl.List()
+  if o.vspace == -1 then
+    t:append [[\vspace{-\parskip}]]
+  elseif o.vspace then
+    t:append [[\vspace{!VSPACE!}]]
+  end
   if o.spreadlines then
     t:append [[\begin{spreadlines}{!SPREADLINES!}]]
   end
@@ -297,6 +302,7 @@ local align_impl = function (star, args, o)
     t:append [[\end{spreadlines}]]
   end
   t.values = {
+    VSPACE      = o.vspace,
     SPREADLINES = o.spreadlines,
     ENVNAME     = environment_name(o.leftindent and 'flalign' or 'align', star),
     CONTENTS    = format_contents()
@@ -305,13 +311,13 @@ local align_impl = function (star, args, o)
   return lbt.util.leftindent(x, o)
 end
 
-o:append 'ALIGN.spreadlines = nil, ALIGN.leftindent = nil'
+o:append 'ALIGN.spreadlines = nil, ALIGN.leftindent = nil, ALIGN.vspace = -1'
 a.ALIGN = '1+'
 f.ALIGN = function(n, args, o)
   return align_impl(false, args, o)
 end
 
-o:append 'ALIGN*.spreadlines = nil, ALIGN*.leftindent = nil'
+o:append 'ALIGN*.spreadlines = nil, ALIGN*.leftindent = nil, ALIGN*.vspace = -1'
 a['ALIGN*'] = '1+'
 f['ALIGN*'] = function(n, args, o)
   return align_impl(true, args, o)
@@ -467,81 +473,105 @@ f.VERBATIM = function (n, args)
   ]], lines)
 end
 
-local table_contents_from_args = function (x, args)
-  for i = 2,n do
-    local line = args[i]
-    if pl.stringx.lfind(line, [[\hline]]) then
-      -- we do not put a \\ on this line
-      x:append(line)
+-- return ok, (data|errormsg)
+local table_data_separator = function (filename)
+  if filename:endswith('.tsv') then
+    return true, '\t'
+  else if filename:endswith('.csv') then
+      return true, ' '
     else
-      x:append(line .. [[ \\]])
+      return false, F('Unknown file type: %s', filename)
     end
   end
 end
 
-local table_contents_from_data = function (x, filename, sep)
-  local f = function()
-    for line in io.lines(filename) do
-      local content_line = line:gsub(sep, ' & ')
-      x:append(content_line .. [[ \\]])
+-- return stat, data, errormsg
+--   stat = 0 for no data to load, 1 for successful data load, 2 for error
+local table_load_data_from_file = function (kw)
+  if kw.datafile then
+    local data = pl.List()
+    local ok, sep = table_data_separator(kw.datafile)
+    if not ok then
+      return 2, nil, sep   -- sep is the errormsg
     end
+    for line in io.lines(kw.datafile) do
+      data:append(lbt.util.split(line, sep))
+    end
+    return 1, data, nil
+  else
+    return 0, nil, nil
   end
-  local _, err = pcall(f)
-  return err
+end
+
+-- named arguments: template, instruction, data
+-- return ok (true or false)
+-- side-effect: append lines to template
+local table_insert_rows_from_data = function (namedargs)
+  local x = namedargs
+  local range = lbt.parser.parse_table_datarows(x.instruction)
+  if range then
+    local A, B = table.unpack(range)
+    local i = A
+    while i <= B and i <= x.data:len() do
+      local row = x.data[i]
+      local line = row:concat(' & ') .. [[ \\]]
+      x.template:append(line)
+      i = i + 1
+    end
+    return true
+  else
+    return false   -- couldn't parse the datarows spec
+  end
 end
 
 -- Table (using tabularray)
 a.TABLE = '1+'
-o:append 'TABLE.center = false, TABLE.centre = false, TABLE.indent = false'
+o:append 'TABLE.center = false, TABLE.centre = false, TABLE.indent = false, TABLE.fontsize = nil'
 f.TABLE = function(n, args, o, kw)
-  -- \begin{tblr}{ ... specification (first argument) ...}
-  --   arg 2 \\
-  --   arg 3 \\         note that if the argument is \hline then there is no \\
-  --   arg 4 \\
-  --   ...
-  -- \end{tblr}
-  -- (0) Prelims
-  local centre = o.centre or o.center
-  local indent = o.indent
-  local x = pl.List()
-  -- (1) Centre and indent
-  if centre then
-    x:append([[\begin{center}]])
-  elseif indent then
-    x:append(F([[\begin{adjustwidth}{%s}{0pt}]], indent))
+  -- t is our template list where we accumulate our result
+  local t = pl.List()
+  -- extract the table spec (there must be one)
+  local spec = kw.spec
+  if not spec then return { error = 'No table spec provided' } end
+  -- load data from file, if necessary
+  local stat, data, errormsg = table_load_data_from_file(kw)
+  if stat == 2 then return { error = errormsg } end
+  -- beginning of tblr environment
+  t:append [[\begin{tblr}{!SPEC!}]]
+  -- contents of table (positional arguments)
+  for line in args:iter() do
+    if line:startswith('@datarows') then
+      local ok = table_insert_rows_from_data {
+        template = t, instruction = line, data = data
+      }
+      if not ok then return { error = 'Invalid datarows spec: ' .. line } end
+    elseif pl.stringx.lfind(line, [[\hline]]) then
+      -- we do not put a \\ on this line
+      t:append(line)
+    else
+      t:append(line .. [[ \\]])
+    end
   end
-  -- (2) Beginning of tblr environment
-  x:append(F([[\begin{tblr}{%s}]], args[1]))
-  -- (3) Contents of table, either with args or with tsv/csv file
-  local error = nil
-  if kw.tsv then
-    error = table_contents_from_data(x, kw.tsv, '\t')
-  elseif kw.csv then
-    error = table_contents_from_data(x, kw.csv, ',')
-  else
-    table_contents_from_args(x, args)
-  end
-  if error then
-    return { error = 'Failed to form table contents: ' .. error }
-  end
-  -- (4) End of tblr environment
-  x:append([[\end{tblr}]])
-  -- (5) Caption
+  -- end of tblr environment
+  t:append [[\end{tblr}]]
+  -- caption (if supplied)
   if kw.manualcaption then
-    x:append('')
-    x:append([[\smallskip]])
-    x:append(F([[\textbf{Table}\enspace %s]], kw.manualcaption))
-    x:append('')
+    t:append ''
+    t:append [[\smallskip]]
+    t:append [[{\small\textbf{Table}\enspace !MANUALCAPTION!}]]
+    t:append ''
   end
-  -- (6) Close the centre or indent environment
-  if centre then
-    x:append([[\end{center}]])
-  elseif indent then
-    x:append([[\end{adjustwidth}]])
-  end
-  -- (7) Done!
-  return x:concat('\n')
+  -- expand the template and handle o.centre or o.leftindent
+  t.values = {
+    SPEC = spec,
+    MANUALCAPTION = kw.manualcaption
+  }
+  local result = lbt.util.string_template_expand(t)
+  result = lbt.util.apply_horizontal_formatting(result, o)
+  result = lbt.util.apply_style_formatting(result, o)
+  return result
 end
+
 
 -- TWOPANEL .o ratio=2:3, align=bt :: \DiagramOne :: ◊DiagramOneText
 a.TWOPANEL = 2
@@ -562,6 +592,7 @@ f.TWOPANEL = function(n, args, o)
       \end{minipage}
     ]]
   return F(template, a1, w1, c1, a2, w2, c2)
+  -- TODO: use string template
 end
 
 -- Example:

@@ -275,6 +275,10 @@ local function T_util()
     values = { COUNTRY = 'Spain', OBJECT = 'plain' }
   }
   EQ(lbt.util.string_template_expand(t), 'The rain in Spain\nfalls mainly on the\nplain, so I am told.')
+  local a, b = lbt.util.parse_range('4..17')
+  EQ(a, 4); EQ(b, 17)
+  a, b = lbt.util.parse_range('6')
+  EQ(a, 6); EQ(b, 6)
 end
 
 local function T_number_in_alphabet()

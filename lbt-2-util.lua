@@ -202,6 +202,49 @@ function lbt.util.leftindent(x, o)
   end
 end
 
+-- x: latex content
+-- o: an options resolver; we are interested in o.leftindent and o.centre and o.center
+-- If leftindent is a value like '3em', wrap x in an adjustwidth environment
+-- to set the left margin.
+-- If centre or center is true, wrap x in a 'center' environment.
+-- TODO: decide whether to implement 'indent' as well as 'leftindent', for example.
+function lbt.util.apply_horizontal_formatting(x, o)
+  if o.center or o.centre then
+    return lbt.util.wrap_environment {
+      content = x,
+      environment = 'center',
+    }
+  elseif o.leftindent then
+    return lbt.util.wrap_environment {
+      content = x,
+      environment = 'adjustwidth',
+      args = { o.leftindent, '' }
+    }
+  else
+    return x
+  end
+end
+
+-- x: latex content
+-- o: an options resolver; we are interested in o.fontsize
+-- Applies environment 'small' or 'footnotesize' or ...
+function lbt.util.apply_style_formatting(x, o)
+  if o.fontsize then
+    return lbt.util.wrap_environment {
+      content = x,
+      environment = o.fontsize,
+    }
+  else
+    return x
+  end
+end
+
+-- Input: '4..17'    Output: 4, 17
+-- Invalid input causes fatal error.
+function lbt.util.parse_range(text)
+  return lbt.parser.parse_range(text)
+end
+
 -- Given arguments to a token, see if the first one is an "options" argument.
 -- Return the options argument (or nil) and the rest of the arguments.
 -- e.g.
@@ -273,6 +316,12 @@ end
 -- newline_split('a \n b \n c')    -> { 'a ', 'b ', 'c' }
 function lbt.util.newline_split(text)
   local result = pl.utils.split(text, '\n')
+  return pl.List(result)
+end
+
+-- simply calls penlight's string:split but returns a List instead of a plain table
+function lbt.util.split(text, sep)
+  local result = pl.utils.split(text, sep)
   return pl.List(result)
 end
 

@@ -1,4 +1,4 @@
--- 
+--
 -- We act on the global table `lbt` and populate its subtable `lbt.fn`.
 --
 
@@ -39,7 +39,7 @@ local V = lpeg.V
 
 -- }}}
 
--- {{{ Fundamental parsing units, like space, position, tag function
+-- {{{ Fundamental parsing units, like space, position, tag function, integer
 local tag = function(type)
   return function(x)
     return { type = type, value = x }
@@ -63,6 +63,8 @@ local RestOfLine = (P(1) - nl)^1
 local Symbol = S'_.*'
 -- identifier can be like foo or foo_bar or foo.bar or TEXT*.vsp
 local identifier = Alpha * (Alpha + Digit + Symbol)^1
+local integer = (P('-')^-1 * R'19' * (R'09')^0) / tonumber
+local integer_only = integer * -1
 -- }}}
 
 -- {{{ Key-value list (used in optargs and in META values like OPTIONS etc.)
@@ -81,8 +83,7 @@ local parsed_value = P{'value',
   btrue = (P'true' * -1) / function() return true end,
   bfalse = (P'false' * -1) / function() return false end,
   zero = (P('0') * -1) / tonumber,
-  integer = (P('-')^-1 * R'19' * (R'09')^0 * -1) / tonumber,
-  value = V'zero' + V'integer' + V'btrue' + V'bfalse' + V'general',
+  value = V'zero' + integer_only + V'btrue' + V'bfalse' + V'general',
 }
 local process_value = function(text)
   local x = parsed_value:match(text)
@@ -360,7 +361,7 @@ end
 -- }}}
 
 -- {{{ Functions: other parsing to support built-in templates
--- 
+--
 --   parse_ratio(n, text)
 --   parse_align(n, text)
 --
@@ -407,5 +408,33 @@ lbt.parser.parse_align = function(n, text)
   end
 end
 
--- }}}
+-- parse_range
+--  * '4..17'  -> 4, 17
+--  * '6'      -> 6, 6
+local range = P{'range',
+  single = integer_only / function (x) return {x,x} end,
+  double = Ct(integer * ('..' * integer)^-1 * -1),
+  range  = V'single' + V'double'
+}
 
+lbt.parser.parse_range = function(text)
+  local r = range:match(text)
+  if not r then
+    lbt.err.E002_general('Unable to parse range from text: "%s"', text)
+  end
+  return table.unpack(r)
+end
+
+-- parse_table_datarows
+--  '@datarows 4..19'   -> {4, 19}
+--  '@datarows 12'      -> {12, 12}
+--  '@datarows xyz'     -> nil
+--  'house'             -> nil
+local datarows = P'@datarows' * hspace * range * -1
+
+lbt.parser.parse_table_datarows = function(text)
+  local r = datarows:match(text)
+  return r or nil
+end
+
+-- }}}
