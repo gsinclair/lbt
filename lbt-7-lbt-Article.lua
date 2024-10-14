@@ -15,7 +15,8 @@ local m = {}
 -- s.Article = { parstyle = 'skip',
 --               parskip = '6pt plus 2pt minus 2pt',
 --               parindent = '1em' }
-o:append 'Article.parstyle = skip, Article.parskip = 6pt plus 2pt minus 2pt, Article.parindent = 1em'
+-- o:append 'Article.parstyle = skip, Article.parskip = 6pt plus 2pt minus 2pt, Article.parindent = 1em'
+o:append 'Article.parskip = 2pt plus 2pt minus 1pt, Article.parindent = 15pt'
 
 local function init()
 end
@@ -26,21 +27,12 @@ local function expand(pc, ocr, ol)
   local author   = lbt.util.content_meta_or_error(pc, 'AUTHOR')
   local date     = lbt.util.content_meta_or_nil(pc, 'DATE')
   local tsize    = lbt.util.content_meta_or_nil(pc, 'TITLE_SIZE') or 'Large'
-  local parstyle = ol('Article.parstyle')
 
   -- 1. Preamble
-  local a = ''
-  if parstyle == 'indent' then
-    a = F([[
-      \setlength{\parindent}{%s}
-      \setlength{\parskip}{0pt}
-    ]]), ol('Article.parindent')
-  elseif parstyle == 'skip' then
-    a = F([[
-      \setlength{\parindent}{0pt}
-      \setlength{\parskip}{%s}
-    ]], ol('Article.parskip'))
-  end
+  local a = F([[
+    \setlength{\parindent}{%s}
+    \setlength{\parskip}{%s}
+  ]], ol('Article.parindent'), ol('Article.parskip'))
 
   -- 2. New page and table-of-contents addition
   local b = F([[
@@ -57,7 +49,7 @@ local function expand(pc, ocr, ol)
   end
   local c = F([[
     \begin{%s}
-    %s
+    \noindent %s
     \end{%s} \\[1em]
     %s
   ]], tsize, title, tsize, authordate)
