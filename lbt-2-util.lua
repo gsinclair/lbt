@@ -38,7 +38,7 @@ lbt.util.latex_expand_content_list = function (key, pc, ocr, ol)
     -- TODO ^^^ add contextual information
     return ''
   end
-  lines = lbt.fn.latex_for_commands(list, ocr, ol)
+  local lines = lbt.fn.latex_for_commands(list, ocr, ol)
   return lines:concat('\n')
 end
 
@@ -131,11 +131,13 @@ end
 -- Input: 'My name is !NAME! and I am !ADJ! to meet you',
 --        { NAME = 'Jon', ADJ = 'pleased', AGE = 37 }
 -- Output: 'My name is Jon and I am pleased to meet you'
+-- Note: valid substitution tokens use upper-case, numbers, and underscores.
+--       (But mostly just upper case.)
 lbt.util.string_template_expand1 = function (template, values)
   local substitute = function(s)
     return values[s] or F('!!%s!!', s)
   end
-  return template:gsub('!(%a+)!', substitute)
+  return template:gsub('!(%u[%u%d_]+)!', substitute)
 end
 
 -- Like string_template_expand1 but you can provide as many 'templates' as you like.
@@ -172,16 +174,17 @@ function lbt.util.wrap_braces(x)
   return '{' .. x .. '}'
 end
 
--- kwargs: a table with keys 'content', 'environment' and 'args'.
+-- kwargs: a table with keys 'content', 'environment', (opt) 'bracket_arg', (opt) 'brace_args'
 function lbt.util.wrap_environment(kwargs)
   local t = pl.List()
-  t:append [[\begin{!ENV!}!ARGS!]]
+  t:append [[\begin{!ENV!}!BRACKET_ARG!!BRACE_ARGS!]]
   t:append '!CONTENT!'
   t:append [[\end{!ENV!}]]
   t.values = {
     ENV = kwargs.environment,
     CONTENT = kwargs.content,
-    ARGS = pl.List(kwargs.args):map(lbt.util.wrap_braces):concat()
+    BRACKET_ARG = kwargs.bracket_arg and '['..kwargs.bracket_arg..']' or '',
+    BRACE_ARGS = pl.List(kwargs.brace_args):map(lbt.util.wrap_braces):concat()
   }
   return lbt.util.string_template_expand(t)
 end
@@ -197,7 +200,7 @@ function lbt.util.leftindent(x, o)
     return lbt.util.wrap_environment {
       content = x,
       environment = 'adjustwidth',
-      args = { o.leftindent, '' }
+      brace_args = { o.leftindent, '' }
     }
   end
 end
@@ -218,7 +221,7 @@ function lbt.util.apply_horizontal_formatting(x, o)
     return lbt.util.wrap_environment {
       content = x,
       environment = 'adjustwidth',
-      args = { o.leftindent, '' }
+      brace_args = { o.leftindent, '' }
     }
   else
     return x

@@ -526,9 +526,13 @@ end
 
 -- Table (using tabularray)
 a.TABLE = '1+'
-o:append 'TABLE.center = false, TABLE.centre = false, TABLE.indent = false, TABLE.fontsize = nil'
+o:append 'TABLE.center = false, TABLE.centre = false, TABLE.leftindent = false'
+o:append 'TABLE.fontsize = nil'
+o:append 'TABLE.float = false, TABLE.position = htbp'
 f.TABLE = function(n, args, o, kw)
   -- t is our template list where we accumulate our result
+  -- Note: we do not include a table environment. That is applied (if o.float) once
+  -- everything, including centering and other formatting, is done. See bottom of function.
   local t = pl.List()
   -- extract the table spec (there must be one)
   local spec = kw.spec
@@ -536,6 +540,21 @@ f.TABLE = function(n, args, o, kw)
   -- load data from file, if necessary
   local stat, data, errormsg = table_load_data_from_file(kw)
   if stat == 2 then return { error = errormsg } end
+  -- If it is a floating table, apply the (optional) caption and label.
+  if o.float then
+    if kw.caption then t:append [[\caption{!CAPTION!}]] end
+    if kw.label   then t:append [[\label{!LABEL!}]] end
+  end
+  -- If it is not a floating table, there might still be a caption, which
+  -- we manually format (with no table number).
+  if not o.float then
+    if kw.caption then
+      t:append ''
+      t:append [[{\small\textbf{Table}\enspace !CAPTION!}]]
+      t:append [[\smallskip]]
+      t:append ''
+    end
+  end
   -- beginning of tblr environment
   t:append [[\begin{tblr}{!SPEC!}]]
   -- contents of table (positional arguments)
@@ -554,21 +573,23 @@ f.TABLE = function(n, args, o, kw)
   end
   -- end of tblr environment
   t:append [[\end{tblr}]]
-  -- caption (if supplied)
-  if kw.manualcaption then
-    t:append ''
-    t:append [[\smallskip]]
-    t:append [[{\small\textbf{Table}\enspace !MANUALCAPTION!}]]
-    t:append ''
-  end
   -- expand the template and handle o.centre or o.leftindent
   t.values = {
     SPEC = spec,
-    MANUALCAPTION = kw.manualcaption
+    CAPTION = kw.caption,
+    LABEL = kw.label,
   }
   local result = lbt.util.string_template_expand(t)
   result = lbt.util.apply_horizontal_formatting(result, o)
   result = lbt.util.apply_style_formatting(result, o)
+  -- if it is a floating table, wrap all this in a table environment
+  if o.float then
+    result = lbt.util.wrap_environment {
+      environment = 'table',
+      content     = result,
+      bracket_arg = o.position
+    }
+  end
   return result
 end
 

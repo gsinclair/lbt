@@ -146,7 +146,7 @@ local commandn = Ct(hsp * opcode * (sep + hspace) *
 -- The "tagging" that gets done when an opcode or argument is parsed is useful
 -- but crude. This function refines the data into something more usable.
 local process_cmd = function(data)
-  local result = { o = {}, k = {}, a = pl.List() }
+  local result = { o = pl.Map(), k = pl.Map(), a = pl.List() }
   local seen = {}
   for _, x in pairs(data) do
     if x.type == 'opcode' then

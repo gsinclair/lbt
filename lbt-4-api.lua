@@ -7,7 +7,7 @@ local F = string.format
 -- Reset all global data but leave the following things alone:
 --  * builtin templates
 --  * draft and debug mode
--- 
+--
 -- Designed to be helpful for testing. Should not be needed elsewhere.
 lbt.api.reset_global_data = function ()
   lbt.init.soft_reset_system()

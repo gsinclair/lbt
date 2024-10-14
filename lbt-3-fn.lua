@@ -507,7 +507,7 @@ end
 --
 -- Parameters:
 --  * command: parsed author content
---  * or:      an opcode resolver that we call to get an opcode function
+--  * ocr:     an opcode resolver that we call to get an opcode function
 --  * ol:      an options lookup that we pass to the function
 --
 -- Return:
@@ -525,10 +525,17 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   local opcode = command[1]
   local args  = command.a
   local nargs = #args
+  local opargs = command.o
+  local kwargs = command.k
+  -- if opcode == 'TABLE' then DEBUGGER() end -- TODO: remove this debug code.
   local cmdstr = F('[%s] %s', opcode, table.concat(args, ' :: '))
-  lbt.log(4, 'latex_for_command: %s', cmdstr)
+  lbt.log(4, 'latex_for_command: opcode = %s', opcode)
+  lbt.log(4, 'latex_for_command: opargs = %s', lbt.pp(opargs))
+  lbt.log(4, 'latex_for_command: kwargs = %s', lbt.pp(kwargs))
+  lbt.log(4, 'latex_for_command: args   = %s', lbt.pp(args))
   lbt.log('emit', '')
   lbt.log('emit', 'Line: %s', cmdstr)
+
   -- 1a. Handle a register allocation. Do not increment command count.
   if opcode == 'STO' then
     lbt.fn.impl.assign_register(args)
@@ -567,17 +574,14 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   -- 5. Expand register references where necessary.
   --    We are not necessarily in mathmode, hence false.
   args = args:map(lbt.fn.impl.expand_register_references, false)
-  -- 6. Call the opcode function and return 'ok', ... or 'error', ...
-  local in_development = true -- (June 2024 changes)
-  local result
-  if in_development then
-    ol:set_opcode_and_options(opcode, command.o)
-    local k = command.k
-    result = x.opcode_function(nargs, args, ol, k)
-    ol:unset_opcode_and_options()
-  else
-    result = opcode_function(nargs, args, sr)
+  for k, v in kwargs:iter() do
+    v = lbt.fn.impl.expand_register_references(v, false)
+    kwargs[k] = v
   end
+  -- 6. Call the opcode function and return 'ok', ... or 'error', ...
+  ol:set_opcode_and_options(opcode, command.o)    -- Having to set and unset is a shame, but probably efficient.
+  local result = x.opcode_function(nargs, args, ol, kwargs)
+  ol:unset_opcode_and_options()
   if type(result) == 'string' then
     lbt.log('emit', '    --> %s', result)
     return 'ok', result
