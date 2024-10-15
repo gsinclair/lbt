@@ -686,6 +686,8 @@ lbt.fn.register_template = function(template_details, path)
   end
   -- Likewise with default options. They are specified as strings and need to be
   -- turned into a map.
+  -- Update Oct 2024: I am supporting a new way of specifying default options,
+  -- which this function will need to support.
   local ok, x = lbt.fn.impl.template_normalise_default_options(td.default_options)
   if ok then
     td.default_options = x
@@ -942,7 +944,7 @@ lbt.fn.impl.template_details_are_valid = function (td)
   elseif td.arguments and type(td.arguments) ~= 'table' then
     return false, F('arguments is not a table')
   elseif td.styles and type(td.styles) ~= 'table' then
-    return false, F('styles is not a table')
+    return false, F('styles is not a table')                   -- XXX: styles -> options [and see if any other changes; macros?]
   end
   return true, ''
 end
@@ -986,21 +988,57 @@ lbt.fn.impl.template_arguments_specification = function (arguments)
   return true, result
 end
 
--- Input x is a list of strings, each of which is like
---   'Q.color = blue, Q.vsp = 10pt'
--- Output is a map { 'Q.color' = 'blue', Q.vsp = '10pt', ... }
+-- In a template like lbt-Basic.lua, each command potentially has optional arguments,
+-- like   ALIGN .o spreadlines=1em, nopar :: ...
+-- These opargs need to have default values, specified in the template like so:
+--   [method 1]
+--     o:append 'ALIGN.spreadlines = 2pt, ALIGN.nopar = false'
+--     {this method relies on lbt.parser.parse_dictionary}
+--   [method 2]
+--     o:append { 'ALIGN', spreadlines = '2pt', nopar = false }
+--     {this method is less repetitive}
+--
+-- The input to template_normalise_default_options is a pl.List of option specs,
+-- each of which can be a string (method 1) or a table (method 2).
+--
+-- We normalise these into a combined table of default options.
+-- The output is a map
+--   { 'ALIGN.spreadlines' = '2pt', 'ALIGN.nopar' = false, 'ITEMIZE.compact = false', ... }
+--
 -- Return  true, output   or   false, error string
-lbt.fn.impl.template_normalise_default_options = function (x)
-  local result = pl.Map()
-  for s in pl.List(x):iter() do
-    if type(s) ~= 'string' then
-      lbt.err.E581_invalid_default_option_value(s)
+lbt.fn.impl.template_normalise_default_options = function (xs)
+  -- Example input: 'ALIGN.spreadlines = 2pt, ALIGN.nopar = false'
+  local method1 = function(s)
+    return lbt.parser.parse_dictionary(s)
+  end
+  -- Example input: { 'ALIGN', spreadlines = '2pt', nopar = false }
+  local method2 = function(t) -- input is a table
+    local options = pl.Map()
+    local command = t[1]
+    local stat = false
+    for k,v in pairs(t) do
+      k = command .. '.' .. k
+      options[k] = v
+      stat = stat or true  -- we want to encounter at least one option
     end
-    local options = lbt.parser.parse_dictionary(s)
-    if options then
-      result:update(options)
+    stat = stat and (command ~= nil)
+    return stat, options
+  end
+  -- Function begins here
+  local result = pl.Map()
+  for x in pl.List(xs):iter() do
+    if type(x) == 'string' then
+      local opts = method1(x)
+      if opts then result:update(opts)
+      else return false, x
+      end
+    elseif type(x) == 'table' then
+      local ok, opts = method2(x)
+      if ok then result:update(opts)
+      else return false, x
+      end
     else
-      return false, s
+      lbt.err.E581_invalid_default_option_value(x)
     end
   end
   return true, result

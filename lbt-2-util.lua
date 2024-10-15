@@ -135,7 +135,7 @@ end
 --       (But mostly just upper case.)
 lbt.util.string_template_expand1 = function (template, values)
   local substitute = function(s)
-    return values[s] or F('!!%s!!', s)
+    return values[s] or error("Can't perform template substitution on string: " .. s)
   end
   return template:gsub('!(%u[%u%d_]+)!', substitute)
 end
@@ -174,17 +174,60 @@ function lbt.util.wrap_braces(x)
   return '{' .. x .. '}'
 end
 
--- kwargs: a table with keys 'content', 'environment', (opt) 'bracket_arg', (opt) 'brace_args'
+function lbt.util.wrap_brackets(x)
+  return '[' .. x .. ']'
+end
+
+function lbt.util.wrap_parens(x)
+  return '(' .. x .. ')'
+end
+
+-- Examples:
+--   Positional arguments
+--     wrap_environment { 'The rain in spain', 'center' }
+--   Keyword arguments
+--     wrap_environment { content = 'The rain in spain', environment = 'center' }
+--   A single argument to the environment
+--     wrap_environment { '...', 'array', arg = 'ccc' }
+--   Multiple arguments to the environment
+--     wrap_environment { '...', 'tabularx', args = { '\textwidth', '|l|c|r|' } }
+--   An optional argument to the environment
+--     wrap_environment { '...', 'enumerate', oparg = 'label=\roman*.' }
+--   Mandatory _and_ optional arguments
+--     wrap_environment { '...', 'multicols', arg = '2', oparg = '\section{The user interface}' }
+--   Mandatory and _two_ optional arguments
+--     wrap_environment { '...', 'multicols', arg = '2', opargs = { '\section{The user interface}', '6cm' } }
+--   Parenthetical argument to the environment
+--     wrap_environment { '\psline(0,0)(5,5)', 'pspicture', parenarg = '(6,8)' }
+--
+-- Note:
+--   All examples of environments I can find have the [] arg(s) _after_ the {} arg(s),
+--   so that is what we will do. If a counterexample comes up, I will provide a 'rawargs'
+--   option like { '...', env, rawargs = '[4]{hello}[x]' }
 function lbt.util.wrap_environment(kwargs)
+  local k = kwargs
+  local braceargs = function()
+    local x = k.args or { k.arg }
+    return #x > 0 and pl.List(x):map(lbt.util.wrap_braces):concat() or ''
+  end
+  local bracketargs = function()
+    local x = k.opargs or { k.oparg }
+    return #x > 0 and pl.List(x):map(lbt.util.wrap_brackets):concat() or ''
+  end
+  local parenargs = function()
+    local x = k.parenargs or { k.parenarg }
+    return #x > 0 and pl.List(x):map(lbt.util.wrap_parens):concat() or ''
+  end
   local t = pl.List()
-  t:append [[\begin{!ENV!}!BRACKET_ARG!!BRACE_ARGS!]]
+  t:append [[\begin{!ENV!}!BRACE_ARGS!!BRACKET_ARGS!!PAREN_ARGS!]]
   t:append '!CONTENT!'
   t:append [[\end{!ENV!}]]
   t.values = {
-    ENV = kwargs.environment,
-    CONTENT = kwargs.content,
-    BRACKET_ARG = kwargs.bracket_arg and '['..kwargs.bracket_arg..']' or '',
-    BRACE_ARGS = pl.List(kwargs.brace_args):map(lbt.util.wrap_braces):concat()
+    ENV          = kwargs[2] or kwargs.environment or error('lbt.util.wrap_environment called incorrectly'),
+    CONTENT      = kwargs[1] or kwargs.content     or error('lbt.util.wrap_environment called incorrectly'),
+    BRACE_ARGS   = braceargs(),
+    BRACKET_ARGS = bracketargs(),
+    PAREN_ARGS   = parenargs(),
   }
   return lbt.util.string_template_expand(t)
 end
@@ -197,11 +240,7 @@ function lbt.util.leftindent(x, o)
   if o.leftindent == nil or o.leftindent == 'nil' then
     return x
   else
-    return lbt.util.wrap_environment {
-      content = x,
-      environment = 'adjustwidth',
-      brace_args = { o.leftindent, '' }
-    }
+    return lbt.util.wrap_environment { x, 'adjustwidth', args = { o.leftindent, '' } }
   end
 end
 
@@ -211,18 +250,12 @@ end
 -- to set the left margin.
 -- If centre or center is true, wrap x in a 'center' environment.
 -- TODO: decide whether to implement 'indent' as well as 'leftindent', for example.
+-- TODO: change this to apply_general_formatting and support nopar and fontsize, and take a list of formats to apply
 function lbt.util.apply_horizontal_formatting(x, o)
   if o.center or o.centre then
-    return lbt.util.wrap_environment {
-      content = x,
-      environment = 'center',
-    }
+    return lbt.util.wrap_environment { x, 'center' }
   elseif o.leftindent then
-    return lbt.util.wrap_environment {
-      content = x,
-      environment = 'adjustwidth',
-      brace_args = { o.leftindent, '' }
-    }
+    return lbt.util.wrap_environment { x, 'adjustwidth', args = { o.leftindent, '' } }
   else
     return x
   end
@@ -233,10 +266,7 @@ end
 -- Applies environment 'small' or 'footnotesize' or ...
 function lbt.util.apply_style_formatting(x, o)
   if o.fontsize then
-    return lbt.util.wrap_environment {
-      content = x,
-      environment = o.fontsize,
-    }
+    return lbt.util.wrap_environment { x, o.fontsize }
   else
     return x
   end

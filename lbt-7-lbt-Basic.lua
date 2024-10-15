@@ -279,7 +279,7 @@ end
 --    » :: F = ma
 
 local align_impl = function (star, args, o)
-  local format_contents = function(text)
+  local format_contents = function()
     if o.leftindent then
       return args:concat([[&& \\]] .. '\n')
     else
@@ -321,6 +321,63 @@ o:append 'ALIGN*.spreadlines = nil, ALIGN*.leftindent = nil, ALIGN*.vspace = -1'
 a['ALIGN*'] = '1+'
 f['ALIGN*'] = function(n, args, o)
   return align_impl(true, args, o)
+end
+
+local math_environment = function(o)
+  -- Deal with a special case first.
+  if (o.env == 'align' or o.align) and o.leftindent then return 'flalign' end
+  -- General case.
+  if o.env ~= 'nil'  then return o.env
+  elseif o.align     then return 'align'
+  elseif o.alignat   then return 'alignat'
+  elseif o.gather    then return 'gather'
+  elseif o.multiline then return 'multiline'
+  elseif o.flalign   then return 'flalign'
+  elseif o.gathered  then return 'gathered'
+  elseif o.aligned   then return 'aligned'
+  elseif o.alignedat then return 'alignedat'
+  else return 'equation'
+  end
+end
+
+local math_impl = function (environment, args, o)
+  local format_contents = function()
+    if environment == 'flalign' then
+      return args:concat([[&& \\]] .. '\n')
+    else
+      return args:concat([[ \\]] .. '\n')
+    end
+  end
+  -- 1. Build mathematical content and wrap it in (say) 'align' and (optionally) 'spreadlines'.
+  local x = nil
+  x = format_contents()
+  x = lbt.util.wrap_latex_environment { x, environment }
+  if o.spreadlines then
+    x = lbt.util.wrap_latex_environment { x, 'spreadlines', args = { o.spreadlines } }
+  end
+  -- 2. Build a string template with optional vspace and result from above.
+  local t = pl.List()
+  if o.vspace == -1 then
+    t:append [[\vspace{-\parskip}]]
+  elseif o.vspace then
+    t:append [[\vspace{!VSPACE!}]]
+  end
+  t:append(x)
+  t.values = { VSPACE = o.vspace }
+  -- 3. Expand template and apply general formatting (leftindent)
+  x = lbt.util.string_template_expand(t)
+  x = lbt.util.general_formatting_wrap(  -- to be implemented; handle centre, right, indent, leftindent, nopar, ...
+    x, o, 'leftindent nopar'
+  )
+  return x
+end
+
+o:append { 'MATH', env = 'nil', align = false, alignat = false, gather = false, multiline = false,
+                   spreadlines = 'nil', leftindent = 'nil', vspace = -1, nopar = false }
+a.MATH = '1+'
+f.MATH = function(n, args, o)
+  local env = math_environment(o)
+  return math_impl(env, args, o)
 end
 
 a.EQUATION = 1
@@ -584,11 +641,7 @@ f.TABLE = function(n, args, o, kw)
   result = lbt.util.apply_style_formatting(result, o)
   -- if it is a floating table, wrap all this in a table environment
   if o.float then
-    result = lbt.util.wrap_environment {
-      environment = 'table',
-      content     = result,
-      bracket_arg = o.position
-    }
+    result = lbt.util.wrap_environment { result, 'table', oparg = o.position }
   end
   return result
 end
