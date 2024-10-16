@@ -32,7 +32,6 @@ local m = {}   -- macros
 
 local function vector_pronumeral(x)
   local format = lbt.util.get_option_for_macro('vector.format')
-  -- if format ~= 'bold' then DEBUGGER() end
   if format == 'bold' then
     return F([[\ensuremath{\mathbf{%s}}]], x)
   elseif format == 'arrow' then

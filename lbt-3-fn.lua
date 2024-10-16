@@ -527,7 +527,6 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   local nargs = #args
   local opargs = command.o
   local kwargs = command.k
-  -- if opcode == 'TABLE' then DEBUGGER() end -- TODO: remove this debug code.
   local cmdstr = F('[%s] %s', opcode, table.concat(args, ' :: '))
   lbt.log(4, 'latex_for_command: opcode = %s', opcode)
   lbt.log(4, 'latex_for_command: opargs = %s', lbt.pp(opargs))

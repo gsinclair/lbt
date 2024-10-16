@@ -142,7 +142,7 @@ end
 
 -- Itemize and enumerate
 
-o:append 'ITEMIZE.notop = false, ITEMIZE.compact = false, ITEMIZE.sep=nil'
+o:append 'ITEMIZE.notop = false, ITEMIZE.compact = false, ITEMIZE.sep=1'
 a.ITEMIZE = '1+'
 f.ITEMIZE = function (n, args, o, k)
   if args[1]:startswith('[') then
@@ -151,11 +151,14 @@ f.ITEMIZE = function (n, args, o, k)
   -- customisations come from options 'notop/compact' and keyword 'spec'
   local spec = pl.List()
   if k.spec then spec:append(k.spec) end
-  if o.notop then
-    spec:append('topsep=0pt')
-  end
   if o.compact then
     spec:append('topsep=-\\parskip, itemsep=0pt')
+  end
+  if o.sep then
+    spec:append('itemsep=' .. o.sep .. '\\itemsep, topsep=' .. o.sep .. '\\topsep')
+  end
+  if o.notop then
+    spec:append('topsep=0pt')
   end
   spec = spec:concat(', ')
   -- build result
@@ -325,55 +328,78 @@ end
 
 local math_environment = function(o)
   -- Deal with a special case first.
-  if (o.env == 'align' or o.align) and o.leftindent then return 'flalign' end
+  local result = nil
+  if (o.env == 'align' or o.align) and o.alignleft then
+    result = 'flalign'
   -- General case.
-  if o.env ~= 'nil'  then return o.env
-  elseif o.align     then return 'align'
-  elseif o.alignat   then return 'alignat'
-  elseif o.gather    then return 'gather'
-  elseif o.multiline then return 'multiline'
-  elseif o.flalign   then return 'flalign'
-  elseif o.gathered  then return 'gathered'
-  elseif o.aligned   then return 'aligned'
-  elseif o.alignedat then return 'alignedat'
-  else return 'equation'
+  elseif o.env           then result = o.env
+  elseif o.align     then result = 'align'
+  elseif o.alignat   then result = 'alignat'
+  elseif o.gather    then result = 'gather'
+  elseif o.multiline then result = 'multiline'
+  elseif o.flalign   then result = 'flalign'
+  elseif o.gathered  then result = 'gathered'
+  elseif o.aligned   then result = 'aligned'   -- TODO: ftalignedat?
+  elseif o.alignedat then result = 'alignedat'
+  else                    result = 'equation'
   end
+  -- Apply star if there is no numbering.
+  if not o.number then
+    result = result .. '*'
+  end
+  return result
 end
 
 local math_impl = function (environment, args, o)
-  local format_contents = function()
-    if environment == 'flalign' then
-      return args:concat([[&& \\]] .. '\n')
+  assert(environment)
+  local process_args_notag = function(args)
+    if o.number == true or o.number == false then return args
     else
-      return args:concat([[ \\]] .. '\n')
+      local numbers = lbt.util.space_split(o.number):map(tonumber)
+      numbers = pl.Set(numbers)
+      local result = pl.List()
+      for i=1,#args do
+        if numbers[i] then
+          result[i] = args[i]
+        else
+          result[i] = args[i] .. [[ \notag ]]
+        end
+      end
+      return result
     end
   end
-  -- 1. Build mathematical content and wrap it in (say) 'align' and (optionally) 'spreadlines'.
+  local join_lines = function(lines)
+    if environment == 'flalign' or environment == 'flalign*' then
+      return lines:concat([[&& \\]] .. '\n')
+    else
+      return lines:concat([[ \\]] .. '\n')
+    end
+  end
+  -- 1. Pre-process the arguments to include \notag where necessary.
+  lines = process_args_notag(args)
+  -- 2. Build mathematical content wrapped in 'align' or 'gather' or whatever.
   local x = nil
-  x = format_contents()
-  x = lbt.util.wrap_latex_environment { x, environment }
-  if o.spreadlines then
-    x = lbt.util.wrap_latex_environment { x, 'spreadlines', args = { o.spreadlines } }
+  x = join_lines(lines)
+  x = lbt.util.wrap_environment { x, environment }
+  -- 3. Apply 'spreadlines' if chosen.
+  x = lbt.util.general_formatting_wrap(x, o, 'spreadlines')
+  -- 4. Apply alignleft if appropriate, including vspace correction.
+  if (environment == 'flalign' or environment == 'flalign*') and o.alignleft then
+    x = lbt.util.wrap_environment { x, 'adjustwidth', args = {o.alignleft, ''} }
+    x = '\\vspace{-\\partopsep}\\vspace{-\\topsep}\n' .. x
   end
-  -- 2. Build a string template with optional vspace and result from above.
-  local t = pl.List()
-  if o.vspace == -1 then
-    t:append [[\vspace{-\parskip}]]
-  elseif o.vspace then
-    t:append [[\vspace{!VSPACE!}]]
-  end
-  t:append(x)
-  t.values = { VSPACE = o.vspace }
-  -- 3. Expand template and apply general formatting (leftindent)
-  x = lbt.util.string_template_expand(t)
-  x = lbt.util.general_formatting_wrap(  -- to be implemented; handle centre, right, indent, leftindent, nopar, ...
-    x, o, 'leftindent nopar'
-  )
+  -- 5. Handle \par or otherwise.
+  x = lbt.util.general_formatting_wrap(x, o, 'nopar')
+  -- 6. Done!
   return x
 end
 
-o:append { 'MATH', env = 'nil', align = false, alignat = false, gather = false, multiline = false,
-                   spreadlines = 'nil', leftindent = 'nil', vspace = -1, nopar = false }
+o:append { 'MATH',
+           env = 'nil', align = false, alignat = false, flalign = false,
+           gather = false, multiline = false, gathered = false,
+           aligned = false, alignedat = false,
+           spreadlines = 'nil', alignleft = false,
+           nopar = false, number = false }
 a.MATH = '1+'
 f.MATH = function(n, args, o)
   local env = math_environment(o)

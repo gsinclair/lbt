@@ -30,7 +30,6 @@ f.MINTED = function(n, args, o)
   stripnl
 ]{%s}]], o.lang)
   end
-  -- DEBUGGER()
   b = lbt.util.straighten_quotes(args[1])
   if o.lang == 'none' then
     c = [[\end{Verbatim}]]

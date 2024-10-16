@@ -93,7 +93,6 @@ lbt.api.author_content_emit_latex = function()
   lbt.log('read', pl.pretty.write(c))
   lbt.log('read', ">>>")
   lbt.log('read', "")
-  -- if eid == 109 then DEBUGGER() end
   local pc = lbt.fn.parsed_content(c)
   if pc.pragmas.ignore then
     lbt.log(3, '  * IGNORE pragma detected - no further action for eID %d', eid)
