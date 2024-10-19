@@ -271,60 +271,9 @@ f.INDENT = function (n, args)
   ]], left, right, text)
 end
 
--- Math environments like ALIGN(*) -- probably need to add others.
-
--- TODO think about the design of align. Could it take one argument per line?
--- Could it take some options, like spreadlines?
--- For example
---   ALIGN*   opt: spreadlines=1em      [or some other signifier for options]
---    » :: a^2 + b^2 &= c^2
---    » :: E &= mc^2
---    » :: F = ma
-
-local align_impl = function (star, args, o)
-  local format_contents = function()
-    if o.leftindent then
-      return args:concat([[&& \\]] .. '\n')
-    else
-      return args:concat([[ \\]] .. '\n')
-    end
-  end
-  local t = pl.List()
-  if o.vspace == -1 then
-    t:append [[\vspace{-\parskip}]]
-  elseif o.vspace then
-    t:append [[\vspace{!VSPACE!}]]
-  end
-  if o.spreadlines then
-    t:append [[\begin{spreadlines}{!SPREADLINES!}]]
-  end
-  t:append [[\begin{!ENVNAME!}]]
-  t:append '!CONTENTS!'
-  t:append [[\end{!ENVNAME!}]]
-  if o.spreadlines then
-    t:append [[\end{spreadlines}]]
-  end
-  t.values = {
-    VSPACE      = o.vspace,
-    SPREADLINES = o.spreadlines,
-    ENVNAME     = environment_name(o.leftindent and 'flalign' or 'align', star),
-    CONTENTS    = format_contents()
-  }
-  local x = lbt.util.string_template_expand(t)
-  return lbt.util.leftindent(x, o)
-end
-
-o:append 'ALIGN.spreadlines = nil, ALIGN.leftindent = nil, ALIGN.vspace = -1'
-a.ALIGN = '1+'
-f.ALIGN = function(n, args, o)
-  return align_impl(false, args, o)
-end
-
-o:append 'ALIGN*.spreadlines = nil, ALIGN*.leftindent = nil, ALIGN*.vspace = -1'
-a['ALIGN*'] = '1+'
-f['ALIGN*'] = function(n, args, o)
-  return align_impl(true, args, o)
-end
+--------- MATH and supporting functions
+-- Takes care of 'align', 'gather' and so on
+-- Yet to be thoroughly tested, but it works nicely for align.
 
 local math_environment = function(o)
   -- Deal with a special case first.
@@ -406,62 +355,7 @@ f.MATH = function(n, args, o)
   return math_impl(env, args, o)
 end
 
-a.EQUATION = 1
-f.EQUATION = function (n, args)
-  return F([[
-\begin{equation}
-  %s
-\end{equation}
-  ]], args[1])
-end
-
------ f.HEADING = function(text)
------   local args = split(text, '::')
------   if #args == 2 then
------     return GSC.util.heading_and_text_indent(args[1], args[2])
------   else
------     return GSC.util.tex_error('HEADING requires two arguments separated by ::')
------   end
------ end
------
------ f.HEADING_INLINE = function(text)
------   local args = split(text, '::')
------   if #args == 2 then
------     return GSC.util.heading_and_text_inline(args[1], args[2])
------   else
------     return GSC.util.tex_error('HEADING_INLINE requires two arguments separated by ::')
------   end
------ end
------
------ f.SIDEBYSIDE = function (text)
------   local args = split(text, '::')
------   if #args == 2 then
------     return F([[\TwoMinipagesSideBySide{%s}{%s}]], args[1], args[2])
------   else
------     return GSC.util.tex_error('SIDEBYSIDE requires two arguments separated by ::')
------   end
------ end
------
------ f['SIDEBYSIDE*'] = function (text)
------   local args = split(text, '::')
------   if #args == 6 then
------     -- width 1 and 2, content 1 and 2
------     local w1, w2, j1, j2, c1, c2 = table.unpack(args)
------     local template = [[
------       \begin{minipage}[%s]{%s\textwidth}
------         \vspace{0pt}
------         %s
------       \end{minipage}\hfill
------       \begin{minipage}[%s]{%s\textwidth}
------         %s
------       \end{minipage}
------     ]]
------     return F(template, j1, w1, c1, j2, w2, c2)
------   else
------     return GSC.util.tex_error('SIDEBYSIDE requires four arguments -- w1, w2, just1, just2, cont1, cont2 -- separated by ::')
------   end
------ end
------
+----- /MATH
 
 -- FIGURE* for no caption
 
@@ -495,6 +389,7 @@ end
 -- Options: bhtp, nocentre (or nocentering)
 -- Arguments: [options] :: content :: caption
 -- Centering is applied by default; specify nocenter if you want to.
+-- XXX: This is old-school code that needs to be updated, pronto!
 a.FIGURE = '2-3'
 f.FIGURE = function (n, args, o)
   local options, args = lbt.util.extract_option_argument(args)
@@ -556,6 +451,8 @@ f.VERBATIM = function (n, args)
   ]], lines)
 end
 
+----- TABLE and supporting code
+
 -- return ok, (data|errormsg)
 local table_data_separator = function (filename)
   if filename:endswith('.tsv') then
@@ -607,7 +504,6 @@ local table_insert_rows_from_data = function (namedargs)
   end
 end
 
--- Table (using tabularray)
 a.TABLE = '1+'
 o:append 'TABLE.center = false, TABLE.centre = false, TABLE.leftindent = false'
 o:append 'TABLE.fontsize = nil'
@@ -672,6 +568,7 @@ f.TABLE = function(n, args, o, kw)
   return result
 end
 
+----- /TABLE
 
 -- TWOPANEL .o ratio=2:3, align=bt :: \DiagramOne :: ◊DiagramOneText
 a.TWOPANEL = 2
