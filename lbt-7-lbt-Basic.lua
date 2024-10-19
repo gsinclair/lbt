@@ -26,25 +26,25 @@ local textparagraphs = function (args, starting_index)
   return args:slice(starting_index,-1):concat([[ \par ]])
 end
 
-o:append'TEXT*.vspace=0pt'
+o:append'TEXT*.prespace=0pt'
 a["TEXT*"] = '1+'
 f["TEXT*"] = function (n, args, o)
   local paragraphs = textparagraphs(args,1)
-  if o.vspace == '0pt' then
+  if o.prespace == '0pt' then
     return paragraphs
   else
-    return F('\\vspace{%s}\n%s', o.vspace, paragraphs)
+    return F('\\vspace{%s}\n%s', o.prespace, paragraphs)
   end
 end
 
-o:append'TEXT.vspace=0pt'
+o:append'TEXT.prespace=0pt'
 a.TEXT = '1+'
 f.TEXT = function (n, args, o)
   local paragraphs = textparagraphs(args,1)
-  if o.vspace == '0pt' then
+  if o.prespace == '0pt' then
     return F([[%s \par]], paragraphs)
   else
-    return F('\\vspace{%s}\n%s \\par', o.vspace, paragraphs)
+    return F('\\vspace{%s}\n%s \\par', o.prespace, paragraphs)
   end
 end
 

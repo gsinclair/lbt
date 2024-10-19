@@ -103,7 +103,7 @@ local good_input_5a = content_lines([[
 local good_input_5b = content_lines([[
   [@META]
     TEMPLATE TestQuestions
-    OPTIONS  .d Q.vspace = 18pt, MC.alphabet = roman
+    OPTIONS  .d Q.prespace = 18pt, MC.alphabet = roman
   [+BODY]
     TEXT .o vspace=30pt :: Complete these questions in the space below.
     Q Evaluate:

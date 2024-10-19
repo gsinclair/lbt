@@ -8,7 +8,7 @@
 -- in particular command options like vspace, color.
 --
 -- Styles provided:
---  * Q.vspace            vertical space before a question
+--  * Q.prespace            vertical space before a question
 --  * Q.color             text color
 --  * QQ.alphabet         (arabic), Arabic, roman, Roman
 --  * MC.alphabet         arabic, (Arabic), roman, Roman
@@ -35,10 +35,10 @@ local init = function()
 end
 
 a.Q = 1
-o:append 'Q.vspace = 12pt, Q.color = blue'
+o:append 'Q.prespace = 12pt, Q.color = blue'
 f.Q = function(n, args, o)
   lbt.api.counter_reset('qq')
-  local vsp = o.vspace
+  local vsp = o.prespace
   local col = o.color
   local q = lbt.api.counter_inc('q')
   return F([[{\vspace{%s}

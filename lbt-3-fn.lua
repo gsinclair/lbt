@@ -104,10 +104,10 @@ function ParsedContent:extra_sources()
 end
 
 -- Inside META you can set, for example
---   OPTIONS   vector.format = tilde, QQ.vspace = 18pt
+--   OPTIONS   vector.format = tilde, QQ.prespace = 18pt
 -- Here we grab that content, parse it, and return it as a dictionary.
 -- Notes:
---  * if the user wrote ".d vector.format = tilde, QQ.vspace = 18pt"
+--  * if the user wrote ".d vector.format = tilde, QQ.prespace = 18pt"
 --    then it is already parsed as a dictionary, so we return that
 --  * if the user has set STYLES, that is old-fashioned and we exit
 --    fast so they can fix it
@@ -286,7 +286,7 @@ end
 
 -- A function call is just a convenient alternative for a table reference.
 -- Even more convenient, because you can resolve more than one option at a time.
---   o('Q.vspace Q.color')   --> '30pt', 'blue'
+--   o('Q.prespace Q.color')   --> '30pt', 'blue'
 OptionLookup.__call = function(self, keys_string)
   local keys = lbt.util.space_split(keys_string)
   local values = keys:map(function(k) return self[k] end)
@@ -433,7 +433,7 @@ end
 -- that are defined in various places: document-wide with \lbtOptions{...},
 -- document-narrow with META.OPTIONS, and command-local with '.o ...'. For
 -- example, 'QQ .o color=red :: Evaluate $3 \times 5$'. The implementation of
--- QQ needs to be able to access 'o.color' and 'o.vspace' easily. Thus we call
+-- QQ needs to be able to access 'o.color' and 'o.prespace' easily. Thus we call
 -- OptionLookup.new{...}.
 --
 -- With everything set up, we can call t.init() and t.expand(pc, or, ol).

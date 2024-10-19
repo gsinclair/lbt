@@ -64,7 +64,7 @@ local function layout_qq_columns(texts, opts)
   local ncols      = opts.ncols
   local colwidth   = F([[%f\textwidth]], 1 / opts.ncols)
   local labelwidth = opts.labelwidth or '1.5em'
-  local vspace     = opts.vspace or '6pt'
+  local vspace     = opts.prespace or '6pt'
   local colorspec  = ''
   if opts.labelcolor then
     colorspec = F([[\color{%s}]], opts.labelcolor)
@@ -119,7 +119,7 @@ local q_sourcenote = function(source, note)
 end
 
 a.Q = 1
-o:append 'Q.vspace = 6pt, Q.color = blue, Q.newpage = false'
+o:append 'Q.prespace = 6pt, Q.color = blue, Q.newpage = false'
 f.Q = function(n, args, o, kw)
   lbt.api.counter_reset('qq')
   lbt.api.counter_reset('mc')
@@ -133,7 +133,7 @@ f.Q = function(n, args, o, kw)
     {\color{!COLOR!}\bfseries Question~!NUMBER!}{!SOURCENOTE!}\quad !TEXT! \par
   ]]
   template.values = {
-    VSPACE = o.vspace, COLOR = o.color, NUMBER = q,
+    VSPACE = o.prespace, COLOR = o.color, NUMBER = q,
     SOURCENOTE = q_sourcenote(kw.source, kw.note),
     TEXT = args[1] }
   return T(template)
@@ -142,10 +142,10 @@ f.Q = function(n, args, o, kw)
 end
 
 a.QQ = 1
-o:append 'QQ.vspace = 0pt'
+o:append 'QQ.prespace = 0pt'
 f.QQ = function(n, args, o)
   local qq = lbt.api.counter_inc('qq')
-  local vsp = o.vspace
+  local vsp = o.prespace
   local label_style = [[\textcolor{blue}{(\alph*)}]]
   local template = [[
     \begin{enumerate}[align=left, topsep=3pt, start=%d, label=%s, left=1em .. 3.2em]
@@ -170,7 +170,7 @@ f['QQ*'] = function(n, args, o)
     lbt.err.E001_internal_logic_error('QQ*')
   end
   local ncols  = options.ncols
-  local vspace = options.vspace or '0pt'
+  local vspace = options.prespace or '0pt'
   local hpack  = options.hpack or 'column'
   -- 2. Decide whether we are doing columns or hfill.
   if hpack == 'column' then
@@ -228,7 +228,7 @@ f['MC*'] = function (n, args, o)
     lbt.err.E001_internal_logic_error('MC*')
   end
   local ncols  = options.ncols
-  local vspace = options.vspace or '0pt'
+  local vspace = options.prespace or '0pt'
   local hpack  = options.hpack or 'column'
   -- 2. Decide whether we are doing columns or hfill.
   if hpack == 'column' then
