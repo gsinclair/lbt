@@ -71,36 +71,27 @@ f.ABSTRACT = function(n, args, o)
   -- Each argument is a paragraph. We set the abstract with thinner margins and
   -- an inline heading, and in smaller text.
   local a = [[\begin{adjustwidth}{4em}{4em}]]
-  local b = [[\begin{small}]]
-  local c = F([[\textbf{Abstract.}\enspace %s]], args[1])
-  local d = pl.List()
+  local b = [[\setlength{\parindent}{0pt} \setlength{\parskip}{0.5ex}]]
+  local c = [[\begin{small}]]
+  local d = F([[\textbf{Abstract.}\enspace %s]], args[1])
+  local e = pl.List()
   if n > 1 then
     for i=2,n do
-      d:append([[\par]])
-      d:append(args[i])
+      e:append([[\par]])
+      e:append(args[i])
     end
   end
-  d = d:concat('\n')
-  local e = [[\end{small}]]
-  local f = [[\end{adjustwidth}]]
-  return lbt.util.combine_latex_fragments(a,b,c,d,e,f)
+  e = e:concat('\n')
+  local f = [[\end{small}]]
+  local g = [[\end{adjustwidth}]]
+  return lbt.util.combine_latex_fragments(a,b,c,d,e,f,g)
 end
 
 a.HEADING = '1'
+-- Experiment, Oct 2024. Use \section* to implement HEADING. We don't want to
+-- affect the table of contents, and we didn't want section numbers anyway.
 f.HEADING = function(n, args, o)
-  local prespace = '1em'
-  local postspace = nil
-  if o('Article.parstyle') == 'indent' then
-    postspace = '1em'
-  else
-    postspace = '0pt'
-  end
-  return F([[
-    \vspace{%s}
-    \textbf{%s}
-    \vspace{%s}
-    \par
-  ]], prespace, args[1], postspace)
+  return F([[\section*{%s}]], args[1])
 end
 
 

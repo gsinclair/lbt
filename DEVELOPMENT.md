@@ -23,18 +23,18 @@ These help to guide a code review that needs to happen soon!
 
     * lbt.fn.pc.content_list(pc, key) -->
       lbt.fn.pc.content_list_or_nil(pc, key)
-    
+
     * same with content dictionary
-    
+
     * lbt.util.content_dictionary_or_{nil,error}
-    
+
       - I kind of have duplicate functionality in fn and util. Reason being:
         fn is for internal use; util is for use within template code. A code
         review will help to sort this out if necessary. In particular,
         consider how errors from template code are reported. I am
         inconsistent at the moment. Should I call lbt.err.xyz? Should I call
         lbt.util.template_error(...)? Or should I return { error = ... }.
-    
+
     * lbt.sty: require package 'tabularray'. I am going all in on this one.
       It's 2024 for goodness sake. Anyway, still to come: TABLE command in
       lbt.Basic.
@@ -174,7 +174,7 @@ The word "template" is a good choice for a key aspect of what LBT does, like for
     \end{lbt}
     ...
     \end{document}
-    
+
 See what happened there? I used the built-in, and elementary, template `lbt.Basic` just so I could use LBT at all. What I really want is access to the `LIMERICK` token. There is no structural layout like a worksheet or exam; there is just an inline poem typeset by a function `Poetry.LIMERICK`, which knows how to indent the two shorter lines and how to keep all five lines together on a page.
 
 `Exam` is a structural template that has a titlepage and header and footer and some boilerplate between sections, and so on. `Poetry` is nothing but a collection of functions. It is a content-only template. You could write an English exam using `Exam` (or, more likely, a specific one you developed) and include `Poetry` as one of the `SOURCES`.
@@ -240,14 +240,14 @@ This might see the end of `lbtDebugMode(On|Off)`.
 When implementing styles I was at one point going to write `lbt.api.style(key)` as a way for token-expansion functions to obtain style information. That changed to the use of a style-resolving higher-order function. But I ended up writing a lot of stuff that I thought could be used as documentation. That needed to move elsewhere, and that place is here.
 
     -- lbt.api.style(key)
-    -- 
+    --
     -- A template has styles built in to it. For example, in a Questions template
     -- the default vspace before a question might be 12pt. And so if the template
     -- object is `t` then we would have `t.styles['vspace'] == '12pt'`.
-    -- 
+    --
     -- A template has styles built in to it. For example, in a Questions template
     -- we might have:
-    --   
+    --
     --   a.Q = 1
     --   s.Q = { vspace = '12pt', color = 'RoyalBlue' }
     --   f.Q = function(n, args)
@@ -427,7 +427,7 @@ We don't bother to clear out expired registers; we just check whether they are e
     CTRL log-state                 [for debugging]
     CTRL dump-state filename.txt
 
-This would be a good way to give the user the ability to exercise some control over things without greatly expanding the number of tokens used.  
+This would be a good way to give the user the ability to exercise some control over things without greatly expanding the number of tokens used.
 
 
 ## Simplemath improvements via lpeg
@@ -453,7 +453,7 @@ Hopefully I can use lpeg to recognise 'words' without needing spaces. For exampl
 ```
  * Flexible newlines in commands, with little or no need for ». This is demonstrated above, with `::` starting each line. You can also end a line with `::`. Therefore, » should almost never be necessary.
  * lpeg parsing of individual commands into an intermediate structure.
- * command functions have signature like `c.TABLE = function(n, args, o, kw)`. 
+ * command functions have signature like `c.TABLE = function(n, args, o, kw)`.
  * Maybe, lpeg-assisted parsing of the whole lbt document. Perhaps one line at a time to better isolate errors. We'll see.
  * `[[ ... ]]` for verbatim argument text. Good for code listing. For example:
 ```
@@ -485,3 +485,124 @@ lbt environments have not been implemented. Picking them up in parsing is fine, 
 ### Progress towards opargs and kwargs
 
 The parser picks them up, and now I need to write the code that acts on them.
+
+**Update: completely done.** I didn't write any further notes about it here.
+
+
+## Generalise COMMAND and COMMAND* (?)
+
+It is a bit annoying (because of redunancy) to implement both TEXT and TEXT*, or PARAGRAPH and PARAGRAPH*, from scratch. Not only do they have almost identical code, but any opargs need to be repeated. Also, if the difference (as in TEXT and PARAGRAPH) is merely the presence or absence of \par, this can be coded uniformly with the new (Oct 2024) lbt.util.general_formatting_wrap(latex, o, 'nopar').
+
+So a natural idea is that
+    TEXT blah blah blah
+gets converted into
+    TEXT .o starred :: blah blah blah
+before calling the command. The handling could happen during parsing (probably not) or during Latex emission (probably). If the command ends in a star, then the opargs gets 'starred = true' set at this point. Then we can have just one TEXT, like this:
+
+Current:
+
+    f.TEXT = function (n, args, o)
+      local paragraphs = textparagraphs(args,1)
+      if o.vspace == '0pt' then
+        return F([[%s \par]], paragraphs)
+      else
+        return F('\\vspace{%s}\n%s \\par', o.vspace, paragraphs)
+      end
+    end
+
+New:
+
+    f.TEXT = function (n, args, o)
+      local result = textparagraphs(args,1)
+      if o.starred then o._set_('nopar', true) end
+      result = lbt.util.general_formatting_wrap(result, o, 'vspace nopar')
+      return result
+    end
+
+Now, will I implement this? Not right away. I have very few starred commands at the moment, and recently started using 'nopar' (in MATH) to give the author the opportunity to suppress paragraphs.
+
+But having this idea means I can think of other uses for starred commands in the future without worrying that it will necessarily mean annoying code redundancy.
+
+Aside following from above:
+* I should probably make 'nopar' an automatic option for every command, handled in one place. Something to think about.
+* 'prespace' (for vspace inserted before) could be treated like this as well.
+  - I currently have TEXT.vspace, but could change to TEXT.prespace.
+  - Not vspace as this is ambiguous whether it is before or after. Maybe include postspace as well. I'm thinking of things like QQ*, which set questions side by side, and can have room for working beneath them.
+
+
+## LBT Environments
+
+I want to implement environments, like
+
+    +COLUMNS 2 :: (pretext) \section{Heading}
+    TEXT Lorem ipsum dolcetur ...
+    IMAGE (filename) blah.png :: (width) 0.8
+    TEXT Lorem ipsum dolcetur ...
+    +INDENT (left) 3em
+    TEXT Up in the air, I fly ...
+    -INDENT
+    TEXT Lorem ipsum dolcetur ...
+    TEXT Lorem ipsum dolcetur ...
+    -COLUMNS
+
+If the contents of the environment is solely paragraphs, you can use a command instead, which closes the environment explicitly.
+
+    COLUMNS 2 :: (pretext) \section{Heading}
+    :: Lorem ipsum dolcetur ...
+    :: Lorem ipsum dolcetur ...
+    :: Lorem ipsum dolcetur ...
+    :: Lorem ipsum dolcetur ...
+
+There are some design notes written in Notability.
+
+This does not replace Latex environments, of course. There is still a use case for 'BEGIN xyz' ... 'END xyz'. But common environments will likely be wrapped, meaning I can use '+COLUMNS' with keyword arguments rather than remembering the details of the Latex \begin{multicols} syntax.
+
+
+## Update to QQ*
+
+QQ* is currently a relic that does its own options parsing, like
+
+    QQ* [ncols=3, hpack=hfill, vspace=6ex]
+
+It is well past time to update this to
+
+    QQ* .o ncols=3, spread=fill, workingspace=6ex
+
+And if the 'starred' idea above takes hold, it will just be `QQ`. Working with that theory, we would have:
+
+    QQ Show that...        (default ncols=nil)
+
+    QQ .o ncols=3          (default spread=columns, workingspace=0pt)
+    :: $3+8$ :: $4\times7$ :: ...
+
+    QQ .o ncols=3, spread=fill
+    :: ...
+
+    QQ .o ncols=3, workingspace=10ex
+
+I like this and would like to make it happen. That 'starred' idea is looking better and better.
+
+
+## General mechanism for setting Latex parameters
+
+Say I want to set parident and topsep and ...
+
+How do I do that in an LBT document? It would be good to have something like
+
+    LATEX_SETTINGS .o parindent = 20pt, topsep = 2pt, ...
+
+What is the best name?
+* LATEX_SETTINGS
+* VISUAL_DESIGN
+* ???
+
+I think LATEX_SETTINGS might be best.
+
+It will take some research to determine what settings should be supported, whether they are group-local or global, that sort of thing.
+
+It could possibly be valuable to be able to specify some settings _outside_ an LBT document and then apply them inside multiple documents. I won't rush to implement this; we'll see if the need arises.
+
+
+## CTRL debug and CTRL debug-stop
+
+I want to be able to issue a `CTRL debug-stop` command and have a lot of debugging information dumped into the PDF, then stop. This will help when something isn't quite right, or when I just want to see all available current commands, etc.
