@@ -83,6 +83,8 @@ local function expand(pc, ocr, ol)
     \bigskip
 
     %s
+
+    \clearpage
   ]], lbt.util.latex_expand_content_list('BODY', pc, ocr, ol))
 
   -- Put it all together!

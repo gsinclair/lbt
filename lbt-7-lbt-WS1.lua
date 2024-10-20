@@ -141,6 +141,8 @@ local function expand(pc, ocr, ol)
     \vfill
 
     %s
+
+    \clearpage
   ]], lbt.util.latex_expand_content_list('OUTRO', pc, ocr, ol))
 
   -- Put it all together!
