@@ -1,0 +1,65 @@
+\documentclass[a4paper,oneside,11pt]{memoir}
+
+\usepackage{lbt}
+\usepackage{kantlipsum}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{newpxtext}
+\usepackage{tcolorbox}
+\usepackage{pdfpages}     % \includepdf
+\usepackage{caption}
+  \captionsetup{labelfont={small,bf,color=blue4},textfont={small,color=blue4},labelsep=quad,margin=10pt}
+\usepackage{hyperref}
+
+\renewcommand{\thefootnote}{\textcolor{blue4}{\arabic{footnote}}}
+
+\lbtLogChannels{all}
+
+\lbtDocumentWideOptions{vector.format = bold}
+
+\lbtDefineLatexMacro{integral=lbt.Math:integral}
+\lbtDefineLatexMacro{V=lbt.Math:vector}
+\lbtDefineLatexMacro{Vijk=lbt.Math:vectorijk}
+\lbtDefineLatexMacro{sm=lbt.Math:simplemath}
+\lbtDefineLatexMacro{smallnote=lbt.WS0:smallnote}
+\lbtDefineLatexMacro{mathlistand=lbt.Math:mathlistand}   % TODO: add to other tex files
+\lbtDefineLatexMacro{mathlistor=lbt.Math:mathlistor}     % TODO: add to other tex files
+\lbtDefineLatexMacro{mathlist=lbt.Math:mathlist}   % TODO: add to other tex files
+\lbtDefineLatexMacro{mathlistdots=lbt.Math:mathlistdots}   % TODO: add to other tex files
+\lbtDefineLatexMacro{mathsum=lbt.Math:mathsum}     % TODO: add to other tex files
+
+\hfuzz=5pt
+
+\setcounter{tocdepth}{2}
+\pagestyle{empty}
+
+% ----------------------------------------------------------------------
+
+\begin{document}
+
+\lbtDraftModeOff{}
+
+\tableofcontents
+
+
+% ----------------------------------------------------------------------
+% {{{    Example of some LBT commands
+% ----------------------------------------------------------------------
+
+\begin{lbt}
+  @META
+    TEMPLATE   lbt.WS0
+    TITLE      Example of some LBT commands
+    COURSE     Example
+    TEACHERNOTES   xxx
+
+  +BODY
+  TEXT \kant[1]
+  SECTION (label) sec-numbered :: A numbered section
+  TEXT \kant[2-3]
+
+\end{lbt}
+
+% }}}
+
+\end{document}
+
