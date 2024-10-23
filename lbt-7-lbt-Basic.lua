@@ -3,6 +3,7 @@
 -- +---------------------------------------+
 
 local F = string.format
+local T = lbt.util.string_template_expand
 
 local f = {}   -- functions
 local a = {}   -- number of arguments
@@ -116,16 +117,72 @@ f.NEWCOMMAND = function(n, args)
   end
 end
 
--- Paragraph
+-- Part, chapter, section, subsection, subsubsection, paragraph, subparagraph
 
-a.PARAGRAPH = '2+'
-f.PARAGRAPH = function(n, args, o)
-  return F([[\paragraph{%s}{%s} \par]], args[1], textparagraphs(args,2))
+local document_section = function(name, title, o, kw)
+  local starred = o:_has_local_key('starred') and o.starred
+  return T {
+    [[\!NAME!!STAR!{!TITLE!} !LABEL!]],
+    values = {
+      NAME = name,
+      TITLE = title,
+      STAR = starred and '*' or '',
+      LABEL = kw.label and F([[\label{%s}]], kw.label) or ''
+    }
+  }
 end
 
-a['PARAGRAPH*'] = 2
-f['PARAGRAPH*'] = function(n, args, o)
-  return F([[\paragraph{%s}{%s}]], args[1], textparagraphs(args,2))
+a.PART = '1'
+f.PART = function(n, args, o, kw)
+  return document_section('part', args[1], o, kw)
+end
+
+a.CHAPTER = '1'
+o:append 'CHAPTER.starred = false'
+f.CHAPTER = function(n, args, o, kw)
+  return document_section('chapter', args[1], o, kw)
+end
+
+a.SECTION = '1'
+o:append 'SECTION.starred = false'
+f.SECTION = function(n, args, o, kw)
+  return document_section('section', args[1], o, kw)
+end
+
+a.SUBSECTION = '1'
+o:append 'SUBSECTION.starred = false'
+f.SUBSECTION = function(n, args, o, kw)
+  return document_section('subsection', args[1], o, kw)
+end
+
+a.PARAGRAPH = '2+'
+o:append 'PARAGRAPH.starred = false, PARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar
+f.PARAGRAPH = function(n, args, o)
+  return T {
+    [[\paragraph{!TITLE} !LABEL!]],
+    '!TEXT! !PAR!',
+    values = {
+      TITLE = args[1],
+      LABEL = kw.label and F([[\label{%s}]], kw.label) or '',
+      TEXT  = textparagraphs(args,2),
+      PAR   = (o.starred or o.nopar) and '' or '\\par'
+    }
+  }
+end
+
+a.SUBPARAGRAPH = '2+'
+o:append 'SUBPARAGRAPH.starred = false, SUBPARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar
+f.SUBPARAGRAPH = function(n, args, o)
+  return T {
+    [[\subparagraph{!TITLE} !LABEL!]],
+    '!TEXT! !PAR!',
+    values = {
+      TITLE = args[1],
+      LABEL = kw.label and F([[\label{%s}]], kw.label) or '',
+      TEXT  = textparagraphs(args,2),
+      PAR   = (o.starred or o.nopar) and '' or '\\par'
+    }
+  }
 end
 
 -- tcolorbox (simple use only; will have to add options)

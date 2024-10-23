@@ -145,6 +145,7 @@ end
 --   ...
 --   if ol.compact then ... end
 --   if ol['vector.format'] == 'bold' then ... end
+--   if o:_has_local_key('nopar') then ... end            -- true/false
 --   ...
 --   ol:unset_opcode_and_options()
 --------------------------------------------------------------------------------
@@ -181,6 +182,7 @@ OptionLookup.new = function(t)
   o.set_opcode_and_options = OptionLookup.set_opcode_and_options
   o.unset_opcode_and_options = OptionLookup.unset_opcode_and_options
   o._lookup = OptionLookup._lookup
+  o._has_local_key = OptionLookup._has_local_key
   -- Apart from that, any field reference is handled by __index, to perform
   -- an option lookup.
   setmetatable(o, OptionLookup)
@@ -266,6 +268,15 @@ function OptionLookup:_lookup(key)
   else
     return nil
   end
+end
+
+-- On occasion it might be necessary to look up a local key that doesn't exist.
+-- That would produce an error. So we provide _has_local_key to avoid errors.
+-- Example of use: _any_ command can have a 'starred' option, but not all will.
+-- So we can call o:_has_local_key('starred') to do the check without risking an
+-- error.
+function OptionLookup:_has_local_key(key)
+  return rawget(self, _local_) ~= nil and rawget(self, _local_)[key] ~= nil
 end
 
 -- ol['QQ.color'] either returns the value or raises an error.
@@ -660,6 +671,13 @@ end
 lbt.fn.register_template = function(template_details, path)
   local td = template_details
   local tn = template_details.name
+  local ok, err_detail, x   -- (needed throughout the function)
+  -- (1) Fill some gaps for things that don't have to be filled in.
+  td.functions       = td.functions       or {}
+  td.arguments       = td.arguments       or {}
+  td.default_options = td.default_options or {}
+  td.macros          = td.macros          or {}
+  -- (2) Check for errors in the spec.
   ok, err_detail = lbt.fn.impl.template_details_are_valid(td)
   if ok then
     if lbt.fn.template_object_or_nil(tn) ~= nil then
@@ -672,22 +690,22 @@ lbt.fn.register_template = function(template_details, path)
   else
     lbt.err.E215_invalid_template_details(td, path, err_detail)
   end
+  -- (3) Normalise some of the specified values.
+  --
   -- Having cleared the hurdles so far and registered the template,
-  -- we now act on the argument specification (if provided) and turn it into
+  -- we now act on the argument specification and turn it into
   -- something that can be used at expansion time.
-  if td.arguments then
-    local ok, x = lbt.fn.impl.template_arguments_specification(td.arguments)
-    if ok then
-      td.arguments = x
-    else
-      lbt.err.E215_invalid_template_details(td, path, x)
-    end
+  ok, x = lbt.fn.impl.template_arguments_specification(td.arguments)
+  if ok then
+    td.arguments = x
+  else
+    lbt.err.E215_invalid_template_details(td, path, x)
   end
   -- Likewise with default options. They are specified as strings and need to be
   -- turned into a map.
   -- Update Oct 2024: I am supporting a new way of specifying default options,
   -- which this function will need to support.
-  local ok, x = lbt.fn.impl.template_normalise_default_options(td.default_options)
+  ok, x = lbt.fn.impl.template_normalise_default_options(td.default_options)
   if ok then
     td.default_options = x
   else
@@ -940,10 +958,12 @@ lbt.fn.impl.template_details_are_valid = function (td)
     return false, F('expand is not a function')
   elseif type(td.functions) ~= 'table' then
     return false, F('functions is not a table')
-  elseif td.arguments and type(td.arguments) ~= 'table' then
+  elseif type(td.arguments) ~= 'table' then
     return false, F('arguments is not a table')
-  elseif td.styles and type(td.styles) ~= 'table' then
-    return false, F('styles is not a table')                   -- XXX: styles -> options [and see if any other changes; macros?]
+  elseif type(td.default_options) ~= 'table' then
+    return false, F('default_options is not a table')
+  elseif type(td.macros) ~= 'table' then
+    return false, F('macros is not a table')
   end
   return true, ''
 end
