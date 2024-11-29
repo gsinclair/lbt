@@ -54,9 +54,11 @@
 
   +BODY
     TEXT The \texttt{lbt.Doc.Chapter} template formats a whole chapter. You then use the command \texttt{SECTION} (and so on for subsection, etc.) to divide your document into sections.
-    TEXT It is also fine to use the more general \texttt{lbt.Basic} template and use the \texttt{CHAPTER} command. It makes no difference. But it is probably convenient to put only one chapter's worth of content into a single \texttt{lbt} environment. 
+    TEXT It is also fine to use the more general \texttt{lbt.Basic} template and use the \texttt{CHAPTER} command. It makes no difference. But it is probably convenient to put only one chapter's worth of content into a single \texttt{lbt} environment.
     SECTION (label) sec-numbered :: A numbered section
     TEXT \kant[2-3]
+    SECTION* (label) sec-unnumbered :: A section without a number
+    TEXT This section was created using \texttt{SECTION*}.
 \end{lbt}
 
 \begin{lbt}
@@ -67,9 +69,11 @@
 
   +BODY
     TEXT This section is written in its own \verb|\begin{lbt}| using the \texttt{SECTION} template. Using the \texttt{LABEL} feature, we can say it is \Cref{sec-1} (in \Cref{ch-general}).
+    TEXT .o nopar :: This particular \texttt{TEXT} command has \texttt{.o nopar} set, meaning \verb|\par| will be suppressed after this sentence.
+    TEXT (This is another \texttt{TEXT} command.)
+    TEXT .o fobar :: Hello.
 \end{lbt}
 
 % }}}
 
 \end{document}
-

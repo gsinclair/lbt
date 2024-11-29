@@ -494,9 +494,9 @@ The parser picks them up, and now I need to write the code that acts on them.
 It is a bit annoying (because of redunancy) to implement both TEXT and TEXT*, or PARAGRAPH and PARAGRAPH*, from scratch. Not only do they have almost identical code, but any opargs need to be repeated. Also, if the difference (as in TEXT and PARAGRAPH) is merely the presence or absence of \par, this can be coded uniformly with the new (Oct 2024) lbt.util.general_formatting_wrap(latex, o, 'nopar').
 
 So a natural idea is that
-    TEXT blah blah blah
+    TEXT* blah blah blah
 gets converted into
-    TEXT .o starred :: blah blah blah
+    TEXT\* .o starred :: blah blah blah
 before calling the command. The handling could happen during parsing (probably not) or during Latex emission (probably). If the command ends in a star, then the opargs gets 'starred = true' set at this point. Then we can have just one TEXT, like this:
 
 Current:
@@ -572,13 +572,13 @@ And if the 'starred' idea above takes hold, it will just be `QQ`. Working with t
 
     QQ Show that...        (default ncols=nil)
 
-    QQ .o ncols=3          (default spread=columns, workingspace=0pt)
+    QQ* .o ncols=3          (default spread=columns, workingspace=0pt)
     :: $3+8$ :: $4\times7$ :: ...
 
-    QQ .o ncols=3, spread=fill
+    QQ* .o ncols=3, spread=fill
     :: ...
 
-    QQ .o ncols=3, workingspace=10ex
+    QQ* .o ncols=3, workingspace=10ex
 
 I like this and would like to make it happen. That 'starred' idea is looking better and better.
 
@@ -606,3 +606,40 @@ It could possibly be valuable to be able to specify some settings _outside_ an L
 ## CTRL debug and CTRL debug-stop
 
 I want to be able to issue a `CTRL debug-stop` command and have a lot of debugging information dumped into the PDF, then stop. This will help when something isn't quite right, or when I just want to see all available current commands, etc.
+
+
+## Implementing general starred commands, and post-processing
+
+I have written code that has condensed the implementation of TEXT(*) to the following:
+
+    a.TEXT = '1+'
+    o:append 'TEXT.starred = false'
+    f.TEXT = function (n, args, o)
+      local paragraphs = textparagraphs(args,1)
+      if o.starred then
+        o:_set_local('nopar', true)
+      end
+      return paragraphs
+    end
+
+No separate TEXT*. No \par at the end (this happens by default to every command; use oparg nopar to suppress). No vspace at the beginning (the oparg prespace is handled for every command automatically).
+
+But some questions arise.
+* _should_ every command automatically get a \par? It's not relevant to every command, like SECTION, for instance, or CMD, or ...
+* If not, how do I limit it to relevant ones?
+* Could I emphasise the positive by putting 'par = true' as the default option for relevant commands, and writing code so that specifying 'nopar' would actually set par to false?
+* Can I generalise that so that any oparg noX will have the effect of setting X to false?
+* And if I can, should I?
+
+And what about prespace and postspace?
+* Which commands do I want this to apply to? I think the idea was that _any_ command could have it, but in order to write 'Q .o prespace = 5ex', I need Q to support prespace. That is, I need Q to have (for instance) 'prespace = 6pt' as a default option.
+* So now I'm in the same position as par/nopar. I need to look at every command and decide whether to put prespace and postspace in the default options.
+* I don't want to do that.
+* So the other option is to have them baked in. Every command silently supports it. Perhaps this could be implemented in _lookup. If the option is 'prespace' and we don't have a value for it, then return false.
+* Although...interesting! The "So now I'm in the same position..." note above is false. I just put 'TEXT .o fobar :: Hello.' in a document and it compiled without error.
+* Therefore, it _is_ possible to place 'par' or 'nopar' or 'prespace' or 'postspace' anywhere I like in the document without having to create commands with these options in mind. That's cool.
+
+Conclusion:
+* I will support prespace and postspace universally without modifying command definitions.
+* I will set 'par = true' for relevant commands, and recognise 'noX' as 'X = false', either in the _setting_ of options or in the _reading_ of them. (In the latter case, calling o.par would, behind the scenes, look for par _and_ nopar.) Thus we will be able to write 'MATH .o align, nopar'.
+* (Open question: should MATH* be like TEXT* and PARAGRAPH* in implying nopar? I think it should. We will dissociate * from equation numbering.)

@@ -27,26 +27,16 @@ local textparagraphs = function (args, starting_index)
   return args:slice(starting_index,-1):concat([[ \par ]])
 end
 
-o:append'TEXT*.prespace=0pt'
-a["TEXT*"] = '1+'
-f["TEXT*"] = function (n, args, o)
-  local paragraphs = textparagraphs(args,1)
-  if o.prespace == '0pt' then
-    return paragraphs
-  else
-    return F('\\vspace{%s}\n%s', o.prespace, paragraphs)
-  end
-end
-
-o:append'TEXT.prespace=0pt'
+-- TEXT creates one or more paragraphs.
+-- TEXT* suppresses the \par that would normally be put at the end.
 a.TEXT = '1+'
+o:append 'TEXT.starred = false'
 f.TEXT = function (n, args, o)
   local paragraphs = textparagraphs(args,1)
-  if o.prespace == '0pt' then
-    return F([[%s \par]], paragraphs)
-  else
-    return F('\\vspace{%s}\n%s \\par', o.prespace, paragraphs)
+  if o.starred then
+    o:_set_local('nopar', true)
   end
+  return paragraphs
 end
 
 -- General Latex command, and some specific ones.

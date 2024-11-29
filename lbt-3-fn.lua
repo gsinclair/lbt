@@ -179,10 +179,12 @@ OptionLookup.new = function(t)
   o[_opcode_]  = nil   -- 'ITEMIZE', provided later
   o[_local_]   = nil   -- 'compact=true, bullet=>', provided later
   -- We need to put explicit methods in so that __index is not triggered.
-  o.set_opcode_and_options = OptionLookup.set_opcode_and_options
+  o.set_opcode_and_options   = OptionLookup.set_opcode_and_options
   o.unset_opcode_and_options = OptionLookup.unset_opcode_and_options
-  o._lookup = OptionLookup._lookup
-  o._has_local_key = OptionLookup._has_local_key
+  o._lookup                  = OptionLookup._lookup
+  o._has_local_key           = OptionLookup._has_local_key
+  o._has_key                 = OptionLookup._has_key
+  o._safe_index              = OptionLookup._safe_index
   -- Apart from that, any field reference is handled by __index, to perform
   -- an option lookup.
   setmetatable(o, OptionLookup)
@@ -277,6 +279,22 @@ end
 -- error.
 function OptionLookup:_has_local_key(key)
   return rawget(self, _local_) ~= nil and rawget(self, _local_)[key] ~= nil
+end
+
+-- Same spirit as _has_local_key, but not limited to local keys. Also, must provide
+-- the 'base' and the key, so that a qualified key can be constructed. For example,
+-- _has_key('TEXT', 'starred').
+function OptionLookup:_has_key(base, key)
+  local qk = base .. '.' .. key   -- qualified key
+  return self:_lookup(qk) ~= nil
+end
+
+-- ol.froboz                  --> error
+-- ol:_safe_index('froboz')   --> nil
+function OptionLookup:_safe_index(key)
+  local value = self:_lookup(key)
+  if value == nil then return nil end
+  return value
 end
 
 -- ol['QQ.color'] either returns the value or raises an error.
@@ -473,6 +491,13 @@ lbt.fn.latex_expansion = function (pc)
 end
 
 
+-- This is called (directly or indirectly) within a template's 'expand' function.
+-- It would usually be indirect. For example:
+--   lbt.WS0 (template)
+--     expand  (function)
+--       lbt.util.latex_expand_content_list('BODY', pc, ocr, ol)
+--         lbt.fn.latex_for_commands
+--
 -- Return List of strings, each containing Latex for a line of author content.
 -- If a line cannot be evaluated (no function to support a given token) then
 -- we insert some bold red information into the Latex so the author can see,
@@ -483,14 +508,12 @@ end
 -- ol:       option lookup           call o.color to get option for current opcode
 --                                   or o['Q.color'] to be specific
 --
--- TODO rename this function to `latex_for_commands`.
---      (That means changing several template expand functions.)
 lbt.fn.latex_for_commands = function (commands, ocr, ol)
   local buffer = pl.List()
   for command in commands:iter() do
     local status, latex = lbt.fn.latex_for_command(command, ocr, ol)
     if status == 'ok' then
-      buffer:append(latex)
+      buffer:extend(latex)
     elseif status == 'notfound' then
       local msg = lbt.fn.impl.latex_message_opcode_not_resolved(command[1])
       buffer:append(msg)
@@ -510,7 +533,7 @@ end
 
 -- Take a single command of parsed author content like
 --   { 'ITEMIZE', o = { float = true}, k = {}, a = {'One', 'Two', 'Three'} }
--- and produce a string of Latex.
+-- and produce a pl.List of Latex code lines.
 --
 -- Before sending the arguments to the opcode function, any register references
 -- like ◊ABC are expanded. Also, STO is treated specially. And, in the future,
@@ -522,7 +545,7 @@ end
 --  * ol:      an options lookup that we pass to the function
 --
 -- Return:
---  * 'ok', latex              [succesful]
+--  * 'ok', latex list         [succesful]
 --  * 'sto', nil               [STO register allocation]
 --  * 'stop-processing', nil   [CTRL stop]
 --  * 'noop', nil              [a CTRL directive requiring no output]
@@ -563,11 +586,18 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
     end
   end
   -- 2. Search for an opcode function (and argspec) and return if we did not find one.
-  local x = ocr(opcode)   --> { opcode_function = ..., argspec = ... }
+  --    This must be aware of starred commands. For example, TEXT* needs to be interpreted
+  --    as 'TEXT .o starred', whereas 'QQ*' is a function in its own right.
+  local x = lbt.fn.impl.resolve_opcode_function_and_argspec(opcode, ocr, ol)
+  ;           --> { opcode_function = ..., argspec = ... }
   if x == nil then
     lbt.log('emit', '    --> NOTFOUND')
     lbt.log(2, 'opcode not resolved: %s', opcode)
     return 'notfound', nil
+  end
+  if x.starred then
+    opcode = opcode.sub(1,-2)
+    opargs.starred = true
   end
   -- 3. Check we have a valid number of arguments.
   if x.argspec then
@@ -588,25 +618,42 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
     v = lbt.fn.impl.expand_register_references(v, false)
     kwargs[k] = v
   end
-  -- 6. Call the opcode function and return 'ok', ... or 'error', ...
-  ol:set_opcode_and_options(opcode, command.o)    -- Having to set and unset is a shame, but probably efficient.
+  -- 6. Call the opcode function and return 'error', ... if necessary.
+  ol:set_opcode_and_options(opcode, opargs)    -- Having to set and unset is a shame, but probably efficient.
   local result = x.opcode_function(nargs, args, ol, kwargs)
+  local extras = lbt.fn.impl.extract_from_option_lookup(ol, { 'nopar', 'prespace', 'postspace' })
   ol:unset_opcode_and_options()
   if type(result) == 'string' then
-    lbt.log('emit', '    --> %s', result)
-    return 'ok', result
+    result = pl.List({result})
   elseif type(result) == 'table' and type(result.error) == 'string' then
     local errormsg = result.error
     lbt.log('emit', '    --> ERROR: %s', errormsg)
     lbt.log(1, 'Error occurred while processing opcode %s\n    %s', opcode, errormsg)
     return 'error', errormsg
   elseif type(result) == 'table' then
-    result = table.concat(result, "\n")
-    lbt.log('emit', '    --> %s', result)
-    return 'ok', result
+    result = pl.List(result)
   else
     lbt.err.E325_invalid_return_from_template_function(opcode, result)
   end
+  -- 7. Do some light processing of the result: apply options par/nopar and
+  --    prespace and postspace.
+  if not extras.nopar then
+    -- NOTE: I want to generalise this. I want to be able to set noX for any
+    -- option X that is a boolean.
+    result:append('\\par')
+  end
+  if extras.prespace then
+    result:insert(1, F([[\vspace{%s}]], extras.prespace))
+  end
+  if extras.postspace then
+    result:append(F([[\vspace{%s}]], extras.postspace))
+  end
+  -- 8. We are done. Log the result and return.
+  lbt.log('emit', '    --> SUCCESS')
+  for line in result:iter() do
+    lbt.log('emit', '       |  ' .. line)
+  end
+  return 'ok', result
 end
 
 -- Produce a function that resolves tokens using the sources provided here.
@@ -619,6 +666,7 @@ end
 -- legitimately be nil, although we will put a warning in the log file.
 --
 -- TODO make this impl
+--
 lbt.fn.opcode_resolver = function (sources)
   return pl.utils.memoize(function (token)
     for s in sources:iter() do
@@ -1087,6 +1135,70 @@ lbt.fn.impl.assign_register = function (args)
                    mathmode = mathmode,
                    value    = value }
   lbt.fn.impl.register_store(record)
+end
+
+-- Given an opcode like 'SECTION' and an opcode resolver (ocr), return
+--   { opcode_function = ..., argspec = ..., starred = true (perhaps) }
+-- If no function exists for the opcode, return nil.
+-- (The opcode resolver will try the current template, then any sources, then...)
+-- All this is handled by the ocr; we don't implement any smart logic, yet.
+--
+-- What we _do_ implement is the smarts surrounding starred commands. The opcode
+-- TEXT* will result in the same opcode_function as TEXT, but the oparg 'starred'
+-- needs to be set. But there are permutations. Consider TEXT*, QQ* and PART*.
+--
+-- ocr('TEXT*') will return nil because it is not registered as its own command.
+-- So we check ocr('TEXT') and get a result. Further, the TEXT function supports
+-- the oparg 'starred' (default false, of course). So we now have our function and
+-- need to communicate that 'starred = true' needs to be registered in the opargs.
+--
+-- ocr('QQ*') will return a result because it is implemented directly. So we don't do
+-- anything special.
+--
+-- ocr('PART*') will return nil, and ocr('PART') will return a result. However, the
+-- opargs for PART do not include 'starred', so there is in fact no implementation
+-- for PART*, and we return nil.
+--
+-- The code is messy, but I don't really see any choice.
+--
+lbt.fn.impl.resolve_opcode_function_and_argspec = function (opcode, ocr, ol)
+  local x, base
+  x = ocr(opcode)
+  if x then
+    return x               -- First time's a charm, like SECTION or QQ*
+  end
+  -- Maybe this is a starred opcode?
+  if opcode:endswith('*') then
+    base = opcode:sub(1,-2)
+    x = ocr(base)
+    if x == nil then
+      return nil           -- There is no base opcode with potential star, like PQXYZ*
+    else
+      -- There is potential but we need to check.
+      if ol:_has_key(base, 'starred') then
+        -- Bingo! We have something like SECTION*
+        x.starred = true
+        return x
+      else
+        -- Boo. We have something like PART*, where PART does not allow for a star
+        return nil
+      end
+    end
+  else
+    -- This is not a starred opcode, like PQXYZ, so we are out of luck.
+    return nil
+  end
+end
+
+-- Input: ol, { 'nopar', 'prespace' }
+-- Output: { nopar = false, prespace = '6pt' }
+lbt.fn.impl.extract_from_option_lookup = function(ol, keys)
+  local result = {}
+  for key in pl.List(keys):iter() do
+    local value = ol:_safe_index(key)
+    result[key] = value
+  end
+  return result
 end
 
 -- str: the string we are expanding (looking for ◊xyz and replacing)
