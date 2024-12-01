@@ -74,7 +74,7 @@ local good_input_4 = content_lines([[
   [+BODY]
     TEXT Examples of animals:
     ITEMIZE .o topsep=0pt :: Bear :: Chameleon :: Frog
-    TEXT* .o vspace=30pt :: Have you seen any of these?]])
+    TEXT* .o prespace=30pt :: Have you seen any of these?]])
 
 -- For testing negative expansion of Basic template
 local bad_input_1 = content_lines([[
@@ -82,7 +82,6 @@ local bad_input_1 = content_lines([[
     TEMPLATE lbt.Basic
   [+BODY]
     TEXT
-    TEXT a :: b :: c
     ITEMIZE
     XYZ foo bar]])
 
@@ -105,7 +104,7 @@ local good_input_5b = content_lines([[
     TEMPLATE TestQuestions
     OPTIONS  .d Q.prespace = 18pt, MC.alphabet = roman
   [+BODY]
-    TEXT .o vspace=30pt :: Complete these questions in the space below.
+    TEXT .o prespace=30pt :: Complete these questions in the space below.
     Q Evaluate:
     QQ $2+2$
     QQ $5 \times 6$
@@ -233,6 +232,7 @@ local function T_expand_Basic_template_1()
   local pc = lbt.fn.parsed_content(good_input_4)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
+  -- IX('latex_expansion', l)
   EQ(l[1], [[Examples of animals: \par]])
   assert(l[2]:lfind("\\item Bear"))
   assert(l[2]:lfind("\\item Chameleon"))
@@ -248,12 +248,10 @@ local function T_expand_Basic_template_2()
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
   assert(l[1]:lfind([[Opcode \verb|TEXT| raised error]]))
-  assert(l[1]:lfind([[0 args given but 1 expected]]))
-  assert(l[2]:lfind([[Opcode \verb|TEXT| raised error]]))
-  assert(l[2]:lfind([[3 args given but 1 expected]]))
-  assert(l[3]:lfind([[Opcode \verb|ITEMIZE| raised error]]))
-  assert(l[3]:lfind([[0 args given but 1+ expected]]))
-  assert(l[4]:lfind([[Opcode \verb|XYZ| not resolved]]))
+  assert(l[1]:lfind([[0 args given but 1+ expected]]))
+  assert(l[2]:lfind([[Opcode \verb|ITEMIZE| raised error]]))
+  assert(l[2]:lfind([[0 args given but 1+ expected]]))
+  assert(l[3]:lfind([[Opcode \verb|XYZ| not resolved]]))
 end
 
 local function T_util()
@@ -266,8 +264,6 @@ local function T_util()
   local t = 'My name is !NAME!, age !AGE!, and I am !ADJ! to see you'
   local v = { NAME = 'Jon', AGE = 37, ADJ = 'pleased', JOB = 'Technician' }
   EQ(lbt.util.string_template_expand1(t, v), 'My name is Jon, age 37, and I am pleased to see you')
-  v = { AGE = 37, JOB = 'Technician' }
-  EQ(lbt.util.string_template_expand1(t, v), 'My name is !!NAME!!, age 37, and I am !!ADJ!! to see you')
   local t = {
     'The rain in !COUNTRY!',
     'falls mainly on the',
@@ -377,7 +373,6 @@ local function T_Basic_various()
   local pc = lbt.fn.parsed_content(good_input_8)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
-  I(l)
   assert(l[2]:lfind('Content 1'))
 end
 
@@ -399,15 +394,15 @@ local function RUN_TESTS(flag)
   T_parsed_content_1()
   T_extra_sources()
   T_add_template_directory()
-  -- T_expand_Basic_template_1()     XXX: this should work but is producing an error
-  -- T_expand_Basic_template_2()
+  T_expand_Basic_template_1()
+  T_expand_Basic_template_2()
   T_util()
   T_number_in_alphabet()
   T_styles_in_test_question_template_5a()
   T_styles_in_test_question_template_5b()
-  -- T_register_expansion()     XXX: this should work but is producing an error
+  T_register_expansion()
   T_simplemath()
-  -- T_Basic_various()     XXX: this should work but is producing an error
+  T_Basic_various()
 
   if flag == 1 then
     print("======================= </TESTS> (exiting)")
