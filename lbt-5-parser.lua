@@ -21,6 +21,7 @@ local loc = lpeg.locale()
 local Alpha = loc.alpha
 local Upper = loc.upper
 local Digit = loc.digit
+local KeywordChar = loc.alpha + '_'
 local Alnum = loc.alpha + loc.digit
 -- loc.space^0 * loc.alpha^1      /\s*\w+/
 -- P'-'^-1 * R'0-9'^3             /-?\d{3,}/
@@ -128,7 +129,7 @@ local verbarg  = '.v <<' * hsp * nl *
 -- options argument
 local optarg   = '.o' * hspace * argtext / tag('optarg')
 -- keyword argument
-local _key     = C(Alpha^1)
+local _key     = C(KeywordChar^1)
 local _value   = argtext
 local kwarg    = Ct('(' * _key * ')' * hspace * _value) / tag('kwarg')
 -- positional argument can be ".a blah blah blah" but is more likely unadorned
