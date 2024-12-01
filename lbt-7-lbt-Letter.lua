@@ -14,8 +14,8 @@ return {
   name      = 'lbt.Letter',
   desc      = 'From/to name and address, salutation, etc.',
   sources   = {},
-  init      = lbt.api.default_template_init,
-  expand    = lbt.api.default_template_expand,
+  init      = nil,
+  expand    = lbt.api.default_template_expander(),
   functions = f
 }
 

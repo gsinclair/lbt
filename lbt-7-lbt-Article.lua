@@ -18,9 +18,6 @@ local m = {}
 -- o:append 'Article.parstyle = skip, Article.parskip = 6pt plus 2pt minus 2pt, Article.parindent = 1em'
 o:append 'Article.parskip = 2pt plus 2pt minus 1pt, Article.parindent = 15pt'
 
-local function init()
-end
-
 -- Input: (pc) parsed content   (ocr) opcode resolver   (ol) option lookup
 local function expand(pc, ocr, ol)
   local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
@@ -99,7 +96,7 @@ return {
   name      = 'lbt.Article',
   sources   = {},
   desc      = 'An article with title, author, date, abstract, headings',
-  init      = init,
+  init      = nil,
   expand    = expand,
   functions = f,
   default_options = o,

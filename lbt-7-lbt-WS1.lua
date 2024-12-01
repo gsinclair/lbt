@@ -154,7 +154,7 @@ return {
   name      = 'lbt.WS1',
   desc      = 'A worksheet like WS0 but with added structure (as an example)',
   sources   = { 'lbt.WS0', 'lbt.Questions' },
-  init      = lbt.api.default_template_init,
+  init      = nil,
   expand    = expand,
   functions = f,
   default_options = o,

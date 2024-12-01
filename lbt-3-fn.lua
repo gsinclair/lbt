@@ -464,7 +464,7 @@ lbt.fn.latex_expansion = function (pc)
   -- Save the option lookup for access by macros like Math.vector.
   lbt.const.option_lookup = ol
   -- Allow the template to initialise counters, etc.
-  t.init()
+  if type(t.init) == 'function' then t.init() end
   -- And...go!
   lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
   local result = t.expand(pc, ocr, ol)

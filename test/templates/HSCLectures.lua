@@ -216,7 +216,7 @@ return {
   desc = 'A test template for the lbt project',
   sources = {'lbt.Questions'},
   init = lbt.api.default_template_init,
-  expand = lbt.api.default_template_expand,
+  expand = lbt.api.default_template_expander(),
   functions = f
 }
 

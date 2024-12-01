@@ -5,7 +5,7 @@ return {
   name      = 'lbt.Doc.Chapter',
   desc      = 'A thin wrapper around a Latex \\chapter',
   sources   = {},
-  init      = lbt.api.default_template_init,
+  init      = nil,
   expand    = function (pc, ocr, ol)
     local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
     local label    = lbt.util.content_meta_or_nil(pc, 'LABEL')

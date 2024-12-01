@@ -17,8 +17,8 @@ return {
   name      = 'lbt.CourseNotes',
   desc      = 'Title page, sections, running headings',
   sources   = {"lbt.Questions"},
-  init      = lbt.api.default_template_init,
-  expand    = lbt.api.default_template_expand,
+  init      = nil,
+  expand    = lbt.api.default_template_expander(),
   functions = f
 }
 

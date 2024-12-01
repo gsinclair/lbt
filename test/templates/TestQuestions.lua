@@ -24,8 +24,6 @@ local pp = pl.pretty.write
 -- [[           template code            ]]
 -- [[                                    ]]
 
-local expand = lbt.api.default_template_expand()
-
 local f = {}
 local a = {}
 local o = pl.List()
@@ -73,7 +71,7 @@ return {
   desc = 'A test template for the lbt project',
   sources = {},
   init = init,
-  expand = lbt.api.default_template_expand(),
+  expand = lbt.api.default_template_expander(),
   default_options = o,
   arguments = a,
   functions = f

@@ -157,9 +157,9 @@ end
 
 a.PARAGRAPH = '2+'
 o:append 'PARAGRAPH.starred = false, PARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar
-f.PARAGRAPH = function(n, args, o)
+f.PARAGRAPH = function(n, args, o, kw)
   return T {
-    [[\paragraph{!TITLE} !LABEL!]],
+    [[\paragraph{!TITLE!} !LABEL!]],
     '!TEXT! !PAR!',
     values = {
       TITLE = args[1],
@@ -174,7 +174,7 @@ a.SUBPARAGRAPH = '2+'
 o:append 'SUBPARAGRAPH.starred = false, SUBPARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar
 f.SUBPARAGRAPH = function(n, args, o)
   return T {
-    [[\subparagraph{!TITLE} !LABEL!]],
+    [[\subparagraph{!TITLE!} !LABEL!]],
     '!TEXT! !PAR!',
     values = {
       TITLE = args[1],
@@ -686,8 +686,8 @@ return {
   name      = 'lbt.Basic',
   desc      = 'Fundamental Latex macros for everyday use (built in to lbt)',
   sources   = {},
-  init      = lbt.api.default_template_init,
-  expand    = lbt.api.default_template_expand,
+  init      = nil,
+  expand    = lbt.api.default_template_expander(),
   functions = f,
   arguments = a,
   default_options = o,

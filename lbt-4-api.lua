@@ -254,7 +254,7 @@ lbt.api.default_template_init = function()
   end
 end
 
--- Template expansion acts on a parsed content (plus sources and styles) and
+-- Template expansion acts on a parsed content (plus sources and options) and
 -- produces a string of Latex code.
 --
 -- A template that is a structural will provide its own expand() function to
@@ -265,10 +265,24 @@ end
 -- `lbt.fn.latex_for_commands`. That means this expansion is
 -- assuming that the author content includes a '+BODY' somewhere. We raise an
 -- error if it does not exist.
-lbt.api.default_template_expand = function()
+--
+-- To use this, include something like the following in a template file:
+--
+--   return {
+--     name      = 'lbt.Basic',
+--     desc      = 'Fundamental Latex macros for everyday use (built in to lbt)',
+--     sources   = {},
+--     init      = nil,
+--     expand    = lbt.api.default_template_expander(),
+--     functions = f,
+--     arguments = a,
+--     default_options = o,
+--   }
+--
+lbt.api.default_template_expander = function()
   return function (pc, ocr, ol)
     -- abbreviations for: parsed content, opcode resolver, option lookup
-    lbt.log(4, 'Inside default_template_expand for template <%s>', pc:template_name())
+    lbt.log(4, 'Inside default_template_expander function for template <%s>', pc:template_name())
     local body = pc:list_or_nil('BODY')
     lbt.log(4, ' * BODY has <%d> items to expand', body:len())
     if body == nil then
