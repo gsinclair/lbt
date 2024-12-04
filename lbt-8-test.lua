@@ -275,6 +275,9 @@ local function T_util()
   EQ(a, 4); EQ(b, 17)
   a, b = lbt.util.parse_range('6')
   EQ(a, 6); EQ(b, 6)
+  local d = lbt.util.parse_date('2023-07-22')
+  EQ(d:year(), 2023); EQ(d:month(), 7); EQ(d:day(), 22)
+  EQ(d:hour(), 12); EQ(d:min(), 0); EQ(d:sec(), 0)
 end
 
 local function T_number_in_alphabet()

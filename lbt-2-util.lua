@@ -329,6 +329,13 @@ function lbt.util.parse_range(text)
   return lbt.parser.parse_range(text)
 end
 
+-- Input: '2023-07-22'    Output: a pl.Date object
+-- Invalid input causes fatal error.
+function lbt.util.parse_date(text)
+  local df = pl.Date.Format 'yyyy-mm-dd'
+  return df:parse(text)
+end
+
 -- Given arguments to a token, see if the first one is an "options" argument.
 -- Return the options argument (or nil) and the rest of the arguments.
 -- e.g.
