@@ -417,4 +417,4 @@ local function RUN_TESTS(flag)
   end
 end
 
-RUN_TESTS(0)
+RUN_TESTS(1)

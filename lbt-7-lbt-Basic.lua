@@ -30,11 +30,11 @@ end
 -- TEXT creates one or more paragraphs.
 -- TEXT* suppresses the \par that would normally be put at the end.
 a.TEXT = '1+'
-o:append 'TEXT.starred = false'
+o:append 'TEXT.starred = false, TEXT.par = true'
 f.TEXT = function (n, args, o)
   local paragraphs = textparagraphs(args,1)
   if o.starred then
-    o:_set_local('nopar', true)
+    o:_set_local('par', false)
   end
   return paragraphs
 end

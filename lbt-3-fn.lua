@@ -183,6 +183,7 @@ OptionLookup.new = function(t)
   o.unset_opcode_and_options = OptionLookup.unset_opcode_and_options
   o._lookup                  = OptionLookup._lookup
   o._has_local_key           = OptionLookup._has_local_key
+  o._set_local               = OptionLookup._set_local
   o._has_key                 = OptionLookup._has_key
   o._safe_index              = OptionLookup._safe_index
   -- Apart from that, any field reference is handled by __index, to perform
@@ -279,6 +280,20 @@ end
 -- error.
 function OptionLookup:_has_local_key(key)
   return rawget(self, _local_) ~= nil and rawget(self, _local_)[key] ~= nil
+end
+
+-- There are cases where the implementation of a command has to change a
+-- local option key. For example:
+--   TEXT* It was a dark and stormy night.
+-- TEXT by default has 'par = true', but because of the star, we want to
+-- change that to 'par = false'. It needs to be done this way, because the
+-- paragraph handling (appending \par to the Latex output) is done outside
+-- the TEXT implementation.
+--
+-- There is probably (and hopefully) no other use case for this.
+function OptionLookup:_set_local(key, value)
+  local l = rawget(self, _local_)
+  l[key] = value
 end
 
 -- Same spirit as _has_local_key, but not limited to local keys. Also, must provide
