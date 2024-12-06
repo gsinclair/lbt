@@ -636,7 +636,7 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   -- 6. Call the opcode function and return 'error', ... if necessary.
   ol:set_opcode_and_options(opcode, opargs)    -- Having to set and unset is a shame, but probably efficient.
   local result = x.opcode_function(nargs, args, ol, kwargs)
-  local extras = lbt.fn.impl.extract_from_option_lookup(ol, { 'nopar', 'prespace', 'postspace' })
+  local extras = lbt.fn.impl.extract_from_option_lookup(ol, { 'par', 'prespace', 'postspace' })
   ol:unset_opcode_and_options()
   if type(result) == 'string' then
     result = pl.List({result})
@@ -652,9 +652,7 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   end
   -- 7. Do some light processing of the result: apply options par/nopar and
   --    prespace and postspace.
-  if not extras.nopar then
-    -- NOTE: I want to generalise this. I want to be able to set noX for any
-    -- option X that is a boolean.
+  if extras.par then
     result:append('\\par')
   end
   if extras.prespace then

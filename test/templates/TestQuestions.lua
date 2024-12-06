@@ -36,12 +36,9 @@ a.Q = 1
 o:append 'Q.prespace = 12pt, Q.color = blue'
 f.Q = function(n, args, o)
   lbt.api.counter_reset('qq')
-  local vsp = o.prespace
   local col = o.color
   local q = lbt.api.counter_inc('q')
-  return F([[{\vspace{%s}
-              \bsferies\color{%s}Question~%d}\enspace %s]],
-              vsp, col, q, args[1])
+  return F([[\bsferies\color{%s}Question~%d}\enspace %s]], col, q, args[1])
 end
 
 a.QQ = 1
