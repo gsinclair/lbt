@@ -280,16 +280,26 @@ local formatting_handlers = {
     else
       return x
     end
+  end,
+
+  par = function(x, o)
+    if o.par then
+      return x .. [[ \par]]
+    else
+      return x
+    end
   end
 }
 
-function lbt.util.handle_nopar(x, o)
-  if o.nopar then return x
-  else return x .. [[ \par ]]
-  end
-end
+-- XXX: remove me
+--
+-- function lbt.util.handle_nopar(x, o)
+--   if o.nopar then return x
+--   else return x .. [[ \par ]]
+--   end
+-- end
 
--- general_formatting_wrap(x, o, 'leftalign center nopar')
+-- general_formatting_wrap(x, o, 'leftalign center par')
 --   x: latex content to be processed
 --   o: option resolver
 --   keys: list (or space-separated string) of formatting keys that are to be applied
@@ -305,19 +315,15 @@ function lbt.util.general_formatting_wrap(x, o, keys)
   end
   -- 2. Apply each formatting key in turn. 'nopar' is special.
   for option in keys:iter() do
-    if option == 'nopar' then
-      x = lbt.util.handle_nopar(x, o)
+    local handler = formatting_handlers[option]
+    if handler == nil then
+      -- TODO: more specific error code
+      lbt.err.E001_internal_logic_error('Invalid formatting key: ' .. option)
+    end
+    if o[option] then
+      x = handler(x,o)
     else
-      local handler = formatting_handlers[option]
-      if handler == nil then
-        -- TODO: more specific error code
-        lbt.err.E001_internal_logic_error('Invalid formatting key: ' .. option)
-      end
-      if o[option] then
-        x = handler(x,o)
-      else
-        -- no need to do anything
-      end
+      -- no need to do anything
     end
   end
   return x

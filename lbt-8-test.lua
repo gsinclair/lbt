@@ -152,6 +152,21 @@ local good_input_8 = content_lines([[
   [+BODY]
     TEXT Hello
     TWOPANEL Content 1 :: Content 2
+    SECTION Introduction
+    SECTION* Various animals
+    SUBSECTION Cats
+    SUBSECTION* Dogs
+    SUBSUBSECTION Large
+    SUBSUBSECTION* Large
+    MATH .o align
+     :: a^2 + b^2 &= c^2
+     ::         E &= mc^2
+    MATH* .o align
+     :: a^2 + b^2 &= c^2
+     ::         E &= mc^2
+    MATH .o align, eqnum
+     :: a^2 + b^2 &= c^2
+     ::         E &= mc^2
 ]])
 
 ----------------------------------------------------------------------
@@ -386,7 +401,12 @@ local function T_Basic_various()
   local pc = lbt.fn.parsed_content(good_input_8)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
+  IX('l', l)
+  assert(l[1]:lfind('Hello'))
+  assert(l[2]:lfind('\\par'))
+  assert(l[3]:lfind('minipage'))
   assert(l[3]:lfind('Content 1'))
+  assert(l[3]:lfind('Content 2'))
 end
 
 ----------------------------------------------------------------------

@@ -325,10 +325,11 @@ end
 local math_environment = function(o)
   -- Deal with a special case first.
   local result = nil
+  DEBUGGER()
   if (o.env == 'align' or o.align) and o.alignleft then
     result = 'flalign'
   -- General case.
-  elseif o.env           then result = o.env
+  elseif o.env       then result = o.env
   elseif o.align     then result = 'align'
   elseif o.alignat   then result = 'alignat'
   elseif o.gather    then result = 'gather'
@@ -340,7 +341,7 @@ local math_environment = function(o)
   else                    result = 'equation'
   end
   -- Apply star if there is no numbering.
-  if not o.number then
+  if not o.eqnum then
     result = result .. '*'
   end
   return result
@@ -349,9 +350,13 @@ end
 local math_impl = function (environment, args, o)
   assert(environment)
   local process_args_notag = function(args)
-    if o.number == true or o.number == false then return args
+    if o.eqnum == true or o.eqnum == false then
+      -- If we number all, we use (say) 'align' and that handles it.
+      -- If we number none, we use (say) 'align*' and that handles it.
+      -- If we number _some_, we use (say) 'align' and apply \notag where needed.
+      return args
     else
-      local numbers = lbt.util.space_split(o.number):map(tonumber)
+      local numbers = lbt.util.space_split(o.eqnum):map(tonumber)
       numbers = pl.Set(numbers)
       local result = pl.List()
       for i=1,#args do
@@ -372,7 +377,7 @@ local math_impl = function (environment, args, o)
     end
   end
   -- 1. Pre-process the arguments to include \notag where necessary.
-  lines = process_args_notag(args)
+  local lines = process_args_notag(args)
   -- 2. Build mathematical content wrapped in 'align' or 'gather' or whatever.
   local x = nil
   x = join_lines(lines)
@@ -385,7 +390,7 @@ local math_impl = function (environment, args, o)
     x = '\\vspace{-\\partopsep}\\vspace{-\\topsep}\n' .. x
   end
   -- 5. Handle \par or otherwise.
-  x = lbt.util.general_formatting_wrap(x, o, 'nopar')
+  x = lbt.util.general_formatting_wrap(x, o, 'par')
   -- 6. Done!
   return x
 end
@@ -395,9 +400,13 @@ o:append { 'MATH',
            gather = false, multiline = false, gathered = false,
            aligned = false, alignedat = false,
            spreadlines = 'nil', alignleft = false,
-           nopar = false, number = false }
+           par = true, eqnum = false,
+           starred = false }
 a.MATH = '1+'
 f.MATH = function(n, args, o)
+  if o.starred then
+    o:_set_local('par', false)
+  end
   local env = math_environment(o)
   return math_impl(env, args, o)
 end
