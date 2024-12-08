@@ -601,17 +601,19 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
     end
   end
   -- 2. Search for an opcode function (and argspec) and return if we did not find one.
-  --    This must be aware of starred commands. For example, TEXT* needs to be interpreted
-  --    as 'TEXT .o starred', whereas 'QQ*' is a function in its own right.
+  --    This must be aware of starred commands. For example, TEXT* needs to be
+  --    interpreted as 'TEXT .o starred', whereas 'QQ*' is a function in its own
+  --    right.
   local x = lbt.fn.impl.resolve_opcode_function_and_argspec(opcode, ocr, ol)
-  ;           --> { opcode_function = ..., argspec = ... }
+  ;           -->     { opcode_function = ..., argspec = ... }
+  ;           -->  or { opcode_function = ..., argspec = ..., starred = true }
   if x == nil then
     lbt.log('emit', '    --> NOTFOUND')
     lbt.log(2, 'opcode not resolved: %s', opcode)
     return 'notfound', nil
   end
   if x.starred then
-    opcode = opcode.sub(1,-2)
+    opcode = opcode:sub(1,-2)
     opargs.starred = true
   end
   -- 3. Check we have a valid number of arguments.
@@ -635,6 +637,7 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   end
   -- 6. Call the opcode function and return 'error', ... if necessary.
   ol:set_opcode_and_options(opcode, opargs)    -- Having to set and unset is a shame, but probably efficient.
+
   local result = x.opcode_function(nargs, args, ol, kwargs)
   local extras = lbt.fn.impl.extract_from_option_lookup(ol, { 'par', 'prespace', 'postspace' })
   ol:unset_opcode_and_options()
@@ -653,7 +656,7 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   -- 7. Do some light processing of the result: apply options par/nopar and
   --    prespace and postspace.
   if extras.par then
-    result:append('\\par')
+    result:append('\\par') -- TODO: replace with general_formatting_wrap ?
   end
   if extras.prespace then
     result:insert(1, F([[\vspace{%s}]], extras.prespace))
@@ -681,22 +684,28 @@ end
 -- TODO make this impl
 --
 lbt.fn.opcode_resolver = function (sources)
-  return pl.utils.memoize(function (token)
-    for s in sources:iter() do
-      -- Each 'source' is a template object, with properties 'functions'
-      -- and 'arguments'.
-      local f = s.functions[token]
-      local a = s.arguments[token]
-      if f then
-        if a == nil then
-          lbt.log(2, 'WARN: no argspec provided for opcode <%s>', token)
+  -- return pl.utils.memoize(
+    -- NOTE: 8 Dec 2024 - Experimenting with _not_ memoising the function, because
+    --       I am getting erroneous return values where 'starred' is making its way
+    --       in, for some reason.
+    return function (token)
+      -- if token:startswith('MATH') then DEBUGGER() end
+      for s in sources:iter() do
+        -- Each 'source' is a template object, with properties 'functions'
+        -- and 'arguments'.
+        local f = s.functions[token]
+        local a = s.arguments[token]
+        if f then
+          if a == nil then
+            lbt.log(2, 'WARN: no argspec provided for opcode <%s>', token)
+          end
+          return { opcode_function = f, argspec = a }
         end
-        return { opcode_function = f, argspec = a }
       end
+      -- No token function found :(
+      return nil
     end
-    -- No token function found :(
-    return nil
-  end)
+  -- )
 end
 
 -- }}}

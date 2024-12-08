@@ -157,14 +157,21 @@ local good_input_8 = content_lines([[
     SUBSECTION Cats
     SUBSECTION* Dogs
     SUBSUBSECTION Large
-    SUBSUBSECTION* Large
-    MATH .o align
-     :: a^2 + b^2 &= c^2
-     ::         E &= mc^2
+    SUBSUBSECTION* Small
+    TEXT* ---------- MATH* .o align
     MATH* .o align
      :: a^2 + b^2 &= c^2
      ::         E &= mc^2
+    TEXT* ---------- MATH .o align
+    MATH .o align
+     :: a^2 + b^2 &= c^2
+     ::         E &= mc^2
+    TEXT* ---------- MATH .o align, eqnum
     MATH .o align, eqnum
+     :: a^2 + b^2 &= c^2
+     ::         E &= mc^2
+    TEXT* ---------- MATH* .o align, eqnum=1
+    MATH* .o align, eqnum=1
      :: a^2 + b^2 &= c^2
      ::         E &= mc^2
 ]])
@@ -247,7 +254,6 @@ local function T_expand_Basic_template_1()
   local pc = lbt.fn.parsed_content(good_input_4)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
-  -- IX('latex_expansion', l)
   EQ(l[1], [[Examples of animals:]])
   EQ(l[2], [[\par]])
   assert(l[3]:lfind("\\item Bear"))
@@ -401,12 +407,42 @@ local function T_Basic_various()
   local pc = lbt.fn.parsed_content(good_input_8)
   lbt.fn.validate_parsed_content(pc)
   local l  = lbt.fn.latex_expansion(pc)
-  IX('l', l)
   assert(l[1]:lfind('Hello'))
   assert(l[2]:lfind('\\par'))
   assert(l[3]:lfind('minipage'))
   assert(l[3]:lfind('Content 1'))
   assert(l[3]:lfind('Content 2'))
+  EQ(l[4], [[\section{Introduction} ]])
+  EQ(l[5], [[\section*{Various animals} ]])
+  EQ(l[6], [[\subsection{Cats} ]])
+  EQ(l[7], [[\subsection*{Dogs} ]])
+  EQ(l[8], [[\subsubsection{Large} ]])
+  EQ(l[9], [[\subsubsection*{Small} ]])
+  EQ(l[10], [[---------- MATH* .o align]])
+  assert(l[11]:lfind([[\begin{align*}]]))
+  assert(l[11]:lfind([[\end{align*}]]))
+  assert(not l[11]:lfind([[\par]]))
+  EQ(l[12], [[---------- MATH .o align]])
+  assert(l[13]:lfind([[\begin{align*}]]))
+  assert(l[13]:lfind([[\end{align*}]]))
+  assert(not l[13]:lfind([[\par]]))
+  EQ(l[14], [[\par]])
+  EQ(l[15], [[---------- MATH .o align, eqnum]])
+  assert(l[16]:lfind([[\begin{align}]]))
+  assert(l[16]:lfind([[\end{align}]]))
+  assert(not l[16]:lfind([[\par]]))
+  EQ(l[17], [[\par]])
+  EQ(l[18], [[---------- MATH* .o align, eqnum=1]])
+  assert(l[19]:lfind([[\begin{align}]]))
+  assert(l[19]:lfind([[a^2 + b^2 &= c^2 \\]]))
+  assert(l[19]:lfind([[E &= mc^2 \notag]]))
+  assert(l[19]:lfind([[\end{align}]]))
+  assert(not l[19]:lfind([[\par]]))
+  EQ(l[20], nil)
+  -- assert(l[10]:lfind([[xxx]]))
+  -- assert(l[10]:lfind([[xxx]]))
+  -- assert(l[10]:lfind([[xxx]]))
+  -- assert(l[10]:lfind([[xxx]]))
 end
 
 ----------------------------------------------------------------------
@@ -447,4 +483,4 @@ local function RUN_TESTS(flag)
   end
 end
 
-RUN_TESTS(1)
+RUN_TESTS(0)

@@ -145,6 +145,12 @@ f.SUBSECTION = function(n, args, o, kw)
   return document_section('subsection', args[1], o, kw)
 end
 
+a.SUBSUBSECTION = '1'
+o:append 'SUBSUBSECTION.starred = false'
+f.SUBSUBSECTION = function(n, args, o, kw)
+  return document_section('subsubsection', args[1], o, kw)
+end
+
 a.PARAGRAPH = '2+'
 o:append 'PARAGRAPH.starred = false, PARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar
 f.PARAGRAPH = function(n, args, o, kw)
@@ -325,7 +331,6 @@ end
 local math_environment = function(o)
   -- Deal with a special case first.
   local result = nil
-  DEBUGGER()
   if (o.env == 'align' or o.align) and o.alignleft then
     result = 'flalign'
   -- General case.
@@ -356,7 +361,13 @@ local math_impl = function (environment, args, o)
       -- If we number _some_, we use (say) 'align' and apply \notag where needed.
       return args
     else
-      local numbers = lbt.util.space_split(o.eqnum):map(tonumber)
+      -- o.eqnum could be an integer (.o eqnum 4) or string (.o eqnum 1 3 4).
+      local numbers
+      if type(o.eqnum) == 'number' then
+        numbers = { o.eqnum }
+      else
+        numbers = lbt.util.space_split(o.eqnum):map(tonumber)
+      end
       numbers = pl.Set(numbers)
       local result = pl.List()
       for i=1,#args do
@@ -389,9 +400,7 @@ local math_impl = function (environment, args, o)
     x = lbt.util.wrap_environment { x, 'adjustwidth', args = {o.alignleft, ''} }
     x = '\\vspace{-\\partopsep}\\vspace{-\\topsep}\n' .. x
   end
-  -- 5. Handle \par or otherwise.
-  x = lbt.util.general_formatting_wrap(x, o, 'par')
-  -- 6. Done!
+  -- 5. Done!
   return x
 end
 
