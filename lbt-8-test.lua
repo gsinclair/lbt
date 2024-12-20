@@ -175,6 +175,10 @@ local good_input_8 = content_lines([[
      :: a^2 + b^2 &= c^2
      ::         E &= mc^2
     TEXT .o nopar :: Trying automatic 'noX' option resolution.
+    PARAGRAPH Title 1 :: Content content.
+    PARAGRAPH* Title 2 :: Content content.
+    PARAGRAPH .o nopar :: Title 3 :: Content content.
+    SUBPARAGRAPH (label) para-label :: Title 4 :: Content content.
 ]])
 
 ----------------------------------------------------------------------
@@ -440,7 +444,13 @@ local function T_Basic_various()
   assert(l[19]:lfind([[\end{align}]]))
   assert(not l[19]:lfind([[\par]]))
   EQ(l[20], [[Trying automatic 'noX' option resolution.]])
-  EQ(l[21], nil)
+  EQ(l[21], '\\paragraph{Title 1} \nContent content.')
+  EQ(l[22], '\\par')
+  EQ(l[23], '\\paragraph{Title 2} \nContent content.')
+  EQ(l[24], '\\paragraph{Title 3} \nContent content.')
+  EQ(l[25], '\\subparagraph{Title 4} \\label{para-label}\nContent content.')
+  EQ(l[26], '\\par')
+  EQ(l[27], nil)
   -- assert(l[10]:lfind([[xxx]]))
   -- assert(l[10]:lfind([[xxx]]))
   -- assert(l[10]:lfind([[xxx]]))

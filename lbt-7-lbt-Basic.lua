@@ -152,31 +152,31 @@ f.SUBSUBSECTION = function(n, args, o, kw)
 end
 
 a.PARAGRAPH = '2+'
-o:append 'PARAGRAPH.starred = false, PARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar (FIXME:)
+o:append 'PARAGRAPH.starred = false, PARAGRAPH.par = true'
 f.PARAGRAPH = function(n, args, o, kw)
+  if o.starred then o:_set_local('par', false) end
   return T {
     [[\paragraph{!TITLE!} !LABEL!]],
-    '!TEXT! !PAR!',
+    '!TEXT!',
     values = {
       TITLE = args[1],
       LABEL = kw.label and F([[\label{%s}]], kw.label) or '',
       TEXT  = textparagraphs(args,2),
-      PAR   = (o.starred or o.nopar) and '' or '\\par'
     }
   }
 end
 
 a.SUBPARAGRAPH = '2+'
-o:append 'SUBPARAGRAPH.starred = false, SUBPARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar (FIXME:)
-f.SUBPARAGRAPH = function(n, args, o)
+o:append 'SUBPARAGRAPH.starred = false, SUBPARAGRAPH.par = true'
+f.SUBPARAGRAPH = function(n, args, o, kw)
+  if o.starred then o:_set_local('par', false) end
   return T {
     [[\subparagraph{!TITLE!} !LABEL!]],
-    '!TEXT! !PAR!',
+    '!TEXT!',
     values = {
       TITLE = args[1],
       LABEL = kw.label and F([[\label{%s}]], kw.label) or '',
       TEXT  = textparagraphs(args,2),
-      PAR   = (o.starred or o.nopar) and '' or '\\par'
     }
   }
 end
