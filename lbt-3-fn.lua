@@ -259,6 +259,12 @@ function OptionLookup:_lookup(key)
   if rawget(self, _local_) ~= nil then
     v = rawget(self, _local_)[key]
     if v ~= nil then return v end
+    -- 1b. Local 'nopar' (say) as a shortcut for 'par = false'. We should do some
+    --     checking on this ('nobeer' should succeed only if 'beer' is a valid option).
+    --     How this works: author writes 'TEXT .o nopar :: ...'. Latex expansion calls
+    --     ol['par']. Because 'nopar' is set locally, ol['par'] has value false.
+    v = rawget(self, _local_)['no'..key]
+    if v == true then return false end
   end
   -- 2. Cache.
   v = rawget(self, _cache_)[qk]
@@ -268,9 +274,9 @@ function OptionLookup:_lookup(key)
   if v ~= nil then
     rawget(self, _cache_)[qk] = v
     return v
-  else
-    return nil
   end
+  -- 4. No match.
+  return nil
 end
 
 -- On occasion it might be necessary to look up a local key that doesn't exist.
@@ -636,6 +642,9 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
     kwargs[k] = v
   end
   -- 6. Call the opcode function and return 'error', ... if necessary.
+  ;         -- XXX: I want opargs to be resolved at this stage, so that 'nopar = true' becomes 'par = false'.
+  ;         --      But this is a challenge.
+  ;         -- NOTE: Actually,  think it can happen inside set_opcode_and_options().
   ol:set_opcode_and_options(opcode, opargs)    -- Having to set and unset is a shame, but probably efficient.
 
   local result = x.opcode_function(nargs, args, ol, kwargs)

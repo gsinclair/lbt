@@ -174,6 +174,7 @@ local good_input_8 = content_lines([[
     MATH* .o align, eqnum=1
      :: a^2 + b^2 &= c^2
      ::         E &= mc^2
+    TEXT .o nopar :: Trying automatic 'noX' option resolution.
 ]])
 
 ----------------------------------------------------------------------
@@ -438,7 +439,8 @@ local function T_Basic_various()
   assert(l[19]:lfind([[E &= mc^2 \notag]]))
   assert(l[19]:lfind([[\end{align}]]))
   assert(not l[19]:lfind([[\par]]))
-  EQ(l[20], nil)
+  EQ(l[20], [[Trying automatic 'noX' option resolution.]])
+  EQ(l[21], nil)
   -- assert(l[10]:lfind([[xxx]]))
   -- assert(l[10]:lfind([[xxx]]))
   -- assert(l[10]:lfind([[xxx]]))

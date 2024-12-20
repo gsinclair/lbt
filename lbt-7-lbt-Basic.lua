@@ -152,7 +152,7 @@ f.SUBSUBSECTION = function(n, args, o, kw)
 end
 
 a.PARAGRAPH = '2+'
-o:append 'PARAGRAPH.starred = false, PARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar
+o:append 'PARAGRAPH.starred = false, PARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar (FIXME:)
 f.PARAGRAPH = function(n, args, o, kw)
   return T {
     [[\paragraph{!TITLE!} !LABEL!]],
@@ -167,7 +167,7 @@ f.PARAGRAPH = function(n, args, o, kw)
 end
 
 a.SUBPARAGRAPH = '2+'
-o:append 'SUBPARAGRAPH.starred = false, SUBPARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar
+o:append 'SUBPARAGRAPH.starred = false, SUBPARAGRAPH.nopar = false'   -- prefer par = true, and able to set nopar (FIXME:)
 f.SUBPARAGRAPH = function(n, args, o)
   return T {
     [[\subparagraph{!TITLE!} !LABEL!]],
@@ -196,6 +196,7 @@ end
 -- Itemize and enumerate
 
 o:append 'ITEMIZE.notop = false, ITEMIZE.compact = false, ITEMIZE.sep=1'
+;              -- ^^^^^ NOTE: noX is now implemented; shouldn't need explicit notop
 a.ITEMIZE = '1+'
 f.ITEMIZE = function (n, args, o, k)
   if args[1]:startswith('[') then
@@ -228,6 +229,7 @@ end
 -- TODO: Factor out code from ITEMIZE and ENUMERATE.
 -- TODO: Support custom environments via .o env=...
 o:append 'ENUMERATE.notop = false, ENUMERATE.compact = false'
+;                -- ^^^^^ NOTE: noX is now implemented; shouldn't need explicit notop
 a.ENUMERATE = '1+'
 f.ENUMERATE = function (n, args, o, k)
   if args[1]:startswith('[') then
