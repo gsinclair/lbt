@@ -73,9 +73,9 @@ end
 
 local float_code = function (number, filename)
   return T {
-    [[\begin{figure}[tbph] ]],
+    [[\begin{figure}[hp] ]],
     [[  \centering]],
-    [[  \includegraphics[width=0.9\linewidth]{!FILENAME!} \\]],
+    [[  \includegraphics[width=0.9\linewidth,height=0.9\textheight,keepaspectratio]{!FILENAME!} \\]],
     [[  \textbf{!CAPTION!}]],
     [[\end{figure}]],
     values = {
@@ -102,7 +102,6 @@ f.PHOTOGALLERY = function(n, args, o, k)
     local ext = fn:match("%.([^%.]+)$")
     return image_extensions[ext]
   end)
-  filenames = filenames:slice(1,30)    -- NOTE: during devlopment only
   local all_files = pl.List()
   for fn in filenames:iter() do
     local n = fn:match("%d+")
@@ -113,6 +112,29 @@ f.PHOTOGALLERY = function(n, args, o, k)
   end
 
   -- 2. Process optional include and exclude values.
+  --    Product: all_files (modified)
+  if include then
+    include = lbt.util.parse_numbers_and_ranges(include)
+    local include_set = pl.Set(include)
+    local working_copy = pl.List(all_files)
+    all_files = pl.List()
+    for f in working_copy:iter() do
+      if include_set[f.number] then
+        all_files:append(f)
+      end
+    end
+  end
+  if exclude then
+    exclude = lbt.util.parse_numbers_and_ranges(exclude)
+    local exclude_set = pl.Set(exclude)
+    local working_copy = pl.List(all_files)
+    all_files = pl.List()
+    for f in working_copy:iter() do
+      if not exclude_set[f.number] then
+        all_files:append(f)
+      end
+    end
+  end
 
   -- 3. Process optional feature values.
   --    Product: ordinary_files, feature_files
@@ -144,23 +166,24 @@ f.PHOTOGALLERY = function(n, args, o, k)
   end
 
   -- 4. Lay them out two per row or three per row or whatever.
-  --    Featured photos are set between rows as a whole-page float.
+  --    Featured photos are set between rows as a float.
   local code = pl.List()
   local rows = slices(minipages, per_row)
   local feature_index = 1
   for row in rows:iter() do
     -- row is a small list of items like { 37, ...code... }
+    -- It serves us to have the numbers and codes separately.
     local numbers = row:map(function (s) return s[1] end)
     local codes   = row:map(function (s) return s[2] end)
-    -- Include this row in the code.
-    code:append(codes:concat('\n\\hfill\n'))
     -- Include any floats whose numbers we have passed.
-    local highest_number = numbers[numbers:len()]
-    while feature_list[feature_index] and feature_list[feature_index] < highest_number do
+    local lowest_ordinary_number = numbers[1]
+    while feature_list[feature_index] and feature_list[feature_index] < lowest_ordinary_number do
       local x = floats[feature_list[feature_index]]  -- float code for this number
       code:append(x)
       feature_index = feature_index + 1
     end
+    -- Now include this row of ordinary photos.
+    code:append(codes:concat('\n\\hfill\n'))
   end
 
   -- 5. Done.
