@@ -335,6 +335,20 @@ function lbt.util.parse_range(text)
   return lbt.parser.parse_range(text)
 end
 
+-- Input: '2 5 6..8 19 25..28'    Output: { 2,5,6,7,8,19,25,26,27,28 }
+-- Invalid input causes fatal error.
+function lbt.util.parse_numbers_and_ranges(text)
+  local bits = lbt.util.space_split(text)
+  local result = pl.List()
+  for x in bits:iter() do
+    local a, b = lbt.util.parse_range(x)
+    for n = a,b do
+      result:append(n)
+    end
+  end
+  return result
+end
+
 -- Input: '2023-07-22'    Output: a pl.Date object
 -- Invalid input causes fatal error.
 function lbt.util.parse_date(text)
