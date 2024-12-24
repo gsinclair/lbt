@@ -85,6 +85,11 @@ local float_code = function (number, filename)
   }
 end
 
+local photo_number_summary = function(x)
+  local fmt = [[{\color{gray}\small \hfill Ordinary photos: \textbf{%s} \quad\quad Feature photos: \textbf{%d} \hfill} \par \vspace{1em}]]
+  return F(fmt, x.ordinary, x.feature)
+end
+
 a.PHOTOGALLERY = 0
 f.PHOTOGALLERY = function(n, args, o, k)
   local folder     = k.folder     or missing_keyword('folder')
@@ -167,7 +172,9 @@ f.PHOTOGALLERY = function(n, args, o, k)
 
   -- 4. Lay them out two per row or three per row or whatever.
   --    Featured photos are set between rows as a float.
+  --    Output the number of photos at the beginning.
   local code = pl.List()
+  code:append(photo_number_summary { ordinary = ordinary_files:len(), feature = feature_files:len() })
   local rows = slices(minipages, per_row)
   local feature_index = 1
   for row in rows:iter() do
