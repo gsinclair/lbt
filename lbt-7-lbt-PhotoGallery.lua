@@ -47,6 +47,9 @@ end
   \end{center}
 ]]
 
+-- TODO: use `opts` argument and include positive_mark and negative_mark
+--       Maybe pass a function that renders the caption, and let that function do the marking.
+--       The function could default to what we have here.
 local minipage_code = function (width, number, filename, max_height)
   return T {
     [[\begin{minipage}[b]{!WIDTH!\textwidth}]],
@@ -92,12 +95,14 @@ end
 
 a.PHOTOGALLERY = 0
 f.PHOTOGALLERY = function(n, args, o, k)
-  local folder     = k.folder     or missing_keyword('folder')
-  local per_row    = k.per_row    or missing_keyword('per_row')
-  local max_height = k.max_height or missing_keyword('max_height')
-  local include    = k.include
-  local exclude    = k.exclude
-  local feature    = k.feature    or ''
+  local folder        = k.folder        or missing_keyword('folder')
+  local per_row       = k.per_row       or missing_keyword('per_row')
+  local max_height    = k.max_height    or missing_keyword('max_height')
+  local include       = k.include
+  local exclude       = k.exclude
+  local positive_mark = k.positive_mark or ''
+  local negative_mark = k.negative_mark or ''
+  local feature       = k.feature       or ''
 
   -- 1. Get a list of all image files, in the form { number = 37, filename = 'IMG_0037.jpg' }
   --    Product: all_files
@@ -141,7 +146,14 @@ f.PHOTOGALLERY = function(n, args, o, k)
     end
   end
 
-  -- 3. Process optional feature values.
+  local pnr = lbt.util.parse_numbers_and_ranges
+
+  -- 3. Process optional positive and negative mark values.
+  --    Product: positive_mark and negative_mark (sets).
+  positive_mark = pl.Set(pnr(positive_mark))
+  negative_mark = pl.Set(pnr(negative_mark))
+
+  -- 4. Process optional feature values.
   --    Product: ordinary_files, feature_files
   local feature_list = lbt.util.parse_numbers_and_ranges(feature)
   local feature_set = pl.Set(feature_list)
@@ -155,7 +167,7 @@ f.PHOTOGALLERY = function(n, args, o, k)
     end
   end
 
-  -- 3. Generate a minipage for each ordinary photo.
+  -- 5. Generate a minipage for each ordinary photo.
   --    And a float for each feature photo.
   --    Product: minipages: a list of { number, latex_code }
   --             floats:    a map of number -> latex_code
@@ -170,7 +182,7 @@ f.PHOTOGALLERY = function(n, args, o, k)
     floats[f.number] = float_code(f.number, f.filename)
   end
 
-  -- 4. Lay them out two per row or three per row or whatever.
+  -- 6. Lay them out two per row or three per row or whatever.
   --    Featured photos are set between rows as a float.
   --    Output the number of photos at the beginning.
   local code = pl.List()
@@ -193,7 +205,7 @@ f.PHOTOGALLERY = function(n, args, o, k)
     code:append(codes:concat('\n\\hfill\n'))
   end
 
-  -- 5. Done.
+  -- 7. Done.
   return code:concat('\n\n')
 end
 
