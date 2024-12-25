@@ -47,21 +47,39 @@ end
   \end{center}
 ]]
 
--- TODO: use `opts` argument and include positive_mark and negative_mark
+
+local caption_renderer = function (mark_yes, mark_no, feature_set)
+  return function(caption)
+    if #mark_yes > 0 or #mark_no > 0 then
+      if mark_yes[caption] or feature_set[caption] then
+        return F([[{\color{Aquamarine}\bfseries %s}]], caption)
+      elseif mark_no[caption] then
+        return F([[{\color{WildStrawberry}\bfseries %s \enspace \small\emoji{cross-mark}}]], caption)
+      else
+        return F([[{\color{gray}\bfseries %s}]], caption)
+      end
+    else
+      return F([[\textbf{%s}]], caption)
+    end
+  end
+end
+
+-- TODO: use `opts` argument and include mark_yes and mark_no
 --       Maybe pass a function that renders the caption, and let that function do the marking.
 --       The function could default to what we have here.
-local minipage_code = function (width, number, filename, max_height)
+-- local minipage_code = function (width, number, filename, max_height)
+local minipage_code = function (opts)
   return T {
     [[\begin{minipage}[b]{!WIDTH!\textwidth}]],
     [[  \centering]],
     [[  \includegraphics[width=\linewidth,height=!HEIGHT!,keepaspectratio]{!FILENAME!} \\]],
-    [[  \textbf{!CAPTION!}]],
+    [[  !CAPTION!]],
     [[\end{minipage}]],
     values = {
-      WIDTH    = width,
-      HEIGHT   = max_height,
-      FILENAME = filename,
-      CAPTION  = number,
+      WIDTH    = opts.width or error(),
+      HEIGHT   = opts.max_height or error(),
+      FILENAME = opts.filename or error(),
+      CAPTION  = opts.caption_renderer(opts.number or error()) or error(),
     }
   }
 end
@@ -74,16 +92,16 @@ local slices = function (list, n)
   return result
 end
 
-local float_code = function (number, filename)
+local float_code = function (opts)
   return T {
     [[\begin{figure}[hp] ]],
     [[  \centering]],
     [[  \includegraphics[width=0.9\linewidth,height=0.9\textheight,keepaspectratio]{!FILENAME!} \\]],
-    [[  \textbf{!CAPTION!}]],
+    [[  !CAPTION!]],
     [[\end{figure}]],
     values = {
-      FILENAME = filename,
-      CAPTION  = number,
+      FILENAME = opts.filename or error(),
+      CAPTION  = opts.caption_renderer(opts.number or error()) or error()
     }
   }
 end
@@ -93,16 +111,23 @@ local photo_number_summary = function(x)
   return F(fmt, x.ordinary, x.feature)
 end
 
+-------------------------------------------------------------------------------
+-- PHOTOGALLERY function
+-------------------------------------------------------------------------------
+
 a.PHOTOGALLERY = 0
+o:append 'PHOTOGALLERY.showno = true'
 f.PHOTOGALLERY = function(n, args, o, k)
-  local folder        = k.folder        or missing_keyword('folder')
-  local per_row       = k.per_row       or missing_keyword('per_row')
-  local max_height    = k.max_height    or missing_keyword('max_height')
+  local folder        = k.folder      or missing_keyword('folder')
+  local per_row       = k.per_row     or missing_keyword('per_row')
+  local max_height    = k.max_height  or missing_keyword('max_height')
   local include       = k.include
   local exclude       = k.exclude
-  local positive_mark = k.positive_mark or ''
-  local negative_mark = k.negative_mark or ''
-  local feature       = k.feature       or ''
+  local mark_yes      = k.mark_yes    or ''
+  local mark_no       = k.mark_no     or ''
+  local mark_yes_no   = k.mark_yes_no or ''
+  local mark_no_yes   = k.mark_no_yes or ''
+  local feature       = k.feature     or ''
 
   -- 1. Get a list of all image files, in the form { number = 37, filename = 'IMG_0037.jpg' }
   --    Product: all_files
@@ -148,10 +173,34 @@ f.PHOTOGALLERY = function(n, args, o, k)
 
   local pnr = lbt.util.parse_numbers_and_ranges
 
-  -- 3. Process optional positive and negative mark values.
-  --    Product: positive_mark and negative_mark (sets).
-  positive_mark = pl.Set(pnr(positive_mark))
-  negative_mark = pl.Set(pnr(negative_mark))
+  -- 3. Process optional mark values: mark_yes, mark_no, mark_yes_no, mark_no_yes
+  --    Product: mark_yes and mark_no (sets).
+  --    If option showno is false, this also affects all_files because we don't want
+  --    to show the photos that are marked 'no'.
+  local my  = pl.Set(pnr(mark_yes))
+  local mn  = pl.Set(pnr(mark_no))
+  local myn = pl.Set(pnr(mark_yes_no))
+  local mny = pl.Set(pnr(mark_no_yes))
+  mark_yes = pl.Set(); mark_no = pl.Set()
+  if #myn > 0 then
+    for f in all_files:iter() do
+      local n = f.number
+      if myn[n] then mark_yes[n] = true else mark_no[n] = true end
+    end
+  elseif #mny > 0 then
+    for f in all_files:iter() do
+      local n = f.number
+      if mny[n] then mark_no[n] = true else mark_yes[n] = true end
+    end
+  else
+    mark_yes = my
+    mark_no  = mn
+  end
+  if o.showno == false then
+    all_files = all_files:filter(function(f)
+      return not mark_no[f.number]
+    end)
+  end
 
   -- 4. Process optional feature values.
   --    Product: ordinary_files, feature_files
@@ -173,13 +222,19 @@ f.PHOTOGALLERY = function(n, args, o, k)
   --             floats:    a map of number -> latex_code
   local width = 1 / tonumber(per_row) - 0.05
   local minipages = pl.List()
+  local cr = caption_renderer(mark_yes, mark_no, feature_set)
   for f in ordinary_files:iter() do
-    local x = minipage_code(width, f.number, f.filename, max_height)
+    local x = minipage_code {
+      width = width, number = f.number, filename = f.filename,
+      max_height = max_height, caption_renderer = cr
+    }
     minipages:append( {f.number, x} )
   end
   local floats = pl.Map()
   for f in feature_files:iter() do
-    floats[f.number] = float_code(f.number, f.filename)
+    floats[f.number] = float_code {
+       number = f.number, filename = f.filename, caption_renderer = cr
+    }
   end
 
   -- 6. Lay them out two per row or three per row or whatever.
@@ -195,8 +250,8 @@ f.PHOTOGALLERY = function(n, args, o, k)
     local numbers = row:map(function (s) return s[1] end)
     local codes   = row:map(function (s) return s[2] end)
     -- Include any floats whose numbers we have passed.
-    local lowest_ordinary_number = numbers[1]
-    while feature_list[feature_index] and feature_list[feature_index] < lowest_ordinary_number do
+    local highest_ordinary_number = numbers[1]
+    while feature_list[feature_index] and feature_list[feature_index] < highest_ordinary_number do
       local x = floats[feature_list[feature_index]]  -- float code for this number
       code:append(x)
       feature_index = feature_index + 1
