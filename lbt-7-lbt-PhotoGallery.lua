@@ -52,9 +52,9 @@ local caption_renderer = function (mark_yes, mark_no, feature_set)
   return function(caption)
     if #mark_yes > 0 or #mark_no > 0 then
       if mark_yes[caption] or feature_set[caption] then
-        return F([[{\color{Aquamarine}\bfseries %s}]], caption)
+        return F([[{\color{Aquamarine}\bfseries %s \enspace\small\emoji{check-mark-button}}]], caption)
       elseif mark_no[caption] then
-        return F([[{\color{WildStrawberry}\bfseries %s \enspace \small\emoji{cross-mark}}]], caption)
+        return F([[{\color{WildStrawberry}\bfseries %s \enspace\small\emoji{cross-mark}}]], caption)
       else
         return F([[{\color{gray}\bfseries %s}]], caption)
       end
@@ -107,8 +107,20 @@ local float_code = function (opts)
 end
 
 local photo_number_summary = function(x)
-  local fmt = [[{\color{gray}\small \hfill Ordinary photos: \textbf{%s} \quad\quad Feature photos: \textbf{%d} \hfill} \par \vspace{1em}]]
-  return F(fmt, x.ordinary, x.feature)
+  return T {
+    [[{\color{gray}\small \hfill]],
+    [[Ordinary photos: \textbf{!ORDINARY!} \quad\quad]],
+    [[Feature photos: \textbf{!FEATURE!} \quad\quad]],
+    [[\emoji{check-mark-button} \textbf{!YES!} \enspace]],
+    [[\emoji{cross-mark} \textbf{!NO!}]],
+    [[\hfill} \par \vspace{2em}]],
+    values = {
+      ORDINARY = x.ordinary,
+      FEATURE  = x.feature,
+      YES      = x.yes,
+      NO       = x.no
+    }
+  }
 end
 
 -------------------------------------------------------------------------------
@@ -116,7 +128,8 @@ end
 -------------------------------------------------------------------------------
 
 a.PHOTOGALLERY = 0
-o:append 'PHOTOGALLERY.showno = true'
+o:append { 'PHOTOGALLERY',
+           showno = true, summary = true, photos = true }
 f.PHOTOGALLERY = function(n, args, o, k)
   local folder        = k.folder      or missing_keyword('folder')
   local per_row       = k.per_row     or missing_keyword('per_row')
@@ -237,27 +250,40 @@ f.PHOTOGALLERY = function(n, args, o, k)
     }
   end
 
-  -- 6. Lay them out two per row or three per row or whatever.
+  -- The `code` list contains all our output.
+  local code = pl.List()
+
+  -- 5. Show a summary if requested.
+  if o.summary then
+    code:append(photo_number_summary {
+      ordinary = ordinary_files:len(),
+      feature  = feature_files:len(),
+      yes      = #mark_yes,
+      no       = #mark_no
+    })
+  end
+
+  -- 6. Lay the photos out two per row or three per row or whatever.
   --    Featured photos are set between rows as a float.
   --    Output the number of photos at the beginning.
-  local code = pl.List()
-  code:append(photo_number_summary { ordinary = ordinary_files:len(), feature = feature_files:len() })
-  local rows = slices(minipages, per_row)
-  local feature_index = 1
-  for row in rows:iter() do
-    -- row is a small list of items like { 37, ...code... }
-    -- It serves us to have the numbers and codes separately.
-    local numbers = row:map(function (s) return s[1] end)
-    local codes   = row:map(function (s) return s[2] end)
-    -- Include any floats whose numbers we have passed.
-    local highest_ordinary_number = numbers[1]
-    while feature_list[feature_index] and feature_list[feature_index] < highest_ordinary_number do
-      local x = floats[feature_list[feature_index]]  -- float code for this number
-      code:append(x)
-      feature_index = feature_index + 1
+  if o.photos then
+    local rows = slices(minipages, per_row)
+    local feature_index = 1
+    for row in rows:iter() do
+      -- row is a small list of items like { 37, ...code... }
+      -- It serves us to have the numbers and codes separately.
+      local numbers = row:map(function (s) return s[1] end)
+      local codes   = row:map(function (s) return s[2] end)
+      -- Include any floats whose numbers we have passed.
+      local highest_ordinary_number = numbers[1]
+      while feature_list[feature_index] and feature_list[feature_index] < highest_ordinary_number do
+        local x = floats[feature_list[feature_index]]  -- float code for this number
+        code:append(x)
+        feature_index = feature_index + 1
+      end
+      -- Now include this row of ordinary photos.
+      code:append(codes:concat('\n\\hfill\n'))
     end
-    -- Now include this row of ordinary photos.
-    code:append(codes:concat('\n\\hfill\n'))
   end
 
   -- 7. Done.
