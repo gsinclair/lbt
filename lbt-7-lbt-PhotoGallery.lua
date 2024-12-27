@@ -48,12 +48,12 @@ end
 ]]
 
 
-local caption_renderer = function (mark_yes, mark_no, feature_set)
+local caption_renderer = function (showmarks, accept, reject)
   return function(caption)
-    if #mark_yes > 0 or #mark_no > 0 then
-      if mark_yes[caption] or feature_set[caption] then
+    if showmarks and (#accept > 0 or #reject > 0) then
+      if accept[caption] then
         return F([[{\color{Aquamarine}\bfseries %s \enspace\small\emoji{check-mark-button}}]], caption)
-      elseif mark_no[caption] then
+      elseif reject[caption] then
         return F([[{\color{WildStrawberry}\bfseries %s \enspace\small\emoji{cross-mark}}]], caption)
       else
         return F([[{\color{gray}\bfseries %s}]], caption)
@@ -64,10 +64,6 @@ local caption_renderer = function (mark_yes, mark_no, feature_set)
   end
 end
 
--- TODO: use `opts` argument and include mark_yes and mark_no
---       Maybe pass a function that renders the caption, and let that function do the marking.
---       The function could default to what we have here.
--- local minipage_code = function (width, number, filename, max_height)
 local minipage_code = function (opts)
   return T {
     [[\begin{minipage}[b]{!WIDTH!\textwidth}]],
@@ -129,18 +125,18 @@ end
 
 a.PHOTOGALLERY = 0
 o:append { 'PHOTOGALLERY',
-           showno = true, summary = true, photos = true }
-f.PHOTOGALLERY = function(n, args, o, k)
-  local folder        = k.folder      or missing_keyword('folder')
-  local per_row       = k.per_row     or missing_keyword('per_row')
-  local max_height    = k.max_height  or missing_keyword('max_height')
-  local include       = k.include
-  local exclude       = k.exclude
-  local mark_yes      = k.mark_yes    or ''
-  local mark_no       = k.mark_no     or ''
-  local mark_yes_no   = k.mark_yes_no or ''
-  local mark_no_yes   = k.mark_no_yes or ''
-  local feature       = k.feature     or ''
+           rejects = true, summary = true, photos = true, marks = false }
+f.PHOTOGALLERY = function(_, _, o, k)
+  local folder      = k.folder      or missing_keyword('folder')
+  local per_row     = k.per_row     or missing_keyword('per_row')
+  local max_height  = k.max_height  or missing_keyword('max_height')
+  local include     = k.include
+  local exclude     = k.exclude
+  local accept      = k.accept      or ''
+  local reject      = k.reject      or ''
+  local accept_only = k.accept_only or ''
+  local reject_only = k.reject_only or ''
+  local feature     = k.feature     or ''
 
   -- 1. Get a list of all image files, in the form { number = 37, filename = 'IMG_0037.jpg' }
   --    Product: all_files
@@ -183,42 +179,47 @@ f.PHOTOGALLERY = function(n, args, o, k)
       end
     end
   end
+  local all_numbers = all_files:map(function(f) return f.number end)
 
-  local pnr = lbt.util.parse_numbers_and_ranges
-
-  -- 3. Process optional mark values: mark_yes, mark_no, mark_yes_no, mark_no_yes
-  --    Product: mark_yes and mark_no (sets).
-  --    If option showno is false, this also affects all_files because we don't want
+  -- 3. Process optional values: accept, reject, accept_only, reject_only
+  --    Product: accept and reject (sets).
+  --    If option rejects is false, this also affects all_files because we don't want
   --    to show the photos that are marked 'no'.
-  local my  = pl.Set(pnr(mark_yes))
-  local mn  = pl.Set(pnr(mark_no))
-  local myn = pl.Set(pnr(mark_yes_no))
-  local mny = pl.Set(pnr(mark_no_yes))
-  mark_yes = pl.Set(); mark_no = pl.Set()
-  if #myn > 0 then
+  local pnr = lbt.util.parse_numbers_and_ranges
+  local ac  = pl.Set(pnr(accept))
+  local re  = pl.Set(pnr(reject))
+  local aco = pl.Set(pnr(accept_only))
+  local reo = pl.Set(pnr(reject_only))
+  accept = pl.Set(); reject = pl.Set()
+  if #aco > 0 then
     for f in all_files:iter() do
       local n = f.number
-      if myn[n] then mark_yes[n] = true else mark_no[n] = true end
+      if aco[n] then accept[n] = true else reject[n] = true end
     end
-  elseif #mny > 0 then
+  elseif #reo > 0 then
     for f in all_files:iter() do
       local n = f.number
-      if mny[n] then mark_no[n] = true else mark_yes[n] = true end
+      if reo[n] then reject[n] = true else accept[n] = true end
     end
   else
-    mark_yes = my
-    mark_no  = mn
-  end
-  if o.showno == false then
-    all_files = all_files:filter(function(f)
-      return not mark_no[f.number]
-    end)
+    accept = ac
+    reject = re
   end
 
   -- 4. Process optional feature values.
+  --    This means we have to update `accept` and `reject`.
+  --    And then we have to update `all_files` if we are not showing the rejects.
   --    Product: ordinary_files, feature_files
   local feature_list = lbt.util.parse_numbers_and_ranges(feature)
   local feature_set = pl.Set(feature_list)
+  accept = accept + feature_set
+  reject = reject - feature_set
+  if o.rejects == false then
+    all_files = all_files:filter(function(f)
+      return not reject[f.number]
+    end)
+  end
+  -- We are now ready to create `feature_files` and `ordinary_files`.
   local feature_files = pl.List()
   local ordinary_files = pl.List()
   for f in all_files:iter() do
@@ -229,13 +230,21 @@ f.PHOTOGALLERY = function(n, args, o, k)
     end
   end
 
+  -- Do a sanity check. Every number that is "included" should be in at most
+  -- one of accept or reject.
+  for n in all_numbers:iter() do
+    if accept[n] and reject[n] then
+      error("File number " .. n .. " is both accepted and rejected")
+    end
+  end
+
   -- 5. Generate a minipage for each ordinary photo.
   --    And a float for each feature photo.
   --    Product: minipages: a list of { number, latex_code }
   --             floats:    a map of number -> latex_code
   local width = 1 / tonumber(per_row) - 0.05
   local minipages = pl.List()
-  local cr = caption_renderer(mark_yes, mark_no, feature_set)
+  local cr = caption_renderer(o.marks, accept, reject)
   for f in ordinary_files:iter() do
     local x = minipage_code {
       width = width, number = f.number, filename = f.filename,
@@ -253,17 +262,17 @@ f.PHOTOGALLERY = function(n, args, o, k)
   -- The `code` list contains all our output.
   local code = pl.List()
 
-  -- 5. Show a summary if requested.
+  -- 6. Show a summary if requested.
   if o.summary then
     code:append(photo_number_summary {
       ordinary = ordinary_files:len(),
       feature  = feature_files:len(),
-      yes      = #mark_yes,
-      no       = #mark_no
+      yes      = #accept,
+      no       = #reject
     })
   end
 
-  -- 6. Lay the photos out two per row or three per row or whatever.
+  -- 7. Lay the photos out two per row or three per row or whatever.
   --    Featured photos are set between rows as a float.
   --    Output the number of photos at the beginning.
   if o.photos then
@@ -286,7 +295,7 @@ f.PHOTOGALLERY = function(n, args, o, k)
     end
   end
 
-  -- 7. Done.
+  -- 8. Done.
   return code:concat('\n\n')
 end
 
