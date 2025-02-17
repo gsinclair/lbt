@@ -389,6 +389,17 @@ local function T_simplemath()
     local expected = F([[\ensuremath{%s}]], expected)
     EQ(actual, expected)
   end
+  lbt.log(1, 'test 1')
+  assert_math([[\alpha]], [[\alpha]])
+  lbt.log(1, 'test 2')
+  assert_math([[\text]], [[\text]])
+  lbt.log(1, 'test 3')
+  assert_math([[n \text]], [[n \text]])
+  lbt.log(1, 'test 4')
+  assert_math([[n \text{ is odd} implies n^2 \text{ is odd}]], [[n \text{ is odd} \implies n^2 \text{ is odd}]])
+  lbt.log(1, 'test 5')
+  assert_math([[\br{ sqrt n }^n le n! le \br{ frac {n+1} 2 }^n\,.]],
+              [[\br{ \sqrt n }^n \le n! \le \br{ \frac {n+1} 2 }^n\,.]])
   assert_math([[sin2 th = 0.32]], [[\sin^{2} \theta = 0.32]])
   assert_math([[cot32 b]], [[\cot^{32} b]])
   assert_math([[cot32 B]], [[\cot^{32} B]])
@@ -402,7 +413,8 @@ local function T_simplemath()
   assert_math([[OABC PQR XY]], [[\mathit{OABC} \mathit{PQR} \mathit{XY}]])
   assert_math([[D = \set {w in \bbC mid \abs {w} le 1}]],
     [[D = \set {w \in \bbC \mid \abs {w} \le 1}]])
-  assert_math([[xxx]], [[xxx]])
+  assert_math([[exists n in \bbN: n text{ is prime }]], [[\exists n \in \bbN: n \text{ is prime }]])
+  assert_math([[exists n in \bbN: n \text{ is prime }]], [[\exists n \in \bbN: n \text{ is prime }]])
   assert_math([[xxx]], [[xxx]])
 end
 
@@ -495,4 +507,8 @@ local function RUN_TESTS(flag)
   end
 end
 
+-- flag:
+--   0: don't run tests (but continue the program)
+--   1: run tests and exit
+--   2: run tests and continue
 RUN_TESTS(0)

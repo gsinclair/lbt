@@ -241,6 +241,7 @@ do
   end
 
   local process_word = function (word)
+    lbt.log('simplemath', 'simplemath word: ' .. word)
     if alpha[word] or other[word] or trig[word] then
       return '\\'..word
     elseif abbrev[word] then
@@ -252,24 +253,30 @@ do
 
   local lpeg = require('lpeg')
   local P, C, Ct, V, loc = lpeg.P, lpeg.C, lpeg.Ct, lpeg.V, lpeg.locale()
+  local backslash = P('\\')
+  local tag = function(label)
+    return function(x) lbt.log('simplemath', 'simplmath tag ' .. label .. ': <' .. x .. '>'); return x end
+  end
   local smparse = P{ 'sm',
+    command = C(backslash * (loc.alpha^1 + '!' + ',')) / tag('command'),
     trigf = P(false) + 'sin' + 'cos' + 'tan' + 'sec' + 'csc' + 'cot' +
                        'sinh' + 'cosh' + 'tanh',
     trig  = (C(V'trigf') * C(loc.digit^1)) / process_trig,
     upper = C(loc.upper^2) / mathit,
     word  = C(loc.alpha^1) / process_word,
-    other = C( (1-loc.alpha)^1 ),
-    space = C(loc.space^1),
-    item  = V'trig' + V'upper' + V'word' + V'other' + V'space',
+    space = C(loc.space^1) / tag('space'),
+    other = C( (1-(loc.alpha+loc.space+backslash))^1 ) / tag('other'),
+    item  = V'command' + V'trig' + V'upper' + V'word' + V'space' + V'other',
     sm = Ct(V'item'^0) * -1
   }
 
   m.simplemath = function (text)
+    lbt.log('simplemath', 'simplemath: ' .. text)
     local transformed = smparse:match(text)
     if transformed then
       return F([[\ensuremath{%s}]], table.concat(transformed, ''))
     else
-      local errormsg = F('«Unable to parse simplemath text: %s»', text)
+      local errormsg = F('«Unable to parse simplemath text: \\Verb====%s====»', text)
       return F([[\textbf{\textcolor{red} %s }]], errormsg)
     end
   end
