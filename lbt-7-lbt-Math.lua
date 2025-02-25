@@ -194,6 +194,17 @@ end
 -- Turn 'sin2 x + cos2 x equiv 1' into '\sin^2 x + \cos^2 x \equiv 1'
 -- Turn 'cos th = 0.72' into '\cos \theta = 0.72'
 
+local enable_simplemath_logging = false
+local simplemathlog = nil
+if enable_simplemath_logging then
+  simplemathlog = function(text)
+    lbt.log('simplemath', text)
+  end
+else
+  simplemathlog = function(text)
+  end
+end
+
 do
   local makeset = function (text)
     return pl.Set(lbt.util.space_split(text))
@@ -241,7 +252,7 @@ do
   end
 
   local process_word = function (word)
-    lbt.log('simplemath', 'simplemath word: ' .. word)
+    simplemathlog('simplemath word: ' .. word)
     if alpha[word] or other[word] or trig[word] then
       return '\\'..word
     elseif abbrev[word] then
@@ -255,7 +266,7 @@ do
   local P, C, Ct, V, loc = lpeg.P, lpeg.C, lpeg.Ct, lpeg.V, lpeg.locale()
   local backslash = P('\\')
   local tag = function(label)
-    return function(x) lbt.log('simplemath', 'simplmath tag ' .. label .. ': <' .. x .. '>'); return x end
+    return function(x) simplemathlog('simplmath tag ' .. label .. ': <' .. x .. '>'); return x end
   end
   local smparse = P{ 'sm',
     command = C(backslash * (loc.alpha^1 + '!' + ',')) / tag('command'),
@@ -271,7 +282,7 @@ do
   }
 
   m.simplemath = function (text)
-    lbt.log('simplemath', 'simplemath: ' .. text)
+    simplemathlog('simplemath: ' .. text)
     local transformed = smparse:match(text)
     if transformed then
       return F([[\ensuremath{%s}]], table.concat(transformed, ''))
