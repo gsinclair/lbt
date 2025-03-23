@@ -51,8 +51,13 @@ f.CMD = function(n, args)
 end
 
 a.VSPACE = 1
-f.VSPACE = function(n, args)
-  return F([[\vspace{%s}]], args[1])
+o:append 'VSPACE.starred = false'
+f.VSPACE = function(n, args, o)
+  if o.starred then
+    return F([[\vspace*{%s}]], args[1])
+  else
+    return F([[\vspace{%s}]], args[1])
+  end
 end
 
 a.VFILL = 0
