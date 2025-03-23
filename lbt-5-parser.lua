@@ -66,6 +66,7 @@ local Symbol = S'_.*'
 local identifier = Alpha * (Alpha + Digit + Symbol)^1
 local integer = (P('-')^-1 * R'19' * (R'09')^0) / tonumber
 local integer_only = integer * -1
+local dquote = P('"')
 -- }}}
 
 -- {{{ Key-value list (used in optargs and in META values like OPTIONS etc.)
@@ -86,15 +87,19 @@ local parsed_value = P{'value',
   zero = (P('0') * -1) / tonumber,
   value = V'zero' + integer_only + V'btrue' + V'bfalse' + V'general',
 }
-local process_value = function(text)
-  local x = parsed_value:match(text)
-  -- if x == 'false' then return false else return x end
-  return x
+local process_quoted_value = function(text)
+  return text:sub(2,-2)             -- remove the double-quotes that surround the text
+end
+local process_plain_value = function(text)
+  return parsed_value:match(text)   -- 'true' becomes true, etc.
 end
 local kvlist = P({'kvlist',
   key = C(identifier),
-  -- TODO allow for quoted values so that commas can be used
-  val = C( (P(1)-',')^1 ) / process_value,
+  notcomma = P(1) - ',',
+  notquote = P(1) - dquote,
+  plain_val  = C((V'notcomma')^1) / process_plain_value,
+  quoted_val = C(dquote * (V'notquote')^1 * dquote) / process_quoted_value,
+  val = V'quoted_val' + V'plain_val',
   entry = Ct( Pos * hsp * V('key') * hsp * ('=' * hsp * V('val'))^-1 * hsp ) / tag('entry'),
   kvlist = Ct( V('entry') * (',' * V('entry'))^0 ) / process_kvlist
 })
