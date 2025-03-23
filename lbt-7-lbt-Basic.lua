@@ -642,6 +642,22 @@ end
 
 ----- /TABLE
 
+-- PDFINCLUDE .o setdirectory :: media/Vectors
+-- PDFINCLUDE .o pages = 7-13 :: Chapter 4
+a.PDFINCLUDE = '1'
+o:append 'PDFINCLUDE.pages = nil, PDFINCLUDE.setdirectory = false'
+f.PDFINCLUDE = function(n, args, o)
+  if o.setdirectory then
+    lbt.api.data_set('lbt.Basic.pdfinclude.directory', args[1])
+    return "{}"
+  end
+  local directory = lbt.api.data_get('lbt.Basic.pdfinclude.directory', '.')
+  local path = F('%s/%s', directory, args[1])
+  if not path:endswith('.pdf') then path = path .. '.pdf' end
+  local pages = o.pages or '-'
+  return F([[\includepdf[pages={%s}]{%s}]], pages, path)
+end
+
 -- TWOPANEL .o ratio=2:3, align=bt :: \DiagramOne :: ◊DiagramOneText
 a.TWOPANEL = 2
 o:append 'TWOPANEL.ratio = 1:1, TWOPANEL.align = tt'
