@@ -181,6 +181,17 @@ local good_input_8 = content_lines([[
     SUBPARAGRAPH (label) para-label :: Title 4 :: Content content.
 ]])
 
+-- For testing QQ and MC, which have a bug (March 2025).
+local good_input_9 = content_lines([[
+  [@META]
+    TEMPLATE   lbt.Basic
+
+  [+BODY]
+    Q What letter comes after the following?
+    QQ J
+    QQ X
+    QQ E
+]])
 ----------------------------------------------------------------------
 
 local function T_pragmas_and_other_lines()
@@ -469,6 +480,15 @@ local function T_Basic_various()
   -- assert(l[10]:lfind([[xxx]]))
 end
 
+local function T_QQ_MC()
+  lbt.api.reset_global_data()
+  lbt.fn.template_register_to_logfile()
+  local pc = lbt.fn.parsed_content(good_input_9)
+  lbt.fn.validate_parsed_content(pc)
+  local l  = lbt.fn.latex_expansion(pc)
+  -- assert(l[1]:lfind('Hello'))
+end
+
 ----------------------------------------------------------------------
 
 -- flag:
@@ -496,6 +516,7 @@ local function RUN_TESTS(flag)
   T_register_expansion()
   T_simplemath()
   T_Basic_various()
+  T_QQ_MC()
 
   if flag == 1 then
     print("======================= </TESTS> (exiting)")
