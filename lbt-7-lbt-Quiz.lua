@@ -6,39 +6,13 @@
 -- +-----------------------------------------------------+
 
 local F = string.format
+local T = lbt.util.string_template_expand
 
 local f = {}
 local a = {}
 local s = {}
 local m = {}
 
-
-local function template_text()
-  return [[
-    \newpage
-    \setlength{\parindent}{0em}
-    \newcommand{\MarkBox}{\boxed{\phantom{\frac{xwx}{2}}}}
-
-    HEADER AND RULE
-
-    \vspace{24pt}
-
-    BODY
-
-    \clearpage
-  ]]
-end
-
--- TODO generalise this and put it in the content lua file for all to access.
--- Have a flag that allows nil value versus an error message.
-local function meta_value_or_err(x)
-  local val = GSC.content.META[x]
-  if val then
-    return val
-  else
-    return GSC.util.tex_error(F([[No value for '%s']], x))
-  end
-end
 
 local function header_and_rule(prefix, n, title, course, topic)
   if n == nil then
@@ -70,11 +44,20 @@ local function expand(pc, tr, sr)
   local title       = lbt.util.content_meta_or_nil(pc, 'TITLE')
   local course      = lbt.util.content_meta_or_error(pc, 'COURSE')
   local topic       = lbt.util.content_meta_or_error(pc, 'TOPIC')
-  local x = template_text()
-  x = x:gsub("HEADER AND RULE", header_and_rule(prefix, quiz_number, title, course, topic))
-  local body_latex = lbt.util.latex_expand_content_list('BODY', pc, tr, sr)
-  x = x:gsub('BODY', body_latex)
-  return x
+
+  return T {
+    [[\newpage]],
+    [[\setlength{\parindent}{0em}]],
+    [[\newcommand{\MarkBox}{\boxed{\phantom{\frac{xwx}{2}}}}]],
+    '',
+    header_and_rule(prefix, quiz_number, title, course, topic),
+    '',
+    [[\vspace{24pt}]],
+    '',
+    lbt.util.latex_expand_content_list('BODY', pc, tr, sr),
+    '',
+    [[\clearpage]],
+  }
 end
 
 return {
