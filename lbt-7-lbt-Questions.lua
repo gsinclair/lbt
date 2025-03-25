@@ -130,15 +130,13 @@ f.Q = function(n, args, o, kw)
   end
   template:append [[
     \vspace{!VSPACE!}
-    {\color{!COLOR!}\bfseries Question~!NUMBER!}{!SOURCENOTE!}\quad !TEXT! \par
+    {\noindent\color{!COLOR!}\bfseries Question~!NUMBER!}{!SOURCENOTE!}\quad !TEXT! \par
   ]]
   template.values = {
     VSPACE = o.prespace, COLOR = o.color, NUMBER = q,
     SOURCENOTE = q_sourcenote(kw.source, kw.note),
     TEXT = args[1] }
   return T(template)
-  -- template = template:concat('\n')
-  -- return F(template, vsp, col, q, args[1])
 end
 
 a.QQ = 1
