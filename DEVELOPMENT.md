@@ -643,3 +643,47 @@ Conclusion:
 * I will support prespace and postspace universally without modifying command definitions.
 * I will set 'par = true' for relevant commands, and recognise 'noX' as 'X = false', either in the _setting_ of options or in the _reading_ of them. (In the latter case, calling o.par would, behind the scenes, look for par _and_ nopar.) Thus we will be able to write 'MATH .o align, nopar'.
 * (Open question: should MATH* be like TEXT* and PARAGRAPH* in implying nopar? I think it should. We will dissociate * from equation numbering.)
+
+## Generalisation of STO to allow for LBT commands
+
+E.g.
+```
+    STO .o lbt :: mylist :: 10
+     :: ITEMIZE .o compact
+        :: Sheep
+        :: Goats
+        :: Cows
+```
+
+Now ◊mylist expands to `\begin{itemize} ... \end{itemize}` and it can go inside a table or colorbox or what have you.
+
+This probably needs parser support to implement.
+
+## READCSV and DB in lbt.Basic
+
+I implemented `READCSV` in my HQMS project so I could read data from a TSV file and access it in template commands like HQMSITEM and BYTOPIC. This will have a wider applicability and it would be good to include it in lbt.Basic.
+
+I also want a `DB` command so that I can have (for example) question banks. In this fantasy example, `vectors.tex` is a file containing several questions on vectors, each separated by a line that reads `% --------...` (the number of dashes is not important, but say > 8). Each item can be proceeded by a line `% key: axvg` to indicate the key for this question when it is loaded into the database.
+
+    DB init :: vec
+    DB vec :: loadfile :: sources/vectors.tex
+    DB vec :: index :: 5       -- show the fifth question
+    DB vec :: key :: axvg      -- show the question with that key
+    DB vec :: all          -- show all in order, separated by \par
+    DB .o showkey :: vec :: all
+    DB .o order = random :: vec :: all
+    DB vec :: keys         -- just list the keys
+    DB vec :: index :: 1..3,7,9,12..20
+    DB vec :: key :: axvg smtp hg85
+    DB vec :: clear
+
+Also, it will be possible to insert into the db from inside the LBT document.
+
+    DB vec :: insert :: <
+        Q Blah blah
+        MC* ...
+    >
+
+Interestingly, some of the commands above demonstrate that it might be nice to allow optional arguments to appear later in the argument sequence. They are currently forced to be at the beginning.
+
+    DB vec :: all :: .o order = random
