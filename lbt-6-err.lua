@@ -36,7 +36,7 @@ lbt.err.E001_internal_logic_error = function(details)
 end
 
 lbt.err.E002_general = function(fmt, ...)
-  E(fmt, ...)
+  E('(lbt) ' .. fmt, ...)
 end
 
 -- no longer needed
@@ -78,7 +78,8 @@ end
 
 lbt.err.E206_cant_form_list_of_sources = function (name)
   E("E206: Can't form a consolidated list of sources.\n"..
-    "      The problem is the template named <%s>.", name)
+    "      The problem is the template named <%s>.\n"..
+    "      (Perhaps you haven't specified a template directory.)", name)
 end
 
 lbt.err.E213_failed_template_load = function(path, error_details)
