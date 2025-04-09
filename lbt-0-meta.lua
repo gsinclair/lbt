@@ -19,8 +19,21 @@ modules['lbt'] = {
 -- We set up a log file and log function here because they are "meta" to the
 -- package.
 --
+-- Also a 'debuglog' file, which is really just for absolutely targeted and temporary
+-- debugging.
+--
 
 local logfile = io.open("lbt.log", "w")
+
+local _debuglogfile = nil
+local debuglogfile = function()
+  if _debuglogfile then
+    return _debuglogfile
+  else
+    _debuglogfile = io.open('lbt.debuglog', 'w')
+    return _debuglogfile
+  end
+end
 
 local channel_name = { [0] = 'ANN',  [1] = 'ERROR', [2] = 'WARN',
                        [3] = 'INFO', [4] = 'TRACE' }
@@ -40,10 +53,17 @@ lbt.log = function (channel, format, ...)
   end
 end
 
+lbt.debuglog = function(format, ...)
+  local line = F(format, ...)
+  debuglogfile():write(line)
+  debuglogfile():write('\n')
+  debuglogfile():flush()
+end
+
 -- Some essential functions that are defined here so they don't have to be
 -- local to just about every file.
 
-lbt.pp            = pl.pretty.write
+lbt.pp            = function(x) return (x == {} and '{}' or pl.pretty.write(x)) end
 lbt.assert_string = pl.utils.assert_string
 lbt.assert_bool   = function(n,x) pl.utils.assert_arg(n,x,'boolean') end
 lbt.assert_table  = function(n,x) pl.utils.assert_arg(n,x,'table') end
