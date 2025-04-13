@@ -93,12 +93,12 @@ function ParsedContent:template_object_or_error()
   return t
 end
 
--- HACK: I don't even know what data type I will get from META.SOURCES
 function ParsedContent:extra_sources()
-  local sources = self:meta().SOURCES or {}
+  local sources = self:meta().SOURCES or ''
   if type(sources) == 'string' then
-    return { sources }
+    return lbt.util.comma_split(sources)
   else
+    lbt.err.E002_general('Trying to read template SOURCES and didn\'t get a string')
     return sources
   end
 end
@@ -324,6 +324,7 @@ end
 -- handled by the lpeg, but 'nil' cannot be, because in that case
 -- the key would not be added to the table.
 OptionLookup.__index = function(self, key)
+  lbt.assert_string(2, key) -- TODO: make an lbt.err for this
   local v = self:_lookup(key)
   if v == nil then
     lbt.err.E192_option_lookup_failed(rawget(self, _opcode_), key)
@@ -458,6 +459,39 @@ lbt.fn.validate_parsed_content = function (pc)
   return nil
 end
 
+-- 
+lbt.fn.set_current_opcode_resolver = function(ocr)
+  lbt.const.opcode_resolver = ocr
+end
+
+lbt.fn.set_current_option_lookup_object = function(ol)
+  lbt.const.option_lookup = ol
+end
+
+lbt.fn.unset_current_opcode_resolver = function(ocr)
+  lbt.const.opcode_resolver = nil
+end
+
+lbt.fn.unset_current_option_lookup_object = function(ol)
+  lbt.const.option_lookup = nil
+end
+-- 
+lbt.fn.get_current_opcode_resolver = function()
+  local ocr = lbt.const.opcode_resolver
+  if ocr == nil then
+    lbt.err.E001_internal_logic_error('lbt.const.opcode_resolver not available')
+  end
+  return ocr
+end
+
+lbt.fn.get_current_option_lookup_object = function()
+  local ol = lbt.const.option_lookup
+  if ol == nil then
+    lbt.err.E001_internal_logic_error('lbt.const.option_lookup not available')
+  end
+  return ol
+end
+
 -- lbt.fn.latex_expansion(pc)
 --
 -- A very important function, turning parsed content into Latex, using the main
@@ -500,14 +534,18 @@ lbt.fn.latex_expansion = function (pc)
     document_narrow = pc:local_options(),
     sources = sources,
   }
-  -- Save the option lookup for access by macros like Math.vector.
-  lbt.const.option_lookup = ol
+  -- Save the option lookup for access by macros like Math.vector and commands like DB or STO.
+  lbt.fn.set_current_opcode_resolver(ocr)
+  lbt.fn.set_current_option_lookup_object(ol)
   -- Allow the template to initialise counters, etc.
   if type(t.init) == 'function' then t.init() end
   -- And...go!
   lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
   local result = t.expand(pc, ocr, ol)
   lbt.log(4, ' ~> result has %d bytes', #result)
+  -- Expansion has finished, so we unset the ocr and ol
+  lbt.fn.unset_current_opcode_resolver()
+  lbt.fn.unset_current_option_lookup_object()
   return result
 end
 
@@ -590,6 +628,8 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   lbt.log('emit', '')
   lbt.log('emit', 'Line: %s', cmdstr)
 
+  if opcode == 'DB' and args[2] == 'index' then DEBUGGER() end
+
   -- 1a. Handle a register allocation. Do not increment command count.
   if opcode == 'STO' then
     lbt.fn.impl.assign_register(args)
@@ -613,6 +653,7 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   local x = lbt.fn.impl.resolve_opcode_function_and_argspec(opcode, ocr, ol)
   ;           -->     { opcode_function = ..., argspec = ... }
   ;           -->  or { opcode_function = ..., argspec = ..., starred = true }
+  -- if opcode == 'Q' then DEBUGGER() end
   if x == nil then
     lbt.log('emit', '    --> NOTFOUND')
     lbt.log(2, 'opcode not resolved: %s', opcode)
@@ -1193,6 +1234,10 @@ end
 -- The code is messy, but I don't really see any choice.
 --
 lbt.fn.impl.resolve_opcode_function_and_argspec = function (opcode, ocr, ol)
+  lbt.debuglog('resolve_opcode_function_and_argspec:')
+  lbt.debuglog('  opcode = %s', opcode)
+  lbt.debuglog('  ocr    = %s', ocr)
+  lbt.debuglog('  ol     = %s', ol)
   local x, base
   x = ocr(opcode)
   if x then

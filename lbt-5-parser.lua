@@ -337,7 +337,7 @@ end
 
 -- }}}
 
--- {{{ Functions: fundamental parsing (parsed_content_0, parse_dictionary)
+-- {{{ Functions: fundamental parsing (parsed_content_0, parse_dictionary, parse_commands)
 
 -- lbt.parser.parsed_content_0
 --   * Does the actual parsing
@@ -362,6 +362,19 @@ end
 local dictionary_only = kvlist * hsp * -1
 lbt.parser.parse_dictionary = function(s)
   return dictionary_only:match(s)
+end
+
+-- lbt.parser.parse_commands: necessary for commands like STO and DB that need to work with
+-- LBT text and process it "at runtime".
+lbt.parser.parse_commands = function(text)
+  local CurrentMaxPosition = MaxPosition  -- store the global variable so we can reset it
+  local pc0 = commands:match(text)
+  MaxPosition = CurrentMaxPosition
+  if pc0 then
+    return { ok = true, commands = pl.List(pc0) }
+  else
+    return { ok = false }
+  end
 end
 
 -- }}}

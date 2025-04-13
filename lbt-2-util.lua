@@ -58,10 +58,7 @@ end
 -- This is designed for use only in macro expansion, and only rarely.
 -- Commands should use the option lookup passed to them.
 lbt.util.get_option_for_macro = function (key)
-  local ol = lbt.const.option_lookup
-  if ol == nil then
-    lbt.err.E001_internal_logic_error('lbt.const.option_lookup not available')
-  end
+  local ol = lbt.fn.get_current_option_lookup_object()
   local value = ol:_lookup(key)
   if value == nil then
     print(ol)

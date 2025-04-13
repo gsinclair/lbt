@@ -79,6 +79,18 @@ local db_parse_input_text = function(text)
   return result
 end
 
+local db_process_text_into_latex = function(text)
+  local x = lbt.parser.parse_commands(text)
+  if x.ok then
+    local ocr = lbt.fn.get_current_opcode_resolver()
+    local ol  = lbt.fn.get_current_option_lookup_object()
+    local items = lbt.fn.latex_for_commands(x.commands, ocr, ol)
+    return items:join('\n\n')  -- is there a util function?
+  else
+    lbt.err.E002_general('(DB) could not parse commands:\n'..text)
+  end
+end
+
 local db_functions = {
   loadfile = function(t)
     if t.nargs ~= 1 then db_err('loadfile needs one argument') end
@@ -101,9 +113,10 @@ local db_functions = {
     if t.nargs ~= 1 then db_err('index needs one argument') end
     local n = tonumber(t.args[1])
     local text = t.db[n]
-    -- Now I have the entry from the database, I need to get LBT to process it.
-    -- For now, just return number of characters.
-    return text:sub(1,10)
+    -- -- Now I have the entry from the database, I need to get LBT to process it.
+    -- -- For now, just return number of characters.
+    -- return text:sub(1,10)
+    return db_process_text_into_latex(text)
   end
 }
 
