@@ -194,6 +194,26 @@ local good_input_9 = content_lines([[
 ]])
 ----------------------------------------------------------------------
 
+local function T_DictionaryStack()
+  local d = lbt.DictionaryStack.new()
+  d:push { A = 4, B = 8, C = 9 }
+  EQ(d:lookup('A'), 4)
+  EQ(d:lookup('B'), 8)
+  EQ(d:lookup('C'), 9)
+  d:push { B = -3 }
+  EQ(d:lookup('A'), 4)
+  EQ(d:lookup('B'), -3)
+  EQ(d:lookup('C'), 9)
+  d:push { A = -1 }
+  EQ(d:lookup('A'), -1)
+  EQ(d:lookup('B'), -3)
+  EQ(d:lookup('C'), 9)
+  d:pop()
+  EQ(d:lookup('A'), 4)
+  EQ(d:lookup('B'), -3)
+  EQ(d:lookup('C'), 9)
+end
+
 local function T_pragmas_and_other_lines()
   lbt.api.reset_global_data()
   local input = pl.List.new{"!DRAFT", "Line 1", "!IGNORE", "Line 2", "Line 3"}
@@ -504,19 +524,20 @@ local function RUN_TESTS(flag)
   -- IX(lbt.system.template_register)
 
   -- T_pragmas_and_other_lines()
-  T_parsed_content_1()
-  T_extra_sources()
-  T_add_template_directory()
-  T_expand_Basic_template_1()
-  T_expand_Basic_template_2()
-  T_util()
-  T_number_in_alphabet()
-  T_styles_in_test_question_template_5a()
-  T_styles_in_test_question_template_5b()
-  T_register_expansion()
-  T_simplemath()
-  T_Basic_various()
-  T_QQ_MC()
+  T_DictionaryStack()
+  -- T_parsed_content_1()
+  -- T_extra_sources()
+  -- T_add_template_directory()
+  -- T_expand_Basic_template_1()
+  -- T_expand_Basic_template_2()
+  -- T_util()
+  -- T_number_in_alphabet()
+  -- T_styles_in_test_question_template_5a()
+  -- T_styles_in_test_question_template_5b()
+  -- T_register_expansion()
+  -- T_simplemath()
+  -- T_Basic_various()
+  -- T_QQ_MC()
 
   if flag == 1 then
     print("======================= </TESTS> (exiting)")
@@ -532,4 +553,4 @@ end
 --   0: don't run tests (but continue the program)
 --   1: run tests and exit
 --   2: run tests and continue
-RUN_TESTS(0)
+RUN_TESTS(1)
