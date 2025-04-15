@@ -114,13 +114,7 @@ lbt.api.author_content_emit_latex = function()
   lbt.log('parse', lbt.pp(pc))
   lbt.fn.validate_parsed_content(pc)
   lbt.log(3, '  * template:       %s', pc:template_name())
-  local development = false
-  local l
-  if development then
-    l = F([[\par\textbf{Expansion for LBT object %d (title `%s')}\par]], eid, pc:title())
-  else
-    l  = lbt.fn.latex_expansion(pc)
-  end
+  local l = lbt.fn.latex_expansion_of_parsed_content(pc)
   local output = lbt.util.normalise_latex_output(l)
   lbt.log(3, '  * latex expansion complete (eid=%d)', eid)
   lbt.util.print_tex_lines(output)

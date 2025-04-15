@@ -174,7 +174,12 @@ lbt.api = {}
 
 -- lbt.fn will contain functions used for the core implementation.
 -- For example: parsed_content, latex_expansion
-lbt.fn = {}
+lbt.fn = {
+  ParsedContent = {},     -- defined in lbt-3-fn-1-parsed_content.lua
+  ExpansionContext = {},  -- defined in lbt-3-fn-2-expansion_context.lua
+  Command = {},           -- defined in lbt-3-fn-3-command.lua
+  impl = {},              -- a place for low-level implementation functions to go
+}
 
 
 -- lbt.util will contain functions that assist template code.
