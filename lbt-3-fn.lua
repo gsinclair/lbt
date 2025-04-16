@@ -11,8 +11,6 @@ end
 -- }}}
 
 --------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------
 -- {{{ OptionLookup class
 --
 --  * OptionLookup.new { document_wide = ..., document_narrow = ..., sources = ...}
@@ -387,17 +385,28 @@ end
 -- compile time.
 --
 lbt.fn.latex_expansion_of_parsed_content = function (pc)
+  -- OLD
   local t = pc:template_object_or_error()
   local sources = lbt.fn.impl.consolidated_sources(pc, t)
   local ocr = lbt.fn.opcode_resolver(sources)
   local ol = OptionLookup.new {
-    document_wide = lbt.system.document_wide_options,
-    document_narrow = pc:local_options(),
+    document_wide = lbt.system.opargs_global,
+    document_narrow = pc:opargs_local(),
     sources = sources,
   }
   -- Save the option lookup for access by macros like Math.vector and commands like DB or STO.
   lbt.fn.set_current_opcode_resolver(ocr)
   lbt.fn.set_current_option_lookup_object(ol)
+  -- /OLD
+  -- NEW
+  --   local t = pc:template_object_or_error()
+  --   local ctx = lbt.fn.ExpansionContext.new {
+  --     pc = pc,
+  --     template = t,
+  --     sources = lbt.fn.impl.consolidated_sources(pc, t)
+  --   }
+  --   lbt.fn.set_current_expansion_context(ctx)
+  -- /NEW
   -- Allow the template to initialise counters, etc.
   if type(t.init) == 'function' then t.init() end
   -- And...go!
@@ -507,6 +516,12 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
       lbt.err.E938_unknown_CTRL_directive(args)
     end
   end
+  -- NEW code that will replace the line below, and have a simplifying effect on the
+  -- lines after it:
+  --   local cmd = lbt.fn.Command.new(opcode, ctx)
+  --     * This will look up the opcode among the template and included sources,
+  --       and will build an oparg lookup object for commands to use.
+  -- /NEW
   -- 2. Search for an opcode function (and argspec) and return if we did not find one.
   --    This must be aware of starred commands. For example, TEXT* needs to be
   --    interpreted as 'TEXT .o starred', whereas 'QQ*' is a function in its own
@@ -592,7 +607,7 @@ end
 -- is found among the sources, or nil otherwise. Note that argspec might
 -- legitimately be nil, although we will put a warning in the log file.
 --
--- TODO make this impl
+-- TODO: delete this once ExpansionContext is completed.
 --
 lbt.fn.opcode_resolver = function (sources)
   -- return pl.utils.memoize(

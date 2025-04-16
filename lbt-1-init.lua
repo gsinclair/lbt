@@ -1,6 +1,7 @@
 --
 -- We act here on the global table `lbt`.
--- It is assumed to exist (and be empty).
+-- It is assumed to exist and be empty, except for lbt.core, which was populated
+-- in the file lbt-0-core.lua.
 --
 
 --------------------------------------------------------------------------------
@@ -82,8 +83,8 @@ lbt.init.init_system = function ()
   lbt.system.template_register = pl.Map()
   -- Option mapping that the author wants applied in every template expansion.
   -- Set via (for example)
-  --    \lbtDocumentWideOptions{Q.color = purple, vector.format = arrow}
-  lbt.system.document_wide_options = pl.Map()
+  --    \lbtGlobalOptions{Q.color = purple, vector.format = arrow}
+  lbt.system.opargs_global = lbt.core.DictionaryStack.new()
   -- If we have a system-wide draft mode, then only content labeled !DRAFT
   -- will be expanded.
   -- Set via \lbtDraftMode{true}

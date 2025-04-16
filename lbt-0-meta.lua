@@ -97,39 +97,3 @@ end
 I = INSPECT
 IX = INSPECTX
 
--- ---------- DictionaryStack ----------
--- Useful for layers of options.
-
-local DictionaryStack = {}
-DictionaryStack.mt = { __index = DictionaryStack }
-
-function DictionaryStack.new()
-  local o = {
-    layers = pl.List()
-  }
-  setmetatable(o, DictionaryStack.mt)
-  return o
-end
-
-function DictionaryStack:empty()
-  return self.layers:len() == 0
-end
-
-function DictionaryStack:push(map)
-  self.layers:append(map)
-end
-
-function DictionaryStack:pop()
-  self.layers:pop()
-end
-
-function DictionaryStack:lookup(key)
-  for i = self.layers:len(), 1, -1 do
-    local layer = self.layers[i]
-    local value = layer[key]
-    if value then return value end
-  end
-  return nil
-end
-
-lbt.DictionaryStack = DictionaryStack

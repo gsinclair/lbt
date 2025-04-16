@@ -25,6 +25,7 @@
   -- Load lbt module into global variable lbt.
   lbt = {}                           -- todo check it doesn't exist already
   require('lbt-0-meta')
+  require('lbt-0-core')
   require('lbt-1-init');   lbt.init.initialize_all()
   require('lbt-2-util')
   require('lbt-3-fn-1-parsed_content')
@@ -73,8 +74,8 @@
 
 \newcommand{\lbtTemplateDirectory}[1]{\directlua{lbt.api.add_template_directory("#1")}} 
 
-\newcommand{\lbtDocumentWideOptions}[1]{%
-  \directlua{lbt.api.add_document_wide_options("#1")}} 
+\newcommand{\lbtGlobalOptions}[1]{%
+  \directlua{lbt.api.add_global_options("#1")}}
 
 \newcommand{\lbtLogChannels}[1]{\directlua{lbt.api.set_log_channels("#1")}} 
 

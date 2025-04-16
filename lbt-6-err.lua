@@ -193,8 +193,8 @@ lbt.err.E192_option_lookup_failed = function (opcode, key, ol)
     'Information about option-lookup:\n\n%s', key, opcode, ol)
 end
 
-lbt.err.E945_invalid_option_dictionary_wide = function (text)
-  E([[The text provided to \lbtDocumentWideOptions is invalid:
+lbt.err.E945_invalid_option_dictionary_global = function (text)
+  E([[The text provided to \lbtGlobalOptions is invalid:
       %s
 Use format: key1 = value1, key2 = value2, ...]], text)
 end

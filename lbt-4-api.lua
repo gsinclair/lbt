@@ -286,15 +286,15 @@ lbt.api.default_template_expander = function()
   end
 end
 
-lbt.api.add_document_wide_options = function (text)
+lbt.api.add_global_options = function (text)
   local options = lbt.parser.parse_dictionary(text)
   if options then
-    lbt.log(3, 'Document-wide options are being updated:')
+    lbt.log(3, 'Global options are being added to the stack:')
     lbt.log(3, lbt.pp(options))
-    lbt.system.document_wide_options:update(options)
+    lbt.system.opargs_latex:push(options)
     return nil
   else
-    lbt.err.E945_invalid_option_dictionary_wide(text)
+    lbt.err.E945_invalid_option_dictionary_global(text)
   end
 end
 

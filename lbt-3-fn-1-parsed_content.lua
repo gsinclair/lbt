@@ -1,5 +1,5 @@
 
--- {{{ ParsedContent class
+-- ParsedContent class
 --
 --  * ParsedContent.new(pc0, pragmas)
 --  * pc:meta()
@@ -100,11 +100,12 @@ end
 --  * if the user has set STYLES, that is old-fashioned and we exit
 --    fast so they can fix it
 --  * if we try to parse a dictionary and fail, we quit with error
-function ParsedContent:local_options()
+function ParsedContent:opargs_local()
   if self:meta().STYLES then
     IX('Old-fashioned STYLES is set. Use OPTIONS instead', self:meta().STYLES)
   end
   local options = self:meta().OPTIONS
+  -- TODO: we are type-checking `options` below. We should know the type.
   if type(options) == 'table' then
     return options
   elseif type(options) == 'string' then
@@ -119,5 +120,3 @@ function ParsedContent:local_options()
 end
 
 lbt.fn.ParsedContent = ParsedContent
-
--- }}}

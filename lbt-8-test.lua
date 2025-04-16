@@ -195,7 +195,7 @@ local good_input_9 = content_lines([[
 ----------------------------------------------------------------------
 
 local function T_DictionaryStack()
-  local d = lbt.DictionaryStack.new()
+  local d = lbt.core.DictionaryStack.new()
   d:push { A = 4, B = 8, C = 9 }
   EQ(d:lookup('A'), 4)
   EQ(d:lookup('B'), 8)
@@ -553,4 +553,4 @@ end
 --   0: don't run tests (but continue the program)
 --   1: run tests and exit
 --   2: run tests and continue
-RUN_TESTS(1)
+RUN_TESTS(0)
