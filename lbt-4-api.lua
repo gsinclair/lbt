@@ -274,7 +274,7 @@ end
 --   }
 --
 lbt.api.default_template_expander = function()
-  return function (pc, ocr, ol)
+  return function (pc)
     -- abbreviations for: parsed content, opcode resolver, option lookup
     lbt.log(4, 'Inside default_template_expander function for template <%s>', pc:template_name())
     local body = pc:list_or_nil('BODY')
@@ -282,7 +282,7 @@ lbt.api.default_template_expander = function()
     if body == nil then
       lbt.err.E301_default_expand_failed_no_body()
     end
-    return lbt.fn.latex_for_commands(body, ocr, ol)
+    return lbt.fn.latex_for_commands(body)
   end
 end
 

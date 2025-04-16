@@ -212,7 +212,7 @@ function Command.new(parsed_command, expansion_context)
   if x then
     local o = {
       opcode  = opcode,
-      exists  = true,
+      starred = x.starred,
       opargs  = c.o,
       kwargs  = c.k,
       posargs = c.a,

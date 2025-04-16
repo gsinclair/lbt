@@ -318,7 +318,7 @@ lbt.fn.validate_parsed_content = function (pc)
   return nil
 end
 
--- 
+--
 lbt.fn.set_current_opcode_resolver = function(ocr)
   lbt.const.opcode_resolver = ocr
 end
@@ -334,7 +334,7 @@ end
 lbt.fn.unset_current_option_lookup_object = function(ol)
   lbt.const.option_lookup = nil
 end
--- 
+--
 lbt.fn.get_current_opcode_resolver = function()
   local ocr = lbt.const.opcode_resolver
   if ocr == nil then
@@ -385,37 +385,35 @@ end
 -- compile time.
 --
 lbt.fn.latex_expansion_of_parsed_content = function (pc)
-  -- OLD
-  local t = pc:template_object_or_error()
-  local sources = lbt.fn.impl.consolidated_sources(pc, t)
-  local ocr = lbt.fn.opcode_resolver(sources)
-  local ol = OptionLookup.new {
-    document_wide = lbt.system.opargs_global,
-    document_narrow = pc:opargs_local(),
-    sources = sources,
-  }
-  -- Save the option lookup for access by macros like Math.vector and commands like DB or STO.
-  lbt.fn.set_current_opcode_resolver(ocr)
-  lbt.fn.set_current_option_lookup_object(ol)
-  -- /OLD
+  -- * -- OLD
+  -- * local t = pc:template_object_or_error()
+  -- * local sources = lbt.fn.impl.consolidated_sources(pc, t)
+  -- * local ocr = lbt.fn.opcode_resolver(sources)
+  -- * local ol = OptionLookup.new {
+  -- *   document_wide = lbt.system.opargs_global,
+  -- *   document_narrow = pc:opargs_local(),
+  -- *   sources = sources,
+  -- * }
+  -- * -- Save the option lookup for access by macros like Math.vector and commands like DB or STO.
+  -- * lbt.fn.set_current_opcode_resolver(ocr)
+  -- * lbt.fn.set_current_option_lookup_object(ol)
+  -- * -- /OLD
   -- NEW
-  --   local t = pc:template_object_or_error()
-  --   local ctx = lbt.fn.ExpansionContext.new {
-  --     pc = pc,
-  --     template = t,
-  --     sources = lbt.fn.impl.consolidated_sources(pc, t)
-  --   }
-  --   lbt.fn.set_current_expansion_context(ctx)
+  local t = pc:template_object_or_error()      -- TODO: rename to `template`
+  local ctx = lbt.fn.ExpansionContext.new {
+    pc = pc,
+    template = t,
+    sources = lbt.fn.impl.consolidated_sources(pc, t)
+  }
+  lbt.fn.set_current_expansion_context(ctx)  -- global variable to be used during this expansion
   -- /NEW
   -- Allow the template to initialise counters, etc.
   if type(t.init) == 'function' then t.init() end
   -- And...go!
   lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
-  local result = t.expand(pc, ocr, ol)
+  local result = t.expand(pc)
   lbt.log(4, ' ~> result has %d bytes', #result)
-  -- Expansion has finished, so we unset the ocr and ol
-  lbt.fn.unset_current_opcode_resolver()
-  lbt.fn.unset_current_option_lookup_object()
+  lbt.fn.unset_current_expansion_context(ctx)  -- the global variable is no longer usable
   return result
 end
 
@@ -437,18 +435,19 @@ end
 -- ol:       option lookup           call o.color to get option for current opcode
 --                                   or o['Q.color'] to be specific
 --
-lbt.fn.latex_for_commands = function (commands, ocr, ol)
+lbt.fn.latex_for_commands = function (parsed_commands)
   local buffer = pl.List()
-  for command in commands:iter() do
-    local status, latex = lbt.fn.latex_for_command(command, ocr, ol)
+  for parsed_command in parsed_commands:iter() do
+    local opcode = parsed_command[1]
+    local status, latex = lbt.fn.latex_for_command(parsed_command)
     if status == 'ok' then
       buffer:extend(latex)
     elseif status == 'notfound' then
-      local msg = lbt.fn.impl.latex_message_opcode_not_resolved(command[1])
+      local msg = lbt.fn.impl.latex_message_opcode_not_resolved(opcode)
       buffer:append(msg)
     elseif status == 'error' then
       local err = latex
-      local msg = lbt.fn.impl.latex_message_opcode_raised_error(command[1], err)
+      local msg = lbt.fn.impl.latex_message_opcode_raised_error(opcode, err)
       buffer:append(msg)
     elseif status == 'noop' then
       -- do nothing
@@ -484,12 +483,13 @@ end
 -- Side effect:
 --  * lbt.var.line_count is increased (unless this is a register allocation)
 --  * lbt.var.registers might be updated
-lbt.fn.latex_for_command = function (command, ocr, ol)
-  local opcode = command[1]
-  local args  = command.a
+lbt.fn.latex_for_command = function (parsed_command)
+  local pcmd = parsed_command
+  local opcode = pcmd[1]
+  local args  = pcmd.a
   local nargs = #args
-  local opargs = command.o
-  local kwargs = command.k
+  local opargs = pcmd.o
+  local kwargs = pcmd.k
   local cmdstr = F('[%s] %s', opcode, table.concat(args, ' :: '))
   lbt.log(4, 'latex_for_command: opcode = %s', opcode)
   lbt.log(4, 'latex_for_command: opargs = %s', lbt.pp(opargs))
@@ -518,7 +518,8 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   end
   -- NEW code that will replace the line below, and have a simplifying effect on the
   -- lines after it:
-  --   local cmd = lbt.fn.Command.new(opcode, ctx)
+  local ctx = lbt.fn.get_current_expansion_context()
+  local cmd = lbt.fn.Command.new(opcode, ctx)
   --     * This will look up the opcode among the template and included sources,
   --       and will build an oparg lookup object for commands to use.
   -- /NEW
@@ -526,28 +527,31 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   --    This must be aware of starred commands. For example, TEXT* needs to be
   --    interpreted as 'TEXT .o starred', whereas 'QQ*' is a function in its own
   --    right.
-  local x = lbt.fn.impl.resolve_opcode_function_and_argspec(opcode, ocr, ol)
+  -- OLD: local x = lbt.fn.impl.resolve_opcode_function_and_argspec(opcode, ocr, ol)
   ;           -->     { opcode_function = ..., argspec = ... }
   ;           -->  or { opcode_function = ..., argspec = ..., starred = true }
   -- if opcode == 'Q' then DEBUGGER() end
-  if x == nil then
+  if cmd == nil then
     lbt.log('emit', '    --> NOTFOUND')
     lbt.log(2, 'opcode not resolved: %s', opcode)
     return 'notfound', nil
   end
-  if x.starred then
-    opcode = opcode:sub(1,-2)
-    opargs.starred = true
-  end
   -- 3. Check we have a valid number of arguments.
-  if x.argspec then
-    local a = x.argspec
-    if nargs < a.min or nargs > a.max then
-      local msg = F("%d args given but %s expected", nargs, a.spec)
-      lbt.log('emit', '    --> ERROR: %s', msg)
-      lbt.log(1, 'Error attempting to expand opcode:\n    %s', msg)
-      return 'error', msg
-    end
+  -- * OLD * if x.argspec then
+  -- * OLD *   local a = x.argspec
+  -- * OLD *   if nargs < a.min or nargs > a.max then
+  -- * OLD *     local msg = F("%d args given but %s expected", nargs, a.spec)
+  -- * OLD *     lbt.log('emit', '    --> ERROR: %s', msg)
+  -- * OLD *     lbt.log(1, 'Error attempting to expand opcode:\n    %s', msg)
+  -- * OLD *     return 'error', msg
+  -- * OLD *   end
+  -- * OLD * end
+  -- 3. Check that opargs, kwargs and posargs are valid before proceeding.
+  local errmsg = cmd:validate_all_arguments()
+  if errmsg then
+      lbt.log('emit', '    --> ERROR: %s', errmsg)
+      lbt.log(1, 'Error attempting to expand opcode:\n    %s', errmsg)
+      return 'error', errmsg
   end
   -- 4. We really are processing a command, so we can increase the command_count.
   lbt.fn.impl.inc_command_count()
@@ -562,11 +566,13 @@ lbt.fn.latex_for_command = function (command, ocr, ol)
   ;         -- XXX: I want opargs to be resolved at this stage, so that 'nopar = true' becomes 'par = false'.
   ;         --      But this is a challenge.
   ;         -- NOTE: Actually,  think it can happen inside set_opcode_and_options().
-  ol:set_opcode_and_options(opcode, opargs)    -- Having to set and unset is a shame, but probably efficient.
 
-  local result = x.opcode_function(nargs, args, ol, kwargs)
+  -- * OLD * ol:set_opcode_and_options(opcode, opargs)    -- Having to set and unset is a shame, but probably efficient.
+
+  local ol = cmd.option_lookup
+  local result = cmd.fn(nargs, args, ol, kwargs)
   local extras = lbt.fn.impl.extract_from_option_lookup(ol, { 'par', 'prespace', 'postspace' })
-  ol:unset_opcode_and_options()
+  -- * OLD * ol:unset_opcode_and_options()
   if type(result) == 'string' then
     result = pl.List({result})
   elseif type(result) == 'table' and type(result.error) == 'string' then
