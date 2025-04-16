@@ -209,13 +209,14 @@ lbt.err.E190_invalid_OptionLookup = function (field)
   E('Some kind of error involving OptionLookup: %s', field)
 end
 
-lbt.err.E193_option_lookup_for_macro_failed = function (key, ol)
+lbt.err.E193_option_lookup_for_macro_failed = function (key, ctx)
   local a = F('Attempt to resolve option in a macro failed.  key: %s', key)
   local b = '' ..
+  '[NOTE] OLD INFORMATION FOLLOWS THIS LINE (it may not be true anymore - Apr 2025)\n' ..
   'Please note that macros can only get option values from document-wide\n' ..
   'settings or document-narrow settings. They cannot rely upon a default value\n' ..
   'in the way commands can. Therefore, please set the value of this option\n' ..
-  'using \\lbtDocumentWideOptions{key = value} or OPTIONS key = value.\n'
-  local c = F('Information about option-lookup: \n\n%s', ol)
+  'using \\lbtGlobalOptions{key = value} or OPTIONS key = value.\n'
+  local c = F('Information about option-lookup: \n\n%s', ctx)
   E('%s\n\n%s\n\n%s\n\n', a, b, c)
 end

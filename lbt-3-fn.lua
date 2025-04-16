@@ -318,37 +318,21 @@ lbt.fn.validate_parsed_content = function (pc)
   return nil
 end
 
---
-lbt.fn.set_current_opcode_resolver = function(ocr)
-  lbt.const.opcode_resolver = ocr
+lbt.fn.set_current_expansion_context = function(ctx)
+  assert(ctx.type == 'ExpansionContext')
+  lbt.const.expansion_context = ctx
 end
 
-lbt.fn.set_current_option_lookup_object = function(ol)
-  lbt.const.option_lookup = ol
+lbt.fn.unset_current_expansion_context = function()
+  lbt.const.expansion_context = nil
 end
 
-lbt.fn.unset_current_opcode_resolver = function(ocr)
-  lbt.const.opcode_resolver = nil
-end
-
-lbt.fn.unset_current_option_lookup_object = function(ol)
-  lbt.const.option_lookup = nil
-end
---
-lbt.fn.get_current_opcode_resolver = function()
-  local ocr = lbt.const.opcode_resolver
-  if ocr == nil then
-    lbt.err.E001_internal_logic_error('lbt.const.opcode_resolver not available')
+lbt.fn.get_current_expansion_context = function()
+  local ctx = lbt.const.expansion_context
+  if ctx == nil then
+    lbt.err.E002_general('lbt.fn.get_current_expansion_context() failed: (nil)')
   end
-  return ocr
-end
-
-lbt.fn.get_current_option_lookup_object = function()
-  local ol = lbt.const.option_lookup
-  if ol == nil then
-    lbt.err.E001_internal_logic_error('lbt.const.option_lookup not available')
-  end
-  return ol
+  return ctx
 end
 
 -- lbt.fn.latex_expansion_of_parsed_content(pc)
@@ -399,7 +383,7 @@ lbt.fn.latex_expansion_of_parsed_content = function (pc)
   -- * lbt.fn.set_current_option_lookup_object(ol)
   -- * -- /OLD
   -- NEW
-  local t = pc:template_object_or_error()      -- TODO: rename to `template`
+  local t = pc:template_object_or_error()      -- TODO: rename variable to `template`
   local ctx = lbt.fn.ExpansionContext.new {
     pc = pc,
     template = t,
@@ -516,36 +500,22 @@ lbt.fn.latex_for_command = function (parsed_command)
       lbt.err.E938_unknown_CTRL_directive(args)
     end
   end
-  -- NEW code that will replace the line below, and have a simplifying effect on the
-  -- lines after it:
-  local ctx = lbt.fn.get_current_expansion_context()
-  local cmd = lbt.fn.Command.new(opcode, ctx)
   --     * This will look up the opcode among the template and included sources,
   --       and will build an oparg lookup object for commands to use.
   -- /NEW
+  -- 2. Use the current expansion context to build a Command object for the current
+  --    command. (Or get nil if it's an unknown opcode.)
+  local ctx = lbt.fn.get_current_expansion_context()
+  local cmd = lbt.fn.Command.new(pcmd, ctx)
   -- 2. Search for an opcode function (and argspec) and return if we did not find one.
   --    This must be aware of starred commands. For example, TEXT* needs to be
   --    interpreted as 'TEXT .o starred', whereas 'QQ*' is a function in its own
   --    right.
-  -- OLD: local x = lbt.fn.impl.resolve_opcode_function_and_argspec(opcode, ocr, ol)
-  ;           -->     { opcode_function = ..., argspec = ... }
-  ;           -->  or { opcode_function = ..., argspec = ..., starred = true }
-  -- if opcode == 'Q' then DEBUGGER() end
   if cmd == nil then
     lbt.log('emit', '    --> NOTFOUND')
     lbt.log(2, 'opcode not resolved: %s', opcode)
     return 'notfound', nil
   end
-  -- 3. Check we have a valid number of arguments.
-  -- * OLD * if x.argspec then
-  -- * OLD *   local a = x.argspec
-  -- * OLD *   if nargs < a.min or nargs > a.max then
-  -- * OLD *     local msg = F("%d args given but %s expected", nargs, a.spec)
-  -- * OLD *     lbt.log('emit', '    --> ERROR: %s', msg)
-  -- * OLD *     lbt.log(1, 'Error attempting to expand opcode:\n    %s', msg)
-  -- * OLD *     return 'error', msg
-  -- * OLD *   end
-  -- * OLD * end
   -- 3. Check that opargs, kwargs and posargs are valid before proceeding.
   local errmsg = cmd:validate_all_arguments()
   if errmsg then
@@ -570,6 +540,7 @@ lbt.fn.latex_for_command = function (parsed_command)
   -- * OLD * ol:set_opcode_and_options(opcode, opargs)    -- Having to set and unset is a shame, but probably efficient.
 
   local ol = cmd.option_lookup
+  -- if opcode == 'VSPACE*' then DEBUGGER() end
   local result = cmd.fn(nargs, args, ol, kwargs)
   local extras = lbt.fn.impl.extract_from_option_lookup(ol, { 'par', 'prespace', 'postspace' })
   -- * OLD * ol:unset_opcode_and_options()

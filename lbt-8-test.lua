@@ -23,7 +23,8 @@ end
 local good_input_1 = content_lines([[
   !DRAFT
   [@META]
-    TEMPLATE Basic
+    TEMPLATE lbt.Basic
+    OPTIONS  TABLE.float = true, MATH.align = true
     TRAIN    Bar :: Baz
     BUS      .d capacity=55, color=purple
   [+BODY]
@@ -230,7 +231,7 @@ local function T_parsed_content_1()
   EQ(pc.type, 'ParsedContent')
   -- check META is correct
   local m = pc:meta()
-  EQ(m.TEMPLATE, 'Basic')
+  EQ(m.TEMPLATE, 'lbt.Basic')
   EQ(m.TRAIN, 'Bar :: Baz')
   EQ(m.BUS, { capacity = 55, color = 'purple'} )
   -- check BODY is correct
@@ -266,6 +267,36 @@ local function T_extra_sources()
   local s3  = pc3:extra_sources()
   EQ(s2, {"Questions", "Figures", "Tables"})
   EQ(s3, {})
+end
+
+local function T_resolve_oparg()
+  lbt.api.reset_global_data()
+  local pc = lbt.fn.parsed_content(good_input_1)
+  local t  = pc:template_object_or_error()
+  local ctx = lbt.fn.ExpansionContext.new {
+    pc = pc,
+    template = t,
+    sources = lbt.fn.impl.consolidated_sources(pc, t)
+  }
+  local f = function(qkey)
+    local t = table.pack(ctx:resolve_oparg(qkey))
+    t.n = nil
+    return t
+  end
+  -- default opargs
+  EQ(f('TEXT.starred'), { true, false })
+  EQ(f('TEXT.par'), { true, true })
+  EQ(f('VSPACE.starred'), { true, false })
+  EQ(f('ITEMIZE.sep'), { true, 1 })
+  EQ(f('MATH.env'), { true, nil })
+  EQ(f('MATH.gathered'), { true, false })
+  EQ(f('TABLE.position'), { true, 'htbp' })
+  -- nonexistent opargs
+  EQ(f('TABLE.xyz'), { false, nil })
+  EQ(f('FOOBAR.xyz'), { false, nil })
+  -- overridden opargs
+  EQ(f('TABLE.float'), { true, true })
+  EQ(f('MATH.align'), { true, true })
 end
 
 local function T_add_template_directory()
@@ -527,6 +558,7 @@ local function RUN_TESTS(flag)
   T_DictionaryStack()
   -- T_parsed_content_1()
   -- T_extra_sources()
+  T_resolve_oparg()
   -- T_add_template_directory()
   -- T_expand_Basic_template_1()
   -- T_expand_Basic_template_2()

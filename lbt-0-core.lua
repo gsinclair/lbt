@@ -24,6 +24,7 @@ DictionaryStack.mt = { __index = DictionaryStack }
 
 function DictionaryStack.new()
   local o = {
+    type = 'DictionaryStack',
     layers = pl.List()
   }
   setmetatable(o, DictionaryStack.mt)
@@ -55,7 +56,7 @@ lbt.core.DictionaryStack = DictionaryStack
 
 
 function lbt.core.oparg_check_qualified_key(key)
-  if x:match('%.') then
+  if key:match('%.') then
     return nil
   else
     lbt.err.E002_general("qualified key required; got '%s'", key)

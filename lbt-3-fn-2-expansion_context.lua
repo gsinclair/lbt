@@ -12,12 +12,13 @@ ExpansionContext.mt = { __index = ExpansionContext }
 function ExpansionContext.new(args)
   assert(args.pc and args.template and args.sources)
   local o = {
+    type = 'ExpansionContext',
     template = args.template,
     sources = args.sources,
     opargs_global = lbt.system.opargs_global,
     opargs_local  = lbt.core.DictionaryStack.new(),
     opcode_cache  = {},
-    oparg_cache   = {},
+    opargs_cache  = {},
   }
   o.opargs_local:push(args.pc:opargs_local())
   setmetatable(o, ExpansionContext.mt)
@@ -29,14 +30,16 @@ local _resolve_opcode_impl_nocache = function(opcode, sources)
     -- Each 'source' is a template object, with properties like 'functions'
     -- and 'arguments' and 'default_options' and ...
     if s.functions[opcode] then
+      local opargs_spec = s.default_options[opcode] or {}
       return {
-        opcode  = opcode,
-        fn      = s.functions[opcode],
+        opcode      = opcode,
+        fn          = s.functions[opcode],
+        allows_star = (opargs_spec.starred ~= nil),
         source_name = s.name,
         spec = {
           posargs = s.arguments[opcode],
           opargs  = s.default_options[opcode],
-          kwargs  = s.kwargs[opcode],
+          -- kwargs  = s.kwargs[opcode],         -- TODO: add this later
         },
         -- TODO: change names inside templates to posargs, opargs, kwargs.
         -- That's a simple change that touches many files.
@@ -86,6 +89,7 @@ end
 --     opargs for PART do not include 'starred', so there is in fact no implementation
 --     for PART*, and we return nil.
 function ExpansionContext:resolve_opcode(opcode)
+  lbt.assert_string(1, opcode)
   local starred, unstarred, result
   local lookup = function(x)
     return _resolve_opcode_impl_cache(x, self.opcode_cache, self.sources)
@@ -106,7 +110,7 @@ function ExpansionContext:resolve_opcode(opcode)
   end
   -- Example: TEXT*
   result = lookup(unstarred)
-  if result then
+  if result and result.allows_star then
     -- What we got back does not have 'starred = true' in it
     -- We operate on a copy so as not to affect the cached value.
     result = pl.tablex.copy(result)
@@ -114,6 +118,10 @@ function ExpansionContext:resolve_opcode(opcode)
     -- But we can cache this for later so that TEXT* is found quickly.
     self.opcode_cache[starred] = result
     return result
+  end
+  -- Example: PART* (where PART does not allow a star)
+  if result and not result.allows_star then
+    return nil
   end
   -- Example: PQSRT*
   if not result then
@@ -166,7 +174,9 @@ end
 -- end
 
 -- To resolve an oparg, we need to look at options set in this LBT document and
--- options set in the Latex document. Both of these are a DictionaryStack.
+-- options set in the Latex document. Both of these are a DictionaryStack. We also
+-- need to look at oparg defaults in the template definitions. Thus we use the
+-- `sources` field, much like `resolve_opcode` does.
 --   Options specified in a command are not seen here. That is handled inside
 -- OptionLookup, which is inside Command. The principal purpose of this function
 -- is to support OptionLookup. However, there are cases where an oparg needs to be
@@ -179,29 +189,42 @@ end
 --     2. See if the key is in the cache.
 --     3. Check the oparg_local stack.
 --     4. Check the oparg_global stack.
---     5. Return nil as the oparg was not found.
+--     5. Check among the sources to find a default for this oparg.
+-- If a value is found, return { true, value }. Otherwise, { false, nil }. Note that
+-- the value _can_ be nil. We sanitise the value on the way out, turning 'nil' into
+-- nil.
 function ExpansionContext:resolve_oparg(qkey)
   -- (1)
   lbt.core.oparg_check_qualified_key(qkey)
   local value
   -- (2)
-  value = self.cache[qkey]
-  if value then return value end
+  value = self.opargs_cache[qkey]
+  if value ~= nil then return { true, lbt.core.sanitise_oparg_nil(value) } end
   -- (3)
-  value = self.oparg_local:lookup(qkey)
-  if value then return self:cache_store(qkey, value) end
+  value = self.opargs_local:lookup(qkey)
+  if value ~= nil then return self:cache_store(qkey, value) end
   -- (4)
-  value = self.oparg_global:lookup(qkey)
-  if value then return self:cache_store(qkey, value) end
+  value = self.opargs_global:lookup(qkey)
+  if value ~= nil then return self:cache_store(qkey, value) end
   -- (5)
-  return nil
+  for s in self.sources:iter() do
+    value = s.default_options[qkey]
+    if value ~= nil then return self:cache_store(qkey, value) end
+  end
+  -- (6)
+  return false, nil
+end
+
+function ExpansionContext:cache_store(qkey, value)
+  self.opargs_cache[qkey] = value
+  return true, lbt.core.sanitise_oparg_nil(value)
 end
 
 -- If an oparg_local gets updated mid-document, the cache needs to be invalidated.
 -- We could clear just the relevant key, but for now let's just clear the whole
 -- thing. Mid-document updates will be rare anyway.
 function ExpansionContext:clear_oparg_cache()
-  self.oparg_cache = {}
+  self.opargs_cache = {}
 end
 
 lbt.fn.ExpansionContext = ExpansionContext

@@ -56,14 +56,14 @@ lbt.util.get_style = function (key)
 end
 
 -- This is designed for use only in macro expansion, and only rarely.
--- Commands should use the option lookup passed to them.
+--   Commands should use the option lookup passed to them.
+--   The key needs to be qualified (e.g. vector.format, not just format); an error will
+-- result otherwise.
 lbt.util.get_option_for_macro = function (key)
-  DEBUGGER()
-  local ol = lbt.fn.get_current_option_lookup_object()
-  local value = ol:_lookup(key)
-  if value == nil then
-    print(ol)
-    lbt.err.E193_option_lookup_for_macro_failed(key, ol)
+  local ctx = lbt.fn.get_current_expansion_context()
+  local found, value = ctx:oparg_resolve(key)
+  if found == false then
+    lbt.err.E193_option_lookup_for_macro_failed(key, ctx)
   end
   return value
 end
