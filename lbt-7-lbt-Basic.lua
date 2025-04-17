@@ -8,7 +8,9 @@ local T = lbt.util.string_template_expand
 local f = {}   -- functions
 local a = {}   -- number of arguments
 local m = {}   -- macros
-local o = pl.List()  -- options
+-- local o = pl.List()  -- options
+local op = {}
+local kw = {}
 
 -- --------------------------------------------------------------------
 -- environment_name('align', true)  --> 'align*'
@@ -30,7 +32,7 @@ end
 -- TEXT creates one or more paragraphs.
 -- TEXT* suppresses the \par that would normally be put at the end.
 a.TEXT = '1+'
-o:append 'TEXT.starred = false, TEXT.par = true'
+op.TEXT = { starred = false, par = true }
 f.TEXT = function (n, args, o)
   local paragraphs = textparagraphs(args,1)
   if o.starred then
@@ -51,7 +53,7 @@ f.CMD = function(n, args)
 end
 
 a.VSPACE = 1
-o:append 'VSPACE.starred = false'
+op.VSPACE = { starred = false }
 f.VSPACE = function(n, args, o)
   if o.starred then
     return F([[\vspace*{%s}]], args[1])
@@ -133,31 +135,31 @@ f.PART = function(n, args, o, kw)
 end
 
 a.CHAPTER = '1'
-o:append 'CHAPTER.starred = false'
+op.CHAPTER = { starred = false }
 f.CHAPTER = function(n, args, o, kw)
   return document_section('chapter', args[1], o, kw)
 end
 
 a.SECTION = '1'
-o:append 'SECTION.starred = false'
+op.SECTION = { starred = false }
 f.SECTION = function(n, args, o, kw)
   return document_section('section', args[1], o, kw)
 end
 
 a.SUBSECTION = '1'
-o:append 'SUBSECTION.starred = false'
+op.SUBSECTION = { starred = false }
 f.SUBSECTION = function(n, args, o, kw)
   return document_section('subsection', args[1], o, kw)
 end
 
 a.SUBSUBSECTION = '1'
-o:append 'SUBSUBSECTION.starred = false'
+op.SUBSUBSECTION = { starred = false }
 f.SUBSUBSECTION = function(n, args, o, kw)
   return document_section('subsubsection', args[1], o, kw)
 end
 
 a.PARAGRAPH = '2+'
-o:append 'PARAGRAPH.starred = false, PARAGRAPH.par = true'
+op.PARAGRAPH = { starred = false, par = true }
 f.PARAGRAPH = function(n, args, o, kw)
   if o.starred then o:_set_local('par', false) end
   return T {
@@ -172,7 +174,7 @@ f.PARAGRAPH = function(n, args, o, kw)
 end
 
 a.SUBPARAGRAPH = '2+'
-o:append 'SUBPARAGRAPH.starred = false, SUBPARAGRAPH.par = true'
+op.SUBPARAGRAPH = { starred = false, par = true }
 f.SUBPARAGRAPH = function(n, args, o, kw)
   if o.starred then o:_set_local('par', false) end
   return T {
@@ -200,8 +202,8 @@ end
 
 -- Itemize and enumerate
 
-o:append 'ITEMIZE.notop = false, ITEMIZE.compact = false, ITEMIZE.sep=1'
-;              -- ^^^^^ NOTE: noX is now implemented; shouldn't need explicit notop
+op.ITEMIZE = { notop = false, compact = false, sep = 1 }
+;           -- ^^^^^ NOTE: noX is now implemented; shouldn't need explicit notop
 a.ITEMIZE = '1+'
 f.ITEMIZE = function (n, args, o, k)
   if args[1]:startswith('[') then
@@ -233,8 +235,8 @@ end
 
 -- TODO: Factor out code from ITEMIZE and ENUMERATE.
 -- TODO: Support custom environments via .o env=...
-o:append 'ENUMERATE.notop = false, ENUMERATE.compact = false'
-;                -- ^^^^^ NOTE: noX is now implemented; shouldn't need explicit notop
+op.ENUMERATE = { notop = false, compact = false }
+;             -- ^^^^^ NOTE: noX is now implemented; shouldn't need explicit notop
 a.ENUMERATE = '1+'
 f.ENUMERATE = function (n, args, o, k)
   if args[1]:startswith('[') then
@@ -411,13 +413,12 @@ local math_impl = function (environment, args, o)
   return x
 end
 
-o:append { 'MATH',
-           env = 'nil', align = false, alignat = false, flalign = false,
-           gather = false, multiline = false, gathered = false,
-           aligned = false, alignedat = false,
-           spreadlines = 'nil', alignleft = false,
-           par = true, eqnum = false,
-           starred = false }
+op.MATH = { env = 'nil', align = false, alignat = false, flalign = false,
+            gather = false, multiline = false, gathered = false,
+            aligned = false, alignedat = false,
+            spreadlines = 'nil', alignleft = false,
+            par = true, eqnum = false,
+            starred = false }
 a.MATH = '1+'
 f.MATH = function(n, args, o)
   if o.starred then
@@ -577,9 +578,8 @@ local table_insert_rows_from_data = function (namedargs)
 end
 
 a.TABLE = '1+'
-o:append 'TABLE.center = false, TABLE.centre = false, TABLE.leftindent = false'
-o:append 'TABLE.fontsize = nil'
-o:append 'TABLE.float = false, TABLE.position = htbp'
+op.TABLE = { center = false, centre = false, leftindent = false, fontsize = 'nil',
+             float = false, position = 'htbp' }
 f.TABLE = function(n, args, o, kw)
   -- t is our template list where we accumulate our result
   -- Note: we do not include a table environment. That is applied (if o.float) once
@@ -645,7 +645,7 @@ end
 -- PDFINCLUDE .o setdirectory :: media/Vectors
 -- PDFINCLUDE .o pages = 7-13 :: Chapter 4
 a.PDFINCLUDE = '1'
-o:append 'PDFINCLUDE.pages = nil, PDFINCLUDE.setdirectory = false'
+op.PDFINCLUDE = { pages = 'nil', setdirectory = false }
 f.PDFINCLUDE = function(n, args, o)
   if o.setdirectory then
     lbt.api.data_set('lbt.Basic.pdfinclude.directory', args[1])
@@ -660,7 +660,7 @@ end
 
 -- TWOPANEL .o ratio=2:3, align=bt :: \DiagramOne :: ◊DiagramOneText
 a.TWOPANEL = 2
-o:append 'TWOPANEL.ratio = 1:1, TWOPANEL.align = tt'
+op.TWOPANEL = { ratio = '1:1', align = 'tt' }
 f.TWOPANEL = function(n, args, o)
   local ratio = lbt.parser.parse_ratio(2, o.ratio)
   local align = lbt.parser.parse_align(2, o.align)
@@ -721,5 +721,5 @@ return {
   expand    = lbt.api.default_template_expander(),
   functions = f,
   arguments = a,
-  default_options = o,
+  default_options = op,
 }

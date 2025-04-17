@@ -10,22 +10,15 @@ local F = string.format
 local T = lbt.util.string_template_expand
 local f = {}
 local a = {}
-local o = pl.List()
+local op = {}  -- opargs
 
 -- This provides the PHOTOGALLERY command only.
-
--- s.Article = { parstyle = 'skip',
---               parskip = '6pt plus 2pt minus 2pt',
---               parindent = '1em' }
--- o:append 'Article.parstyle = skip, Article.parskip = 6pt plus 2pt minus 2pt, Article.parindent = 1em'
-o:append 'Article.parskip = 2pt plus 2pt minus 1pt, Article.parindent = 15pt'
-
 
 local missing_keyword = function(x)
   error('Missing keyword in PHOTOGALLERY: ' .. x)
 end
 
-  local chatgpt = [[
+local chatgpt = [[
   \begin{center}
       \begin{minipage}[t]{0.3\textwidth}
           \centering
@@ -124,8 +117,7 @@ end
 -------------------------------------------------------------------------------
 
 a.PHOTOGALLERY = 0
-o:append { 'PHOTOGALLERY',
-           rejects = true, summary = true, photos = true, marks = false }
+op.PHOTOGALLERY = { rejects = true, summary = true, photos = true, marks = false }
 f.PHOTOGALLERY = function(_, _, o, k)
   local folder      = k.folder      or missing_keyword('folder')
   local per_row     = k.per_row     or missing_keyword('per_row')
@@ -307,7 +299,7 @@ return {
   init      = nil,
   expand    = nil,
   functions = f,
-  default_options = o,
+  default_options = op,
   arguments = a,
   macros    = nil,
 }

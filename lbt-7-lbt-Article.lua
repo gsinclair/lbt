@@ -9,14 +9,10 @@
 local F = string.format
 local f = {}
 local a = {}
-local o = pl.List()
+local op = {}
 local m = {}
 
--- s.Article = { parstyle = 'skip',
---               parskip = '6pt plus 2pt minus 2pt',
---               parindent = '1em' }
--- o:append 'Article.parstyle = skip, Article.parskip = 6pt plus 2pt minus 2pt, Article.parindent = 1em'
-o:append 'Article.parskip = 2pt plus 2pt minus 1pt, Article.parindent = 15pt'
+op.Article = { parskip = '2pt plus 2pt minus 1pt', parindent = '15pt'}
 
 -- Input: (pc) parsed content   (ocr) opcode resolver   (ol) option lookup
 local function expand(pc, ocr, ol)
@@ -99,7 +95,7 @@ return {
   init      = nil,
   expand    = expand,
   functions = f,
-  default_options = o,
+  default_options = op,
   arguments = a,
   macros    = m,
 }

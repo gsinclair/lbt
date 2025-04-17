@@ -10,7 +10,7 @@ local T = lbt.util.string_template_expand
 
 local f = {}
 local a = {}
-local o = pl.List()
+local op = {}
 
 -- Support function to lay out horizontal subquestions or ---------------------
 -- multiple-choice options horizontally in fixed columns  ---------------------
@@ -119,7 +119,7 @@ local q_sourcenote = function(source, note)
 end
 
 a.Q = 1
-o:append 'Q.prespace = 1ex, Q.color = blue, Q.newpage = false'
+op.Q = { prespace = '1ex', color = 'blue', newpage = false }
 f.Q = function(n, args, o, kw)
   lbt.api.counter_reset('qq')
   lbt.api.counter_reset('mc')
@@ -140,7 +140,7 @@ f.Q = function(n, args, o, kw)
 end
 
 a.QQ = 1
-o:append 'QQ.workingspace = 0pt'
+op.QQ = { workingspace = '0pt' }
 f.QQ = function(n, args, o)
   local qq = lbt.api.counter_inc('qq')
   local vsp = o.workingspace
@@ -192,7 +192,7 @@ end
 
 -- MC lays out vertically as many options as are given using A, B, C, ...
 a.MC = '1+'
-o:append 'MC.format = (A)'
+op.MC = { formal = '(A)' }
 f.MC = function(n, args, o)
   -- We employ an enumerate environment with one line1, many line2 and one line3.
   local line0 = [[ \begin{adjustwidth}{2em}{}]]

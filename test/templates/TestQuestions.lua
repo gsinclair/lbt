@@ -26,14 +26,14 @@ local pp = pl.pretty.write
 
 local f = {}
 local a = {}
-local o = pl.List()
+local op = {}  -- opargs
 
 local init = function()
   lbt.api.counter_reset('q')
 end
 
 a.Q = 1
-o:append 'Q.prespace = 12pt, Q.color = blue'
+op.Q = { prespace = '12pt', color = 'blue' }
 f.Q = function(n, args, o)
   lbt.api.counter_reset('qq')
   local col = o.color
@@ -42,7 +42,7 @@ f.Q = function(n, args, o)
 end
 
 a.QQ = 1
-o:append 'QQ.alphabet = latin'
+op.QQ = { alphabet = 'latin' }
 f.QQ = function(n, args, o)
   local alph = o.alphabet
   local qq = lbt.api.counter_inc('qq')
@@ -51,7 +51,7 @@ f.QQ = function(n, args, o)
 end
 
 a.MC = '1+'
-o:append 'MC.alphabet = Latin'
+op.MC = { alphabet = 'Latin' }
 f.MC = function(n, args, o)
   local result = pl.List()
   local alph = o.alphabet
@@ -69,7 +69,7 @@ return {
   sources = {},
   init = init,
   expand = lbt.api.default_template_expander(),
-  default_options = o,
+  default_options = op,
   arguments = a,
   functions = f
 }

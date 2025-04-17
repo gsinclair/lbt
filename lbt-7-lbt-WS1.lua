@@ -33,10 +33,10 @@ local F = string.format
 
 local f = {}
 local a = {}
-local o = pl.List()
+local op = {}
 local m = {}
 
-o:append 'WS1.title_color = MidnightBlue, WS1.teacher_notes_color = blue'
+op.WS1 = { title_color = 'MidnightBlue', teacher_notes_color = 'blue' }
 
 -- Set styles to headings in WS0.   (Consering this...)
 -- s.WS0 = { heading_color = 'MidnightBlue' }
@@ -157,7 +157,7 @@ return {
   init      = nil,
   expand    = expand,
   functions = f,
-  default_options = o,
+  default_options = op,
   arguments = a,
   macros    = m,
 }

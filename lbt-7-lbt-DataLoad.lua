@@ -8,7 +8,7 @@ local T = lbt.util.string_template_expand
 local f = {}   -- functions
 local a = {}   -- number of arguments
 local m = {}   -- macros
-local o = pl.List()  -- options
+local op = {}  -- opargs
 
 ---------- DB and supporting functions ----------
 
@@ -121,7 +121,7 @@ local db_functions = {
 }
 
 a.DB = '2+'
-o:append { 'DB', showkey = false, order = 'index' }
+op.DB = { showkey = false, order = 'index' }
 f.DB = function(n, args, o)
   if args[1] == 'init' then
     local label = db_check_valid_label(args[2])
@@ -146,5 +146,5 @@ return {
   expand    = lbt.api.default_template_expander(),
   functions = f,
   arguments = a,
-  default_options = o,
+  default_options = op,
 }

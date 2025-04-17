@@ -7,10 +7,10 @@ local F = string.format
 local f = {}   -- functions
 local a = {}   -- number of arguments
 local m = {}   -- macros
-local o = pl.List()  -- options
+local op = {}  -- opargs
 
 a.MINTED = 1
-o:append 'MINTED.lang = none, MINTED.env = none, MINTED.number = false'
+op.MINTED = { lang = 'none', env = 'none', number = false }
 f.MINTED = function(n, args, o)
   local a,b,c
   if o.lang == 'none' then
@@ -55,6 +55,6 @@ return {
   expand    = lbt.api.default_template_expander(),
   functions = f,
   arguments = a,
-  default_options = o,
+  default_options = op,
 }
 

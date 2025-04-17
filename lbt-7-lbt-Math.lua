@@ -9,7 +9,7 @@ local F = string.format
 
 local f = {}   -- functions
 local a = {}   -- number of arguments
-local o = pl.List()  -- options
+local op = {}  -- opargs
 local m = {}   -- macros
 
 
@@ -53,7 +53,7 @@ local function vector_segment(ab)
   return F([[\ensuremath{\vv{\mathit{%s}}}]], ab)
 end
 
-o:append 'vector.format = bold'
+op.vector = { format = 'bold' }
 m.vector = function (text)
   local args
   if text:find(',') then
@@ -479,7 +479,7 @@ return {
   expand    = nil,
   functions = f,
   arguments = a,
-  default_options = o,
+  default_options = op,
   macros    = m,
 }
 
