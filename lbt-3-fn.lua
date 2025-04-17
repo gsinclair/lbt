@@ -622,6 +622,8 @@ end
 --  * template_path_or_error(name)
 --  *
 --  * [expand_directory -- an implementation detail]
+--  * [template_names_to_logfile -- for debugging]
+--  * [template_register_to_logfile -- for debugging]
 --  * [template_compact_representation -- for debugging]
 --------------------------------------------------------------------------------
 
@@ -736,6 +738,7 @@ lbt.fn.template_register_to_logfile = function()
   end
 end
 
+-- TODO: bring this up to date (styles -> opargs, for instance)
 lbt.fn.template_compact_representation = function(te)
   local x = pl.List()
   local t = te.td
@@ -948,6 +951,7 @@ local convert_argspec = function(x)
   elseif type(x) ~= 'string' then
     return nil
   end
+  local m, n
   n = x:match('^(%d+)$')
   if n then
     return { spec = x, min = tonumber(n), max = tonumber(n) }

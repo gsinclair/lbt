@@ -299,6 +299,32 @@ local function T_resolve_oparg()
   EQ(f('MATH.align'), { true, true })
 end
 
+local function T_resolve_opcode()
+  lbt.api.reset_global_data()
+  local pc = lbt.fn.parsed_content(good_input_1)
+  local t  = pc:template_object_or_error()
+  local ctx = lbt.fn.ExpansionContext.new {
+    pc = pc,
+    template = t,
+    sources = lbt.fn.impl.consolidated_sources(pc, t)
+  }
+  local result
+  lbt.debuglog('------------------------------------------------------------')
+  lbt.debuglog('1')
+  result = ctx:resolve_opcode('VSPACE')
+  assert(result ~= nil)
+  EQ(result.opcode, 'VSPACE')
+  EQ(result.source_name, 'lbt.Basic')
+  EQ(result.spec.star, true)
+  lbt.debuglog('------------------------------------------------------------')
+  lbt.debuglog('2')
+  result = ctx:resolve_opcode('VSPACE*')
+  assert(result ~= nil)
+  EQ(result.opcode, 'VSPACE')
+  EQ(result.source_name, 'lbt.Basic')
+  EQ(result.spec.star, true)
+end
+
 local function T_add_template_directory()
   lbt.api.reset_global_data()
   local t1 = lbt.fn.template_object_or_nil("HSCLectures")
@@ -559,8 +585,9 @@ local function RUN_TESTS(flag)
   -- T_parsed_content_1()
   -- T_extra_sources()
   T_resolve_oparg()
+  T_resolve_opcode()
   -- T_add_template_directory()
-  -- T_expand_Basic_template_1()
+  T_expand_Basic_template_1()
   -- T_expand_Basic_template_2()
   -- T_util()
   -- T_number_in_alphabet()
@@ -585,4 +612,4 @@ end
 --   0: don't run tests (but continue the program)
 --   1: run tests and exit
 --   2: run tests and continue
-RUN_TESTS(0)
+RUN_TESTS(1)

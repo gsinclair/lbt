@@ -55,9 +55,10 @@ end
 
 lbt.debuglog = function(format, ...)
   local line = F(format, ...)
-  debuglogfile():write(line)
-  debuglogfile():write('\n')
-  debuglogfile():flush()
+  local file = debuglogfile()
+  file:write(line)
+  file:write('\n')
+  file:flush()
 end
 
 -- Some essential functions that are defined here so they don't have to be
@@ -96,4 +97,3 @@ end
 
 I = INSPECT
 IX = INSPECTX
-

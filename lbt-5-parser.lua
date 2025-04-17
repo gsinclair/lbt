@@ -347,7 +347,6 @@ end
 --   * Further processing will be required to use the results:
 --     - build an index of the contents   - incorporate pragmas
 lbt.parser.parsed_content_0 = function(text)
-  local result = {}
   -- reset the file-scoped variable MaxPosition each time we do a parse
   MaxPosition = -1
   local pc0 = document:match(text)

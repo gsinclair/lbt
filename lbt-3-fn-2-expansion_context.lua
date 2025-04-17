@@ -6,6 +6,8 @@
 --  * resolve opcodes
 --  * look up global and local opargs
 
+local F = string.format
+
 local ExpansionContext = {}
 ExpansionContext.mt = { __index = ExpansionContext }
 
@@ -25,39 +27,10 @@ function ExpansionContext.new(args)
   return o
 end
 
-local _resolve_opcode_impl_nocache = function(opcode, sources)
-  for s in sources:iter() do
-    -- Each 'source' is a template object, with properties like 'functions'
-    -- and 'arguments' and 'default_options' and ...
-    if s.functions[opcode] then
-      local opargs_spec = s.default_options[opcode] or {}
-      return {
-        opcode      = opcode,
-        fn          = s.functions[opcode],
-        allows_star = (opargs_spec.starred ~= nil),
-        source_name = s.name,
-        spec = {
-          posargs = s.arguments[opcode],
-          opargs  = s.default_options[opcode],
-          -- kwargs  = s.kwargs[opcode],         -- TODO: add this later
-        },
-        -- TODO: change names inside templates to posargs, opargs, kwargs.
-        -- That's a simple change that touches many files.
-      }
-    end
-  end
-  -- No token function found :(
-  return nil
-end
+-- {{{ resolve_opcode
 
-local _resolve_opcode_impl_cache = function(opcode, cache, sources)
-  if cache[opcode] == nil then
-    local result = _resolve_opcode_impl_nocache(opcode, sources)
-    cache[opcode] = result
-  end
-  return cache[opcode]
-end
-
+-- TODO: overhaul this documentation
+--
 -- This will be used wherever ocr('Q') is currently used. It returns all possible
 -- information about the opcode.
 --   We implement the starred logic here, which is messy but important. To illustrate,
@@ -88,90 +61,87 @@ end
 --     ocr('PART*') will return nil, and ocr('PART') will return a result. However, the
 --     opargs for PART do not include 'starred', so there is in fact no implementation
 --     for PART*, and we return nil.
-function ExpansionContext:resolve_opcode(opcode)
-  lbt.assert_string(1, opcode)
-  local starred, unstarred, result
-  local lookup = function(x)
-    return _resolve_opcode_impl_cache(x, self.opcode_cache, self.sources)
+
+function ExpansionContext:_resolve_opcode_impl_nocache(opcode)
+  for s in self.sources:iter() do
+    -- Each 'source' is a template object, with properties like 'functions'
+    -- and 'arguments' and 'default_options' and ...
+    if s.functions[opcode] then
+      local allow_star = s.default_options[opcode .. '.starred'] ~= nil
+      return {
+        opcode      = opcode,
+        fn          = s.functions[opcode],
+        source_name = s.name,
+        spec = {
+          posargs = s.arguments[opcode],
+          opargs  = s.default_options[opcode],
+          -- kwargs  = s.kwargs[opcode],         -- TODO: add this later
+          star    = allow_star
+        },
+        -- TODO: change names inside templates to posargs, opargs, kwargs.
+        -- That's a simple change that touches many files.
+      }
+    end
   end
-  if opcode:endswith('*') then
-    starred = opcode
-    unstarred = opcode:sub(1,-2)
-  else
-    starred = nil
-    unstarred = opcode
+  -- No token function found :(
+  return nil
+end
+
+function ExpansionContext:_resolve_opcode_impl_cache(opcode)
+  local cached_result, result
+  cached_result = self.opcode_cache[opcode]
+  if cached_result ~= nil then return cached_result end
+  result = self:_resolve_opcode_impl_nocache(opcode)
+  if result ~= nil then
+    return self:opcode_cache_store(opcode, result)
   end
-  -- Example: TEXT or QQ* (we find the right details right away)
-  result = lookup(opcode)
-  if result then return result end
-  -- If we found nothing, it's only worth continuing if a starred opcode was given.
-  if not starred then
+  return nil
+end
+
+local resolve_starred_opcode = function(opcode, lookup_function)
+  -- if opcode == 'VSPACE*' then DEBUGGER() end
+  if not opcode:endswith('*') then
+    -- opcode was PQRST (i.e. no star) and we have nothing to look for
     return nil
   end
-  -- Example: TEXT*
-  result = lookup(unstarred)
-  if result and result.allows_star then
-    -- What we got back does not have 'starred = true' in it
-    -- We operate on a copy so as not to affect the cached value.
-    result = pl.tablex.copy(result)
-    result.starred = true
-    -- But we can cache this for later so that TEXT* is found quickly.
-    self.opcode_cache[starred] = result
-    return result
+  local base, result, result2
+  base = opcode:sub(1,-2)
+  result = lookup_function(base)
+  if result and result.spec.star then
+    -- opcode was TEXT* and we found TEXT, and that result is now in the cache.
+    -- We need an entry in the cache for TEXT* that has 'starred = true'.
+    result2 = pl.tablex.copy(result)
+    result2.starred = true
+    return result2
   end
-  -- Example: PART* (where PART does not allow a star)
-  if result and not result.allows_star then
+  if result and not result.spec.starred then
+    -- opcode was PART* and we found PART, but PART does not allow a star.
     return nil
   end
-  -- Example: PQSRT*
   if not result then
-    -- There was simply no match, starred or unstarred.
+    -- opcode was PQRST* and we found nothing for PQRST.
     return nil
   end
   lbt.err.E001_internal_logic_error("shouldn't reach here")
 end
 
--- -- Given an opcode like 'SECTION' and an opcode resolver (ocr), return
--- --   { opcode_function = ..., argspec = ..., starred = true (perhaps) }
--- -- If no function exists for the opcode, return nil.
--- -- (The opcode resolver will try the current template, then any sources, then...)
--- -- All this is handled by the ocr; we don't implement any smart logic, yet.
--- --
--- --
--- -- The code is messy, but I don't really see any choice.
--- --
--- lbt.fn.impl.resolve_opcode_function_and_argspec = function (opcode, ocr, ol)
---   lbt.debuglog('resolve_opcode_function_and_argspec:')
---   lbt.debuglog('  opcode = %s', opcode)
---   lbt.debuglog('  ocr    = %s', ocr)
---   lbt.debuglog('  ol     = %s', ol)
---   local x, base
---   x = ocr(opcode)
---   if x then
---     return x               -- First time's a charm, like SECTION or QQ*
---   end
---   -- Maybe this is a starred opcode?
---   if opcode:endswith('*') then
---     base = opcode:sub(1,-2)
---     x = ocr(base)
---     if x == nil then
---       return nil           -- There is no base opcode with potential star, like PQXYZ*
---     else
---       -- There is potential but we need to check.
---       if ol:_has_key(base, 'starred') then
---         -- Bingo! We have something like SECTION*
---         x.starred = true
---         return x
---       else
---         -- Boo. We have something like PART*, where PART does not allow for a star
---         return nil
---       end
---     end
---   else
---     -- This is not a starred opcode, like PQXYZ, so we are out of luck.
---     return nil
---   end
--- end
+function ExpansionContext:resolve_opcode(opcode)
+  local result = nil
+  local lookup = function(x)
+    return self:_resolve_opcode_impl_cache(x)
+  end
+  result = lookup(opcode)
+  if result ~= nil then return result end
+  result = resolve_starred_opcode(opcode, lookup)
+  if result ~= nil then
+    return self:opcode_cache_store(opcode, result)
+  end
+  return nil
+end
+
+-- }}}
+
+-- {{{ resolve_oparg
 
 -- To resolve an oparg, we need to look at options set in this LBT document and
 -- options set in the Latex document. Both of these are a DictionaryStack. We also
@@ -202,20 +172,32 @@ function ExpansionContext:resolve_oparg(qkey)
   if value ~= nil then return { true, lbt.core.sanitise_oparg_nil(value) } end
   -- (3)
   value = self.opargs_local:lookup(qkey)
-  if value ~= nil then return self:cache_store(qkey, value) end
+  if value ~= nil then return self:opargs_cache_store(qkey, value) end
   -- (4)
   value = self.opargs_global:lookup(qkey)
-  if value ~= nil then return self:cache_store(qkey, value) end
+  if value ~= nil then return self:opargs_cache_store(qkey, value) end
   -- (5)
   for s in self.sources:iter() do
     value = s.default_options[qkey]
-    if value ~= nil then return self:cache_store(qkey, value) end
+    if value ~= nil then return self:opargs_cache_store(qkey, value) end
   end
   -- (6)
   return false, nil
 end
 
-function ExpansionContext:cache_store(qkey, value)
+-- }}}
+
+-- {{{ functions that operate on the cache
+
+function ExpansionContext:opcode_cache_store(opcode, result)
+  self.opcode_cache[opcode] = result
+  lbt.debuglog('------------------------------------------------------------')
+  lbt.debuglog('Opcode %s added to cache', opcode)
+  lbt.debuglog(lbt.pp(self.opcode_cache))
+  return result
+end
+
+function ExpansionContext:opargs_cache_store(qkey, value)
   self.opargs_cache[qkey] = value
   return true, lbt.core.sanitise_oparg_nil(value)
 end
@@ -226,5 +208,7 @@ end
 function ExpansionContext:clear_oparg_cache()
   self.opargs_cache = {}
 end
+
+-- }}}
 
 lbt.fn.ExpansionContext = ExpansionContext

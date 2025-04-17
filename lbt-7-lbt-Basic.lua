@@ -214,7 +214,7 @@ f.ITEMIZE = function (n, args, o, k)
     spec:append('topsep=-\\parskip, itemsep=0pt')
   end
   if o.sep then
-    spec:append('itemsep=' .. o.sep .. '\\itemsep, topsep=' .. o.sep .. '\\topsep')
+    spec:append(F([[itemsep=%s\itemsep, topsep=%s\topsep]], o.sep, o.sep))
   end
   if o.notop then
     spec:append('topsep=0pt')
