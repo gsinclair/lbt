@@ -32,7 +32,7 @@ lbt.api.add_template_directory = function (dir)
     local ok, x = pcall(dofile, path)
     if ok then
       local template_details = x
-      lbt.fn.register_template(template_details, path)
+      lbt.fn.Template.register(template_details, path)
     else
       local err_details = x
       lbt.err.E213_failed_template_load(path, err_details)
@@ -40,7 +40,7 @@ lbt.api.add_template_directory = function (dir)
   end
   lbt.log(3, "Added template directory <%s>", dir)
   lbt.log('templates', "Added template directory <%s>", dir)
-  lbt.fn.template_names_to_logfile()
+  lbt.fn.Template.names_to_logfile()
 end
 
 --------------------------------------------------------------------------------
@@ -256,9 +256,8 @@ end
 -- to do this, so it can lean on this default implementation.
 --
 -- The default expansion is to run the contents of BODY through
--- `lbt.fn.latex_for_commands`. That means this expansion is
--- assuming that the author content includes a '+BODY' somewhere. We raise an
--- error if it does not exist.
+-- `lbt.fn.latex_for_commands`. That means this expansion is assuming that the author
+-- content includes a '+[BODY]' somewhere. We raise an error if it does not exist.
 --
 -- To use this, include something like the following in a template file:
 --
@@ -336,7 +335,7 @@ end
 lbt.api.macro_define = function (text)
   -- lm = latex macro   tn = template name   fn = function name
   local lm, tn, fn = lbt.fn.parse_macro_define_argument(text)
-  local t = lbt.fn.template_object_or_nil(tn)
+  local t = Template.object_by_name(tn)
   if t == nil then
     lbt.err.E158_macro_define_error("Template doesn't exist: %s", tn)
   elseif t.macros == nil then
@@ -361,7 +360,7 @@ end
 --  * lbt.api.macro_run('Math', 'myvec', '4 6 -1') is called
 --  * Latex code is generated and emitted
 lbt.api.macro_run = function (tn, fn, arg)
-  local t = lbt.fn.template_object_or_nil(tn)
+  local t = Template.object_by_name(tn)
   if t == nil then
     lbt.err.E159_macro_run_error("Template doesn't exist: %s", tn)
   end

@@ -613,6 +613,8 @@ end
 
 -- }}}
 
+-- XXX: delete this section after creation of Template class.
+--
 --------------------------------------------------------------------------------
 -- {{{ Functions to do with loading templates
 --  * register_template(td, path)
@@ -627,6 +629,7 @@ end
 --  * [template_compact_representation -- for debugging]
 --------------------------------------------------------------------------------
 
+-- TODO: keep this function
 lbt.fn.expand_directory = function (path)
   if path:startswith("PWD") then
     return path:replace("PWD", os.getenv("PWD"), 1)

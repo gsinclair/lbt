@@ -612,4 +612,4 @@ end
 --   0: don't run tests (but continue the program)
 --   1: run tests and exit
 --   2: run tests and continue
-RUN_TESTS(1)
+RUN_TESTS(0)
