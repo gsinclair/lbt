@@ -19,7 +19,7 @@ end
 
 ----------------------------------------------------------------------
 
--- For testing parsed_content
+-- For testing parsed_content_from_content_lines
 local good_input_1 = content_lines([[
   !DRAFT
   [@META]
@@ -223,10 +223,10 @@ local function T_pragmas_and_other_lines()
   EQ(lines, pl.List.new({"Line 1", "Line 2", "Line 3"}))
 end
 
--- This uses good_input_1 to test lbt.fn.parsed_content.
-local function T_parsed_content_1()
+-- This uses good_input_1 to test lbt.fn.parsed_content_from_content_lines.
+local function T_parsed_content_from_content_lines_1()
   lbt.api.reset_global_data()
-  local pc = lbt.fn.parsed_content(good_input_1)
+  local pc = lbt.fn.parsed_content_from_content_lines(good_input_1)
   EQ(pc.pragmas, { draft = true, ignore = false, debug = false })
   EQ(pc.type, 'ParsedContent')
   -- check META is correct
@@ -260,9 +260,9 @@ end
 
 local function T_extra_sources()
   lbt.api.reset_global_data()
-  -- We assume parsed_content works for these inputs.
-  local pc2 = lbt.fn.parsed_content(good_input_2)
-  local pc3 = lbt.fn.parsed_content(good_input_3)
+  -- We assume parsed_content_from_content_lines works for these inputs.
+  local pc2 = lbt.fn.parsed_content_from_content_lines(good_input_2)
+  local pc3 = lbt.fn.parsed_content_from_content_lines(good_input_3)
   local s2  = pc2:extra_sources()
   local s3  = pc3:extra_sources()
   EQ(s2, {"Questions", "Figures", "Tables"})
@@ -271,7 +271,7 @@ end
 
 local function T_resolve_oparg()
   lbt.api.reset_global_data()
-  local pc = lbt.fn.parsed_content(good_input_1)
+  local pc = lbt.fn.parsed_content_from_content_lines(good_input_1)
   local t  = pc:template_object_or_error()
   local ctx = lbt.fn.ExpansionContext.new {
     pc = pc,
@@ -301,7 +301,7 @@ end
 
 local function T_resolve_opcode()
   lbt.api.reset_global_data()
-  local pc = lbt.fn.parsed_content(good_input_1)
+  local pc = lbt.fn.parsed_content_from_content_lines(good_input_1)
   local t  = pc:template_object_or_error()
   local ctx = lbt.fn.ExpansionContext.new {
     pc = pc,
@@ -327,13 +327,13 @@ end
 
 local function T_add_template_directory()
   lbt.api.reset_global_data()
-  local t1 = lbt.fn.template_object_or_nil("HSCLectures")
-  local p1 = lbt.fn.template_path_or_nil("HSCLectures")
+  local t1 = lbt.fn.Template.object_by_name("HSCLectures")
+  local p1 = lbt.fn.Template.path_by_name("HSCLectures")
   assert(t1 == nil and p1 == nil)
   lbt.api.add_template_directory("PWD/templates")
   -- Note: the templates directory has a file HSCLectures.lua in it.
-  local t2 = lbt.fn.template_object_or_nil("HSCLectures")
-  local p2 = lbt.fn.template_path_or_nil("HSCLectures")
+  local t2 = lbt.fn.Template.object_by_name("HSCLectures")
+  local p2 = lbt.fn.Template.path_by_name("HSCLectures")
   assert(t2 ~= nil and p2 ~= nil)
   assert(t2.name == "HSCLectures")
   assert(t2.desc == "A test template for the lbt project")
@@ -343,9 +343,9 @@ end
 
 local function T_expand_Basic_template_1()
   lbt.api.reset_global_data()
-  lbt.fn.template_register_to_logfile()
-  local pc = lbt.fn.parsed_content(good_input_4)
-  lbt.fn.validate_parsed_content(pc)
+  lbt.fn.Template.register_to_logfile()
+  local pc = lbt.fn.parsed_content_from_content_lines(good_input_4)
+  lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
   EQ(l[1], [[Examples of animals:]])
   EQ(l[2], [[\par]])
@@ -359,9 +359,9 @@ end
 
 local function T_expand_Basic_template_2()
   lbt.api.reset_global_data()
-  lbt.fn.template_register_to_logfile()
-  local pc = lbt.fn.parsed_content(bad_input_1)
-  lbt.fn.validate_parsed_content(pc)
+  lbt.fn.Template.register_to_logfile()
+  local pc = lbt.fn.parsed_content_from_content_lines(bad_input_1)
+  lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
   assert(l[1]:lfind([[Opcode \verb|TEXT| raised error]]))
   assert(l[1]:lfind([[0 args given but 1+ expected]]))
@@ -408,8 +408,8 @@ end
 local function T_styles_in_test_question_template_5a()
   lbt.api.reset_global_data()
   lbt.api.add_template_directory("PWD/templates")
-  local pc = lbt.fn.parsed_content(good_input_5a)
-  lbt.fn.validate_parsed_content(pc)
+  local pc = lbt.fn.parsed_content_from_content_lines(good_input_5a)
+  lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
   EQ(l[1], [[Complete these questions in the space below.]])
   EQ(l[2], [[\par]])
@@ -430,8 +430,8 @@ end
 local function T_styles_in_test_question_template_5b()
   lbt.api.reset_global_data()
   lbt.api.add_template_directory("PWD/templates")
-  local pc = lbt.fn.parsed_content(good_input_5b)
-  lbt.fn.validate_parsed_content(pc)
+  local pc = lbt.fn.parsed_content_from_content_lines(good_input_5b)
+  lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
   EQ(l[1], [[\vspace{30pt}]])
   EQ(l[2], [[Complete these questions in the space below.]])
@@ -451,8 +451,8 @@ end
 
 local function T_register_expansion()
   lbt.api.reset_global_data()
-  local pc = lbt.fn.parsed_content(good_input_6)
-  lbt.fn.validate_parsed_content(pc)
+  local pc = lbt.fn.parsed_content_from_content_lines(good_input_6)
+  lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
   EQ(l[1], [=[The quadratic formula is \[ \ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}. \]]=])
   EQ(l[2], [[\par]])
@@ -470,7 +470,7 @@ end
 local function T_simplemath()
   lbt.api.set_log_channels('allbuttrace')
   -- Gain backdoor access to the simplemath macro
-  local t = lbt.fn.template_object_or_error('lbt.Math')
+  local t = lbt.fn.Template.object_by_name('lbt.Math', 'error')
   local m = t.macros.simplemath
   local assert_math = function(input, expected)
     local actual = m(input)
@@ -508,9 +508,9 @@ end
 
 local function T_Basic_various()
   lbt.api.reset_global_data()
-  lbt.fn.template_register_to_logfile()
-  local pc = lbt.fn.parsed_content(good_input_8)
-  lbt.fn.validate_parsed_content(pc)
+  lbt.fn.Template.register_to_logfile()
+  local pc = lbt.fn.parsed_content_from_content_lines(good_input_8)
+  lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
   assert(l[1]:lfind('Hello'))
   assert(l[2]:lfind('\\par'))
@@ -559,9 +559,9 @@ end
 
 local function T_QQ_MC()
   lbt.api.reset_global_data()
-  lbt.fn.template_register_to_logfile()
-  local pc = lbt.fn.parsed_content(good_input_9)
-  lbt.fn.validate_parsed_content(pc)
+  lbt.fn.Template.register_to_logfile()
+  local pc = lbt.fn.parsed_content_from_content_lines(good_input_9)
+  lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
   -- assert(l[1]:lfind('Hello'))
 end
@@ -582,7 +582,7 @@ local function RUN_TESTS(flag)
 
   -- T_pragmas_and_other_lines()
   T_DictionaryStack()
-  -- T_parsed_content_1()
+  -- T_parsed_content_from_content_lines_1()
   -- T_extra_sources()
   T_resolve_oparg()
   T_resolve_opcode()

@@ -41,7 +41,7 @@
   local register_builtin = function (lua_file)
     local td = require(lua_file)                -- template description
     local path = "Built-in " .. lua_file
-    lbt.fn.register_template(td, path)
+    lbt.fn.Template.register(td, path)
   end
 
   register_builtin('lbt-7-lbt-Basic')

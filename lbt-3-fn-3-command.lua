@@ -51,6 +51,7 @@ function OptionLookup.new(args)
   o._set_local     = OptionLookup._set_local
   o._has_key       = OptionLookup._has_key
   o._safe_index    = OptionLookup._safe_index
+  o._extract_multi_values = OptionLookup._extract_multi_values
   o.f              = OptionLookup.f
   return o
 end
@@ -159,6 +160,18 @@ function OptionLookup:_safe_index(key)
     return nil
   end
 end
+
+-- Input: { 'nopar', 'prespace' }
+-- Output: { nopar = false, prespace = '6pt' }
+function OptionLookup:_extract_multi_values(keys)
+  local result = {}
+  for key in pl.List(keys):iter() do
+    local value = self:_safe_index(key)
+    result[key] = value
+  end
+  return result
+end
+
 
 -- ol['QQ.color'] either returns the value or raises an error.
 -- If the value is the string 'nil' then we return nil instead.

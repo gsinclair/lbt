@@ -93,7 +93,7 @@ lbt.api.author_content_emit_latex = function()
   lbt.log('read', pl.pretty.write(c))
   lbt.log('read', ">>>")
   lbt.log('read', "")
-  local pc = lbt.fn.parsed_content(c)
+  local pc = lbt.fn.parsed_content_from_content_lines(c)
   if pc.pragmas.ignore then
     lbt.log(3, '  * IGNORE pragma detected - no further action for eID %d', eid)
     return
@@ -112,7 +112,7 @@ lbt.api.author_content_emit_latex = function()
   end
   lbt.log('parse', 'Parsed content below. eID=%d', eid)
   lbt.log('parse', lbt.pp(pc))
-  lbt.fn.validate_parsed_content(pc)
+  lbt.fn.ParsedContent.validate(pc)
   lbt.log(3, '  * template:       %s', pc:template_name())
   local l = lbt.fn.latex_expansion_of_parsed_content(pc)
   local output = lbt.util.normalise_latex_output(l)

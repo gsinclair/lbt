@@ -19,6 +19,8 @@
 local ParsedContent = {}
 ParsedContent.mt = { __index = ParsedContent }
 
+-- {{{ object creation
+
 local mkindex = function(pc0)
   local result = { dicts = {}, lists = {} }
   for _, x in ipairs(pc0) do
@@ -45,6 +47,25 @@ function ParsedContent.new(pc0, pragmas)
   setmetatable(o, ParsedContent.mt)
   return o
 end
+
+-- }}}
+
+-- {{{ validation
+
+function ParsedContent.validate(pc)
+  -- We check that META and META.TEMPLATE are present.
+  if pc:meta() == nil then
+    lbt.err.E203_no_META_defined()
+  end
+  if pc:template_name() == nil then
+    lbt.err.E204_no_TEMPLATE_defined()
+  end
+  return nil
+end
+
+-- }}}
+
+-- {{{ accessors
 
 -- Return a dictionary given a name. The actual keys and values are returned
 -- in a table, not all the metadata that is stored in pc0.
@@ -77,7 +98,7 @@ end
 
 function ParsedContent:template_object_or_error()
   local tn = self:template_name()
-  local t = lbt.fn.template_object_or_error(tn)
+  local t = lbt.fn.Template.object_by_name(tn, 'error')
   return t
 end
 
@@ -118,5 +139,7 @@ function ParsedContent:opargs_local()
     lbt.err.E001_internal_logic_error('OPTIONS not a string or table')
   end
 end
+
+-- }}}
 
 lbt.fn.ParsedContent = ParsedContent
