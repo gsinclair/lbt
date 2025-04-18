@@ -67,7 +67,13 @@ function ExpansionContext:_resolve_opcode_impl_nocache(opcode)
     -- Each 'source' is a template object, with properties like 'functions'
     -- and 'arguments' and 'default_options' and ...
     if s.functions[opcode] then
-      local allow_star = s.default_options[opcode .. '.starred'] ~= nil
+      -- XXX: Here we have a bug. opcode is VSPACE*, which does not appear in the
+      -- default_options spec. I think we need a proper Template object to answer
+      -- queries about oparg specs. (Not that that would automatically solve this
+      -- problem.) It seems we need to distinguish between opcode (VSPACE*) and
+      -- _implementing_ opcode (VSPACE). That is perhaps something only this class
+      -- can do.
+      local allow_star = s.default_options[opcode].starred ~= nil
       return {
         opcode      = opcode,
         fn          = s.functions[opcode],
@@ -76,7 +82,7 @@ function ExpansionContext:_resolve_opcode_impl_nocache(opcode)
           posargs = s.arguments[opcode],
           opargs  = s.default_options[opcode],
           -- kwargs  = s.kwargs[opcode],         -- TODO: add this later
-          star    = allow_star
+          allow_star = allow_star
         },
         -- TODO: change names inside templates to posargs, opargs, kwargs.
         -- That's a simple change that touches many files.
@@ -99,6 +105,7 @@ function ExpansionContext:_resolve_opcode_impl_cache(opcode)
 end
 
 local resolve_starred_opcode = function(opcode, lookup_function)
+  if opcode == 'VSPACE*' then DEBUGGER() end
   if not opcode:endswith('*') then
     -- opcode was PQRST (i.e. no star) and we have nothing to look for
     return nil
@@ -106,14 +113,14 @@ local resolve_starred_opcode = function(opcode, lookup_function)
   local base, result, result2
   base = opcode:sub(1,-2)
   result = lookup_function(base)
-  if result and result.spec.star then
+  if result and result.spec.allow_star then
     -- opcode was TEXT* and we found TEXT, and that result is now in the cache.
     -- We need an entry in the cache for TEXT* that has 'starred = true'.
     result2 = pl.tablex.copy(result)
     result2.starred = true
     return result2
   end
-  if result and not result.spec.starred then
+  if result and not result.spec.allow_star then
     -- opcode was PART* and we found PART, but PART does not allow a star.
     return nil
   end
