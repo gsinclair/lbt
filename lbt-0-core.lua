@@ -56,10 +56,19 @@ lbt.core.DictionaryStack = DictionaryStack
 
 
 function lbt.core.oparg_check_qualified_key(key)
-  if key:match('%.') then
+  if type(key) == 'string' and key:match('%.') then
     return nil
   else
-    lbt.err.E002_general("qualified key required; got '%s'", key)
+    lbt.err.E002_general("qualified key like `MATH.align` required; got '%s'", key)
+  end
+end
+
+function lbt.core.oparg_split_qualified_key(qkey)
+  local bits = lbt.util.split(qkey, '%.')
+  if bits:len() == 2 then
+    return table.unpack(bits)
+  else
+    lbt.err.E002_general("qualified key like `MATH.align` required; got '%s'", qkey)
   end
 end
 

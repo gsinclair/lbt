@@ -107,7 +107,6 @@ function OptionLookup:_lookup(key)
   local qk, v
   -- (1)
   qk = qualified_key(self, key)
-  -- if qk == 'COLORPALETTE.width' then DEBUGGER() end
   -- (2)
   v = rawget(self, _opargs_cmd_)[key]
   if v ~= nil then return true, lbt.core.sanitise_oparg_nil(v) end

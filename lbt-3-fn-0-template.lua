@@ -50,20 +50,14 @@ function Template.register(template_details, path)
   -- Having cleared the hurdles so far and registered the template,
   -- we now act on the argument specification and turn it into
   -- something that can be used at expansion time.
+  --   We also check that the oparg specs appear valid.
   ok, x = impl.template_arguments_specification(td.arguments)
   if ok then
     td.arguments = x
   else
     lbt.err.E215_invalid_template_details(td, path, x)
   end
-  -- Likewise with default options. They are specified as strings and need to be
-  -- turned into a map.
-  -- Update Oct 2024: I am supporting a new way of specifying default options,
-  -- which this function will need to support.
-  ok, x = impl.template_normalise_default_options(td.default_options)
-  if ok then
-    td.default_options = x
-  else
+  if not impl.oparg_specifications_valid(td.default_options) then
     lbt.err.E215_invalid_template_details(td, path, x)
   end
   return nil
@@ -189,6 +183,8 @@ local convert_argspec = function(x)
   m, n = x:match('^(%d+)-(%d+)$')
   if m and n then
     return { spec = x, min = tonumber(m), max = tonumber(n) }
+    -- XXX: Coming up: simplify this to { tonumber(m), tonumber(n) } (i.e. a pair,
+    -- not a map). Also the return lines above.
   end
   return nil
 end
@@ -233,44 +229,26 @@ end
 --   ...
 --   op.TEXT = { starred = false, par = true }
 --
-impl.template_normalise_default_options = function (xs)
-  -- Example input: 'ALIGN.spreadlines = 2pt, ALIGN.nopar = false'
-  local method1 = function(s)
-    return lbt.parser.parse_dictionary(s)
-  end
-  -- Example input: { 'ALIGN', spreadlines = '2pt', nopar = false }
-  local method2 = function(t) -- input is a table
-    local options = pl.Map()
-    local command = t[1]
-    local stat = false
-    for k,v in pairs(t) do
-      k = command .. '.' .. k
-      options[k] = v
-      stat = stat or true  -- we want to encounter at least one option
-    end
-    stat = stat and (command ~= nil)
-    return stat, options
-  end
-  -- Function begins here
-  local result = pl.Map()
-  for x in pl.List(xs):iter() do
-    if type(x) == 'string' then
-      local opts = method1(x)
-      if opts then result:update(opts)
-      else return false, x
-      end
-    elseif type(x) == 'table' then
-      local ok, opts = method2(x)
-      if ok then result:update(opts)
-      else return false, x
-      end
-    else
-      lbt.err.E581_invalid_default_option_value(x)
-    end
-  end
-  return true, result
+impl.template_normalise_default_options = function (_)
+  -- removed as no longer needed
 end
 
+impl.oparg_specifications_valid = function(spec)
+  -- Each key needs to be a string, and each value needs to be a table, where each
+  -- key is a string.
+  local table_with_all_keys_string = function(x)
+    if type(x) ~= 'table' then return false end
+    for k, _ in pairs(x) do
+      if type(k) ~= 'string' then return false, 'key '..k end
+    end
+    return true
+  end
+  if not table_with_all_keys_string(spec) then return false, 'invalid table structure' end
+  for _, v in pairs(spec) do
+    if not table_with_all_keys_string(v) then return false, 'value '..v end
+  end
+  return true, nil
+end
 
 -- }}}
 

@@ -99,7 +99,6 @@ function ExpansionContext:_resolve_opcode_impl_cache(opcode)
 end
 
 local resolve_starred_opcode = function(opcode, lookup_function)
-  -- if opcode == 'VSPACE*' then DEBUGGER() end
   if not opcode:endswith('*') then
     -- opcode was PQRST (i.e. no star) and we have nothing to look for
     return nil
@@ -177,9 +176,16 @@ function ExpansionContext:resolve_oparg(qkey)
   value = self.opargs_global:lookup(qkey)
   if value ~= nil then return self:opargs_cache_store(qkey, value) end
   -- (5)
+  local scope, option = lbt.core.oparg_split_qualified_key(qkey)
   for s in self.sources:iter() do
-    value = s.default_options[qkey]
-    if value ~= nil then return self:opargs_cache_store(qkey, value) end
+    -- XXX: There could be a bug. What if we have (say) `TEXT* .o prespace=3em`?
+    -- TEXT* relies on TEXT for its implementation and opargs. Which opcode would
+    -- be sent to this function? TEXT* or TEXT?
+    local spec = s.default_options[scope]
+    if spec and spec[option] ~= nil then
+      value = spec[option]
+      if value ~= nil then return self:opargs_cache_store(qkey, value) end
+    end
   end
   -- (6)
   return false, nil
