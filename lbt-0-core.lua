@@ -16,7 +16,7 @@ local F = string.format
 
 lbt.core = {}
 
--- ---------- DictionaryStack ----------
+-- {{{ DictionaryStack --------------------------------------------------------------
 -- Useful for layers of options.
 
 local DictionaryStack = {}
@@ -53,7 +53,12 @@ function DictionaryStack:lookup(key)
 end
 
 lbt.core.DictionaryStack = DictionaryStack
+-- }}}
 
+-- {{{ Some oparg-related functions -------------------------------------------------
+--
+-- These are in 'core' so they can be used from anywhere, and to document a core
+-- aspect of the system.
 
 function lbt.core.oparg_check_qualified_key(key)
   if type(key) == 'string' and key:match('%.') then
@@ -79,3 +84,29 @@ function lbt.core.sanitise_oparg_nil(value)
     return value
   end
 end
+
+-- }}}
+
+-- {{{ CommandSpec ------------------------------------------------------------------
+
+local CommandSpec = {}
+CommandSpec.mt = { __index = CommandSpec }
+
+function CommandSpec.new(details)
+  local o = {
+    type    = 'CommandSpec',
+    opcode  = details.opcode,
+    source  = details.source,
+    refer   = details.refer,       -- only present for VSPACE*, SECTION*, ...
+    fn      = details.fn,          -- the rest are NOT present for starred commands
+    posargs = details.posargs,
+    opargs  = details.opargs,
+    kwargs  = details.kwargs,
+  }
+  setmetatable(o, CommandSpec.mt)
+  return o
+end
+
+lbt.core.CommandSpec = CommandSpec
+-- }}}
+

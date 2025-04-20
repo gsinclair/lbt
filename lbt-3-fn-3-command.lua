@@ -221,9 +221,11 @@ OptionLookup.__tostring = function(self)
 end
 
 lbt.fn.OptionLookup = OptionLookup
+
 -- }}}
 
 -- {{{ Command ----------------------------------------------------------------------
+
 local Command = {}
 Command.mt = { __index = Command }
 

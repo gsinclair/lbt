@@ -69,18 +69,19 @@ end
 -- See: lbt.init.soft_reset_system()
 lbt.init.init_system = function ()
   -- Collection of templates that are loaded and ready to use.
-  -- Type: pl.Map
-  -- Mapping from template name to template register entry.
-  -- For example:
-  --   'CourseNotes' --> { path = '/path/to/CourseNotes.lua',
-  --                       td   = { name = 'CourseNotes',
-  --                                desc = '...',
-  --                                functions = { ... }
-  --                                ...}}
+  -- Type: pl.Map { string -> Template }
+  --
   -- This data is global (system-wide) because template data is read-only,
-  -- and once a template has been referenced (and hence loaded) once, it is
-  -- available for use from then on.
+  -- and once a Template object has been created and registered, available for
+  -- use from then on.
+  -- Interface: Template.object_by_name('lbt.Questions', 'error')
+  -- Interface: Template.path_by_name('lbt.WS0')
   lbt.system.template_register = pl.Map()
+  -- Collection of command registers (CommandSpec objects grouped by template name).
+  -- Makes it easy to look up what we need for any command.
+  -- E.g. command_register['lbt.Basic']['TABLE'] -> { opcode = 'TABLE', ... }
+  -- Interface: Template:command_spec('VSPACE*')
+  lbt.system.command_register  = pl.Map()
   -- Option mapping that the author wants applied in every template expansion.
   -- Set via (for example)
   --    \lbtGlobalOptions{Q.color = purple, vector.format = arrow}
