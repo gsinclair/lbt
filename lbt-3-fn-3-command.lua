@@ -235,27 +235,24 @@ function Command.new(parsed_command, expansion_context)
   local c = parsed_command
   local ctx = expansion_context
   local opcode = c[1]
-  local x = expansion_context:resolve_opcode(opcode)
-  if x then
+  local command_spec = expansion_context:command_spec(opcode)
+  if command_spec then
     local o = {
-      type       = 'Command',
-      opcode     = opcode,
-      opargs_cmd = c.o,
-      kwargs     = c.k,
-      posargs    = c.a,
-      nargs      = #c.a,
-      fn         = x.fn,
-      spec = {
-        opargs  = x.spec.opargs,
-        kwargs  = x.spec.kwargs,
-        posargs = x.spec.posargs,
+      type = 'Command',
+      opcode = opcode,
+      details = {
+        opargs_cmd = c.o,
+        kwargs     = c.k,
+        posargs    = c.a,
       },
+      spec = command_spec,
+      -- ^ opcode, source, starred, refer?, fn, opargs, kwargs, posargs
       expansion_context = ctx,
       option_lookup = lbt.fn.OptionLookup.new {
         opcode = opcode,
         opargs_cmd = c.o,
         expansion_context = ctx,
-        starred = x.starred
+        starred = command_spec.starred
       }
     }
     setmetatable(o, Command.mt)
@@ -265,9 +262,11 @@ function Command.new(parsed_command, expansion_context)
   end
 end
 
+-- TODO: validate opargs (near future)
+-- TODO: validate kwargs (later)
 function Command:validate_all_arguments()
   local spec = self.spec
-  local nargs = self.nargs
+  local nargs = #self.details.posargs
   -- local opargs = self.opargs
   if spec.posargs then
     local min = spec.posargs[1]
@@ -280,6 +279,19 @@ function Command:validate_all_arguments()
     end
   end
   return nil
+end
+
+function Command:apply()
+  local fn      = self.spec.fn
+  local posargs = self.details.posargs
+  local ol      = self.option_lookup
+  local kwargs  = self.details.kwargs
+  return fn(#posargs, posargs, ol, kwargs)
+end
+
+function Command:oparg_values(keys)
+  local ol = self.option_lookup
+  return ol:_extract_multi_values(keys)
 end
 
 -- TODO: a nice tostring

@@ -3,149 +3,35 @@
 -- and is stored in the global variable lbt.const.current_expansion_context.
 --
 -- It serves to:
---  * resolve opcodes
+--  * resolve opcodes into CommandSpec objects
 --  * look up global and local opargs
-
-local F = string.format
 
 local ExpansionContext = {}
 ExpansionContext.mt = { __index = ExpansionContext }
+local impl = {}
 
 function ExpansionContext.new(args)
   assert(args.pc and args.template and args.sources)
   local o = {
-    type          = 'ExpansionContext',
-    template      = args.template,
-    sources       = args.sources,
-    opargs_global = lbt.system.opargs_global,
-    opargs_local  = lbt.core.DictionaryStack.new(),
-    opcode_cache  = {},
-    opargs_cache  = {},
+    type           = 'ExpansionContext',
+    template       = args.template,
+    sources        = args.sources,
+    command_lookup = impl.comprehensive_command_lookup_map(args.sources),
+    opargs_global  = lbt.system.opargs_global,
+    opargs_local   = lbt.core.DictionaryStack.new(),
+    opargs_cache   = {},
   }
   o.opargs_local:push(args.pc:opargs_local())
   setmetatable(o, ExpansionContext.mt)
   return o
 end
 
--- {{{ resolve_opcode
+-- {{{ command_spec
 
--- TODO: overhaul this documentation
---
--- This will be used wherever ocr('Q') is currently used. It returns all possible
--- information about the opcode.
---   We implement the starred logic here, which is messy but important. To illustrate,
--- consider the examples:
---  * TEXT is an unstarred command implemented by the function TEXT
---  * TEXT* is a starred command implemented by TEXT with the added oparg starred = true
---  * QQ is an unstarred command implemented by the function QQ
---  * QQ* is on the surface a starred command, but it is implemented by the function QQ*
---    (and it does not have starred = true set)
---  * PQRST is non-existed
---  * PQRST* is also non-existent, but we need to look for PQRST to be sure
---
--- Here is some further description from the pre-refactoring code. It refers to ocr(...)
--- which is now replaced with ExpansionContext:resolve_opcode.
---
---     The opcode TEXT* will result in the same opcode_function as TEXT, but the oparg
---     'starred' needs to be set. But there are permutations. Consider TEXT*, QQ* and
---     PART*.
---
---     ocr('TEXT*') will return nil because it is not registered as its own command.
---     So we check ocr('TEXT') and get a result. Further, the TEXT function supports
---     the oparg 'starred' (default false, of course). So we now have our function and
---     need to communicate that 'starred = true' needs to be registered in the opargs.
---
---     ocr('QQ*') will return a result because it is implemented directly. So we don't do
---     anything special.
---
---     ocr('PART*') will return nil, and ocr('PART') will return a result. However, the
---     opargs for PART do not include 'starred', so there is in fact no implementation
---     for PART*, and we return nil.
-
-function ExpansionContext:_resolve_opcode_impl_nocache(opcode)
-  for s in self.sources:iter() do
-    -- Each 'source' is a template object, with properties like 'functions'
-    -- and 'posargs' and 'opargs' and ...
-    if s.functions[opcode] then
-      -- XXX: Here we have a bug. opcode is VSPACE*, which does not appear in the
-      -- default_options spec. I think we need a proper Template object to answer
-      -- queries about oparg specs. (Not that that would automatically solve this
-      -- problem.) It seems we need to distinguish between opcode (VSPACE*) and
-      -- _implementing_ opcode (VSPACE). That is perhaps something only this class
-      -- can do.
-      -- TODO: Remove three lines
-      -- DEBUGGER()
-      -- lbt.debuglog(s.name)
-      -- lbt.debuglog(s.opargs)
-      local allow_star = s.opargs[opcode] and s.opargs[opcode].starred ~= nil
-      return {
-        opcode      = opcode,
-        fn          = s.functions[opcode],
-        source_name = s.name,
-        spec = {
-          posargs = s.posargs[opcode],
-          opargs  = s.opargs[opcode],
-          -- kwargs  = s.kwargs[opcode],         -- TODO: add this later
-          allow_star = allow_star
-        },
-        -- TODO: change names inside templates to posargs, opargs, kwargs.
-        -- That's a simple change that touches many files.
-      }
-    end
-  end
-  -- No token function found :(
-  return nil
-end
-
-function ExpansionContext:_resolve_opcode_impl_cache(opcode)
-  local cached_result, result
-  cached_result = self.opcode_cache[opcode]
-  if cached_result ~= nil then return cached_result end
-  result = self:_resolve_opcode_impl_nocache(opcode)
-  if result ~= nil then
-    return self:opcode_cache_store(opcode, result)
-  end
-  return nil
-end
-
-local resolve_starred_opcode = function(opcode, lookup_function)
-  if not opcode:endswith('*') then
-    -- opcode was PQRST (i.e. no star) and we have nothing to look for
-    return nil
-  end
-  local base, result, result2
-  base = opcode:sub(1,-2)
-  result = lookup_function(base)
-  if result and result.spec.allow_star then
-    -- opcode was TEXT* and we found TEXT, and that result is now in the cache.
-    -- We need an entry in the cache for TEXT* that has 'starred = true'.
-    result2 = pl.tablex.copy(result)
-    result2.starred = true
-    return result2
-  end
-  if result and not result.spec.allow_star then
-    -- opcode was PART* and we found PART, but PART does not allow a star.
-    return nil
-  end
-  if not result then
-    -- opcode was PQRST* and we found nothing for PQRST.
-    return nil
-  end
-  lbt.err.E001_internal_logic_error("shouldn't reach here")
-end
-
-function ExpansionContext:resolve_opcode(opcode)
-  local result = nil
-  local lookup = function(x)
-    return self:_resolve_opcode_impl_cache(x)
-  end
-  result = lookup(opcode)
-  if result ~= nil then return result end
-  result = resolve_starred_opcode(opcode, lookup)
-  if result ~= nil then
-    return self:opcode_cache_store(opcode, result)
-  end
-  return nil
+-- Input: opcode (e.g. 'TABLE')
+-- Output: CommandSpec: (e.g. { opcode = 'TABLE', fn = <function>, ... })
+function ExpansionContext:command_spec(opcode)
+  return self.command_lookup[opcode]
 end
 
 -- }}}
@@ -205,14 +91,6 @@ end
 
 -- {{{ functions that operate on the cache
 
-function ExpansionContext:opcode_cache_store(opcode, result)
-  self.opcode_cache[opcode] = result
-  lbt.debuglog('------------------------------------------------------------')
-  lbt.debuglog('Opcode %s added to cache', opcode)
-  lbt.debuglog(lbt.pp(self.opcode_cache))
-  return result
-end
-
 function ExpansionContext:opargs_cache_store(qkey, value)
   self.opargs_cache[qkey] = value
   return true, lbt.core.sanitise_oparg_nil(value)
@@ -225,6 +103,19 @@ function ExpansionContext:clear_oparg_cache()
   self.opargs_cache = {}
 end
 
+-- }}}
+
+-- {{{ implementation functions
+
+impl.comprehensive_command_lookup_map = function(sources)
+  local result = pl.Map()
+  local sources_rev = sources:clone(); sources_rev:reverse()
+  for s in sources_rev:iter() do
+    result:update(s:command_register())
+  end
+  return result
+
+end
 -- }}}
 
 lbt.fn.ExpansionContext = ExpansionContext

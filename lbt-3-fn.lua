@@ -220,8 +220,7 @@ end
 lbt.fn.latex_for_command = function (parsed_command)
   local pcmd = parsed_command
   local opcode = pcmd[1]
-  local args  = pcmd.a
-  local nargs = #args
+  local args   = pcmd.a      -- NOTE: many of these locals should be unnecessary now
   local opargs = pcmd.o
   local kwargs = pcmd.k
   local cmdstr = F('[%s] %s', opcode, table.concat(args, ' :: '))
@@ -250,17 +249,10 @@ lbt.fn.latex_for_command = function (parsed_command)
       lbt.err.E938_unknown_CTRL_directive(args)
     end
   end
-  --     * This will look up the opcode among the template and included sources,
-  --       and will build an oparg lookup object for commands to use.
-  -- /NEW
   -- 2. Use the current expansion context to build a Command object for the current
   --    command. (Or get nil if it's an unknown opcode.)
   local ctx = lbt.fn.get_current_expansion_context()
   local cmd = lbt.fn.Command.new(pcmd, ctx)
-  -- 2. Search for an opcode function (and argspec) and return if we did not find one.
-  --    This must be aware of starred commands. For example, TEXT* needs to be
-  --    interpreted as 'TEXT .o starred', whereas 'QQ*' is a function in its own
-  --    right.
   if cmd == nil then
     lbt.log('emit', '    --> NOTFOUND')
     lbt.log(2, 'opcode not resolved: %s', opcode)
@@ -286,10 +278,7 @@ lbt.fn.latex_for_command = function (parsed_command)
   ;         -- XXX: I want opargs to be resolved at this stage, so that 'nopar = true' becomes 'par = false'.
   ;         --      But this is a challenge.
   ;         -- NOTE: Actually,  think it can happen inside set_opcode_and_options().
-  local ol = cmd.option_lookup
-  local result = cmd.fn(nargs, args, ol, kwargs)
-  -- local extras = lbt.fn.impl.extract_from_option_lookup(ol, { 'par', 'prespace', 'postspace' })
-  local extras = ol:_extract_multi_values { 'par', 'prespace', 'postspace' }
+  local result = cmd:apply()
   if type(result) == 'string' then
     result = pl.List({result})
   elseif type(result) == 'table' and type(result.error) == 'string' then
@@ -304,6 +293,7 @@ lbt.fn.latex_for_command = function (parsed_command)
   end
   -- 7. Do some light processing of the result: apply options par/nopar and
   --    prespace and postspace.
+  local extras = cmd:oparg_values { 'par', 'prespace', 'postspace' }
   if extras.par then
     result:append('\\par') -- TODO: replace with general_formatting_wrap ?
   end
@@ -492,6 +482,9 @@ end
 --
 -- Return: a List of source template _objects_ in the order they should be referenced.
 -- Error: if any template name cannot be resolved into a template object.
+--
+-- TODO: I want this to be just _names_ instead. Code can use the template registry
+-- to gain access to the actual templates.
 --
 lbt.fn.impl.consolidated_sources = function (pc, template)
   local src1 = pc:extra_sources()          -- optional specific source names (List)

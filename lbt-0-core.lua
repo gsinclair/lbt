@@ -97,11 +97,12 @@ function CommandSpec.new(details)
     type    = 'CommandSpec',
     opcode  = details.opcode,
     source  = details.source,
+    starred = details.starred,     -- true or false
     refer   = details.refer,       -- only present for VSPACE*, SECTION*, ...
-    fn      = details.fn,          -- the rest are NOT present for starred commands
-    posargs = details.posargs,
+    fn      = details.fn,
     opargs  = details.opargs,
     kwargs  = details.kwargs,
+    posargs = details.posargs,
   }
   setmetatable(o, CommandSpec.mt)
   return o
