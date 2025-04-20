@@ -14,9 +14,9 @@ ExpansionContext.mt = { __index = ExpansionContext }
 function ExpansionContext.new(args)
   assert(args.pc and args.template and args.sources)
   local o = {
-    type = 'ExpansionContext',
-    template = args.template,
-    sources = args.sources,
+    type          = 'ExpansionContext',
+    template      = args.template,
+    sources       = args.sources,
     opargs_global = lbt.system.opargs_global,
     opargs_local  = lbt.core.DictionaryStack.new(),
     opcode_cache  = {},
@@ -65,7 +65,7 @@ end
 function ExpansionContext:_resolve_opcode_impl_nocache(opcode)
   for s in self.sources:iter() do
     -- Each 'source' is a template object, with properties like 'functions'
-    -- and 'arguments' and 'default_options' and ...
+    -- and 'posargs' and 'opargs' and ...
     if s.functions[opcode] then
       -- XXX: Here we have a bug. opcode is VSPACE*, which does not appear in the
       -- default_options spec. I think we need a proper Template object to answer
@@ -73,14 +73,18 @@ function ExpansionContext:_resolve_opcode_impl_nocache(opcode)
       -- problem.) It seems we need to distinguish between opcode (VSPACE*) and
       -- _implementing_ opcode (VSPACE). That is perhaps something only this class
       -- can do.
-      local allow_star = s.default_options[opcode].starred ~= nil
+      -- TODO: Remove three lines
+      -- DEBUGGER()
+      -- lbt.debuglog(s.name)
+      -- lbt.debuglog(s.opargs)
+      local allow_star = s.opargs[opcode] and s.opargs[opcode].starred ~= nil
       return {
         opcode      = opcode,
         fn          = s.functions[opcode],
         source_name = s.name,
         spec = {
-          posargs = s.arguments[opcode],
-          opargs  = s.default_options[opcode],
+          posargs = s.posargs[opcode],
+          opargs  = s.opargs[opcode],
           -- kwargs  = s.kwargs[opcode],         -- TODO: add this later
           allow_star = allow_star
         },
@@ -105,7 +109,6 @@ function ExpansionContext:_resolve_opcode_impl_cache(opcode)
 end
 
 local resolve_starred_opcode = function(opcode, lookup_function)
-  if opcode == 'VSPACE*' then DEBUGGER() end
   if not opcode:endswith('*') then
     -- opcode was PQRST (i.e. no star) and we have nothing to look for
     return nil
@@ -188,7 +191,7 @@ function ExpansionContext:resolve_oparg(qkey)
     -- XXX: There could be a bug. What if we have (say) `TEXT* .o prespace=3em`?
     -- TEXT* relies on TEXT for its implementation and opargs. Which opcode would
     -- be sent to this function? TEXT* or TEXT?
-    local spec = s.default_options[scope]
+    local spec = s.opargs[scope]
     if spec and spec[option] ~= nil then
       value = spec[option]
       if value ~= nil then return self:opargs_cache_store(qkey, value) end

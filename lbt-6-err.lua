@@ -99,8 +99,8 @@ file that describes a template should have at the bottom:
     init      = <function>,                  # can be omitted
     expand    = <function>,                  # can be omitted
     functions = <table of functions>,        # can be omitted if there are no commands
-    arguments = <table of arg specs>,        # can be omitted
-    default_options = <list of option specs> # can be omitted
+    posargs = <table of arg specs>,        # can be omitted
+    opargs = <list of option specs> # can be omitted
   }
 
 Error template path:

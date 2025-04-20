@@ -145,6 +145,6 @@ return {
   init      = nil,
   expand    = lbt.api.default_template_expander(),
   functions = f,
-  arguments = a,
-  default_options = op,
+  posargs = a,
+  opargs = op,
 }

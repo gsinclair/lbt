@@ -268,9 +268,10 @@ function Command:validate_all_arguments()
   local nargs = self.nargs
   -- local opargs = self.opargs
   if spec.posargs then
-    local a = spec.posargs
-    if nargs < a.min or nargs > a.max then
-      local msg = F("%d args given but %s expected", nargs, a.spec)
+    local min = spec.posargs[1]
+    local max = spec.posargs[2]
+    if nargs < min or nargs > max then
+      local msg = F("%d args given but %d..%d expected", nargs, min, max)
       lbt.log('emit', '    --> ERROR: %s', msg)
       lbt.log(1, 'Error attempting to expand opcode:\n    %s', msg)
       return msg

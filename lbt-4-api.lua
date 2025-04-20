@@ -31,8 +31,9 @@ lbt.api.add_template_directory = function (dir)
     lbt.log(3, " * %s", pl.path.basename(path))
     local ok, x = pcall(dofile, path)
     if ok then
-      local template_details = x
-      lbt.fn.Template.register(template_details, path)
+      local template_spec = x
+      local template = lbt.fn.Template.new(template_spec, path)
+      template:register()
     else
       local err_details = x
       lbt.err.E213_failed_template_load(path, err_details)
@@ -268,8 +269,8 @@ end
 --     init      = nil,
 --     expand    = lbt.api.default_template_expander(),
 --     functions = f,
---     arguments = a,
---     default_options = o,
+--     posargs = a,
+--     opargs = o,
 --   }
 --
 lbt.api.default_template_expander = function()

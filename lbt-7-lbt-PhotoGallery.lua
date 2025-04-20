@@ -299,7 +299,7 @@ return {
   init      = nil,
   expand    = nil,
   functions = f,
-  default_options = op,
-  arguments = a,
+  opargs = op,
+  posargs = a,
   macros    = nil,
 }

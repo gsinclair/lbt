@@ -321,8 +321,8 @@ return {
   init      = nil,
   expand    = nil,
   functions = f,
-  arguments = a,
+  posargs = a,
   -- styles    = s,
-  default_options = o
+  opargs = o
 }
 

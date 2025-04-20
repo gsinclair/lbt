@@ -68,6 +68,6 @@ return {
   expand    = expand,
   functions = f,
   styles    = s,
-  arguments = a,
+  posargs = a,
   macros    = m,
 }

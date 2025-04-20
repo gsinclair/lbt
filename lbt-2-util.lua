@@ -444,6 +444,11 @@ function lbt.util.straighten_quotes(text)
   return x
 end
 
+function lbt.util.table_keys_string(t)
+  local m = pl.Map(t)
+  return m:keys():join(',')
+end
+
 -- When expanding an LBT macro like lbt.Math.myvec, an error might occur.
 -- This function helps you format a red flag for the Latex output.
 function lbt.util.latex_macro_error(errormsg)

@@ -69,8 +69,8 @@ return {
   sources = {},
   init = init,
   expand = lbt.api.default_template_expander(),
-  default_options = op,
-  arguments = a,
+  opargs = op,
+  posargs = a,
   functions = f
 }
 

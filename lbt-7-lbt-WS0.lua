@@ -177,8 +177,8 @@ return {
   init      = init,
   expand    = expand,
   functions = f,
-  default_options = op,
-  arguments = a,
+  opargs = op,
+  posargs = a,
   macros    = m,
 }
 

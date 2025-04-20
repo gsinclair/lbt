@@ -478,8 +478,8 @@ return {
   init      = nil,
   expand    = nil,
   functions = f,
-  arguments = a,
-  default_options = op,
+  posargs = a,
+  opargs = op,
   macros    = m,
 }
 

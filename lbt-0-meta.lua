@@ -54,8 +54,13 @@ lbt.log = function (channel, format, ...)
 end
 
 lbt.debuglog = function(format, ...)
-  local line = F(format, ...)
   local file = debuglogfile()
+  local line
+  if format == nil then
+    line = 'nil'
+  else
+    line = F(format, ...)
+  end
   file:write(line)
   file:write('\n')
   file:flush()
