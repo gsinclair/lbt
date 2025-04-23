@@ -110,62 +110,54 @@ local function heading_and_text_inline(heading, color, text)
   return F([[ {%s \bfseries %s} \quad %s \par ]], colorsetting, heading, text)
 end
 
-op.EXAMPLE = { color = blue }
+op.EXAMPLE = { starred = false, color = 'blue' }
 a.EXAMPLE = 1
 f.EXAMPLE = function (n, args, o)
-  return heading_and_text_indent('Example', o('EXAMPLE.color'), args[1])
+  local fn = heading_and_text_indent
+  if o.starred then
+    fn = heading_and_text_inline
+  end
+  return fn('Example', o.color, args[1])
 end
 
-a['EXAMPLE*'] = 1
-f['EXAMPLE*'] = function (n, args, o)
-  return heading_and_text_inline('Example', o('EXAMPLE.color'), args[1])
-end
-
-op.NOTE = { color = 'Mahogany' }
+op.NOTE = { starred = false, color = 'Mahogany' }
 a.NOTE = 1
 f.NOTE = function (n, args, o)
-  return heading_and_text_indent('Note', o('NOTE.color'), args[1])
+  local fn = heading_and_text_indent
+  if o.starred then
+    fn = heading_and_text_inline
+  end
+  return fn('Note', o.color, args[1])
 end
 
-a['NOTE*'] = 1
-f['NOTE*'] = function (n, args, o)
-  return heading_and_text_inline('Note', o('NOTE.color'), args[1])
-end
-
-op.CHALLENGE = { color = 'Plum' }
+op.CHALLENGE = { starred = false, color = 'Plum' }
 a.CHALLENGE = 1
 f.CHALLENGE = function (n, args, o)
-  lbt.api.counter_reset('qq')
-  return heading_and_text_indent('Challenge', o('CHALLENGE.color'), args[1])
-end
-
-a['CHALLENGE*'] = 1
-f['CHALLENGE*'] = function (n, args, o)
-  lbt.api.counter_reset('qq')
-  return heading_and_text_inline('Challenge', o('CHALLENGE.color'), args[1])
-end
-
-a.HEADING = '2-3'
-f.HEADING = function(n, args)
-  if n == 2 then
-    return heading_and_text_indent(args[1], nil, args[2])
-  elseif n == 3 then
-    return heading_and_text_indent(args[1], args[2], args[3])
+  local fn = heading_and_text_indent
+  if o.starred then
+    fn = heading_and_text_inline
   end
+  lbt.api.counter_reset('qq')
+  return fn('Challenge', o.color, args[1])
 end
 
-a['HEADING*'] = '2-3'
-f['HEADING*'] = function(n, args)
+op.HEADING = { starred = false }
+a.HEADING = '2-3'
+f.HEADING = function(n, args, o)
+  local fn = heading_and_text_indent
+  if o.starred then
+    fn = heading_and_text_inline
+  end
   if n == 2 then
-    return heading_and_text_inline(args[1], nil, args[2])
+    return fn(args[1], nil, args[2])
   elseif n == 3 then
-    return heading_and_text_inline(args[1], args[2], args[3])
+    return fn(args[1], args[2], args[3])
   end
 end
 
 -- smallnote macro ------------------------------------------------------------
 
-m.smallnote = function(text)
+m.smallnote = function(text, _)  -- ignore the ExpansionContext parameter
   return F([[\textcolor{CadetBlue}{\small %s} ]], text)
 end
 

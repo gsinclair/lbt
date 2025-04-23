@@ -183,7 +183,7 @@ OptionLookup.__index = function(self, key)
   if found then
     return value
   else
-    lbt.err.E192_option_lookup_failed(rawget(self, _opcode_), key)
+    lbt.err.E192_oparg_lookup_failed(rawget(self, _opcode_), key)
   end
 end
 
@@ -249,7 +249,7 @@ function Command.new(parsed_command, expansion_context)
       -- ^ opcode, source, starred, refer?, fn, opargs, kwargs, posargs
       expansion_context = ctx,
       option_lookup = lbt.fn.OptionLookup.new {
-        opcode = opcode,
+        opcode = command_spec.starred and command_spec.refer or command_spec.opcode,
         opargs_cmd = c.o,
         expansion_context = ctx,
         starred = command_spec.starred

@@ -188,8 +188,9 @@ lbt.err.E325_invalid_return_from_template_function = function (token, result)
   E('When calling function for token %s, the result was invalid\nResult: %s', token, lbt.pp(result))
 end
 
-lbt.err.E192_oparg_lookup_failed = function (key)
-  E('E192 Attempt to resolve oparg failed.  key: %s', key)
+lbt.err.E192_oparg_lookup_failed = function (opcode, oparg)
+  DEBUGGER()
+  E('E192 Attempt to resolve oparg failed: %s.%s', opcode, oparg)
 end
 
 lbt.err.E945_invalid_option_dictionary_global = function (text)

@@ -107,8 +107,8 @@ end
 impl.comprehensive_command_lookup_map = function(sources)
   local result = pl.Map()
   local sources_rev = sources:clone(); sources_rev:reverse()
-  for s in sources_rev:iter() do
-    result:update(s:command_register())
+  for template in sources_rev:iter() do
+    result:update(template:command_register())
   end
   return result
 

@@ -80,13 +80,13 @@ end
 
 
 -- Input: (pc) parsed content   (ocr) opcode resolver   (ol) option lookup
-local function expand(pc, ocr, ol)
+local function expand(pc)
   local n        = lbt.api.persistent_counter_inc('WS1-worksheet')
   local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
   local course   = lbt.util.content_meta_or_error(pc, 'COURSE')
   local tnotes   = lbt.util.content_meta_or_nil(pc, 'TEACHERNOTES') or '(none specified)'
-  local titlecol = ol('WS1.title_color')
-  local tncol    = ol('WS1.teacher_notes_color')
+  local titlecol = lbt.util.resolve_oparg('WS1.title_color')
+  local tncol    = lbt.util.resolve_oparg('WS1.teacher_notes_color')
 
   -- 1. Preamble
   local a = [[
@@ -134,7 +134,7 @@ local function expand(pc, ocr, ol)
     \bigskip
 
     %s
-  ]], lbt.util.latex_expand_content_list('BODY', pc, ocr, ol))
+  ]], lbt.util.latex_expand_content_list('BODY', pc))
 
   -- 7. Outro
   local g = F([[
@@ -143,7 +143,7 @@ local function expand(pc, ocr, ol)
     %s
 
     \clearpage
-  ]], lbt.util.latex_expand_content_list('OUTRO', pc, ocr, ol))
+  ]], lbt.util.latex_expand_content_list('OUTRO', pc))
 
   -- Put it all together!
   return lbt.util.combine_latex_fragments(a,b,c,d,e,f,g)
