@@ -68,6 +68,20 @@ lbt.util.get_option_for_macro = function (key)
   return value
 end
 
+-- This is designed for use only in macro expansion. Commands have access to the
+-- current expansion context and don't need to call 'util'.
+--   The key needs to be qualified (e.g. vector.format, not just format); an error will
+-- result otherwise.
+lbt.util.resolve_oparg_for_macro = function (qkey, ctx)
+  lbt.assert_string(1, qkey)
+  assert(ctx.type == 'ExpansionContext')
+  local found, value = ctx:resolve_oparg(qkey)
+  if found == false then
+    lbt.err.E193_oparg_lookup_for_macro_failed(qkey)
+  end
+  return value
+end
+
 -- `x` may be a string or a table.
 -- To 'normalise' the output for these purposes, we want:
 --  * a single string

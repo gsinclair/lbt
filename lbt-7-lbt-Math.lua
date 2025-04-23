@@ -30,8 +30,7 @@ local m = {}   -- macros
 --  The macros vecbold, vecarrow and vectilde are provided to force a style
 --  if needed.
 
-local function vector_pronumeral(x)
-  local format = lbt.util.get_option_for_macro('vector.format')
+local function vector_pronumeral(x, format)
   if format == 'bold' then
     return F([[\ensuremath{\mathbf{%s}}]], x)
   elseif format == 'arrow' then
@@ -54,7 +53,7 @@ local function vector_segment(ab)
 end
 
 op.vector = { format = 'bold' }
-m.vector = function (text)
+m.vector = function (text, ctx)
   local args
   if text:find(',') then
     args = lbt.util.comma_split(text)
@@ -66,7 +65,8 @@ m.vector = function (text)
     -- It is either a pronumeral like 'p' or a segment like 'AB'.
     local arg = args[1]
     if arg:match('^%l$') or arg == '0' then
-      return vector_pronumeral(arg)
+      local format = lbt.util.resolve_oparg_for_macro('vector.format', ctx)
+      return vector_pronumeral(arg, format)
     elseif arg:match('^%u%u$') then
       return vector_segment(arg)
     else

@@ -328,11 +328,18 @@ end
 -- Usage: macro_define('\myvec=lbt.Math.myvec')
 --
 -- This looks up the module lbt.Math and sees if it has a macro 'myvec', which
--- is a function. Then it defines a Latex macro \myvec like so:
+-- is a function. Then it defines a Latex macro \myvec like so (without any newlines):
 --
---   \newcommand{\myvec}[1]{\luaexec{lbt.api.macro_run('Math', 'myvec', '#1')}}
+--   \newcommand{\myvec}[1]{
+--     \luaexec{lbt.api.macro_run {
+--       template = 'Math', macro = 'myvec', eid = lbt.fn.current_expansion_id(), arg = '#1'
+--     }
+--   }
 --
 -- It literally just prints that into the Latex stream. And logs it.
+--
+-- The current_expansion_id is needed so that the relevant ExpansionContext can be
+-- retrieved when it is time to 'run' the macro.
 lbt.api.macro_define = function (text)
   -- lm = latex macro   tn = template name   fn = function name
   local lm, tn, fn = lbt.fn.parse_macro_define_argument(text)
@@ -347,8 +354,9 @@ lbt.api.macro_define = function (text)
     lbt.err.E158_macro_define_error(
       "Template %s has macro 'function' %s that's not actually a function", tn, fn)
   else
-    local latex_cmd = F([=[\newcommand{\%s}[1]{\directlua{lbt.api.macro_run('%s', '%s', [[\unexpanded{#1}]])}}]=],
-                        lm, tn, fn)
+    local details = F([=[template = '%s', macro = '%s', eid = lbt.fn.current_expansion_id(), arg = [[\unexpanded{#1}]] ]=], tn, fn)
+    local latex_cmd = F([[\newcommand{\%s}[1]{\directlua{lbt.api.macro_run { %s } }} ]],
+                        lm, details)
     tex.print(latex_cmd)
     lbt.log(3, [[Defined Latex macro \%s to %s.%s]], lm, tn, fn)
     lbt.log(3, ' ~> %s', latex_cmd)
@@ -358,17 +366,24 @@ end
 -- Usage:
 --  * author sets up \myvec macro with \lbtDefineLatexMacro{\myvec=lbt.Math:myvec}
 --  * author writes \myvec{4 6 -1} in their document
---  * lbt.api.macro_run('Math', 'myvec', '4 6 -1') is called
+--  * lbt.api.macro_run { template = 'Math', macro = 'myvec', eid = 113, arg = '4 6 -1'}
+--    is called
 --  * Latex code is generated and emitted
-lbt.api.macro_run = function (tn, fn, arg)
-  local t = lbt.fn.Template.object_by_name(tn)
-  if t == nil then
+lbt.api.macro_run = function (t)
+  local tn = t.template   -- tn is 'template name' (e.g. Math)
+  local fn = t.macro      -- fn is 'function name' (e.g. myvec)
+  local eid = t.eid       -- expansion id for the LBT document in which the macro call occurred
+  local arg = t.arg       -- the argument to the macro (e.g. '4 6 -1')
+  local template = lbt.fn.Template.object_by_name(tn)
+  if template == nil then
     lbt.err.E159_macro_run_error("Template doesn't exist: %s", tn)
   end
-  local f = t.macros[fn]
+  local f = template.macros[fn]
   if f == nil then
     lbt.err.E159_macro_run_error("Template %s does not have macro function %s", tn, fn)
+  else
+    local ctx = lbt.fn.get_expansion_context_by_eid(eid)
+    local latex_code = f(arg, ctx)
+    lbt.util.print_tex_lines(latex_code)
   end
-  local latex_code = f(arg)
-  lbt.util.print_tex_lines(latex_code)
 end
