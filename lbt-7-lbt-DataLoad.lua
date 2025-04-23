@@ -82,9 +82,7 @@ end
 local db_process_text_into_latex = function(text)
   local x = lbt.parser.parse_commands(text)
   if x.ok then
-    local ocr = lbt.fn.get_current_opcode_resolver()
-    local ol  = lbt.fn.get_current_option_lookup_object()
-    local items = lbt.fn.latex_for_commands(x.commands, ocr, ol)
+    local items = lbt.fn.latex_for_commands(x.commands)
     return items:join('\n\n')  -- is there a util function?
   else
     lbt.err.E002_general('(DB) could not parse commands:\n'..text)

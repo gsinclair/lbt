@@ -336,7 +336,7 @@ end
 lbt.api.macro_define = function (text)
   -- lm = latex macro   tn = template name   fn = function name
   local lm, tn, fn = lbt.fn.parse_macro_define_argument(text)
-  local t = Template.object_by_name(tn)
+  local t = lbt.fn.Template.object_by_name(tn)
   if t == nil then
     lbt.err.E158_macro_define_error("Template doesn't exist: %s", tn)
   elseif t.macros == nil then
@@ -361,7 +361,7 @@ end
 --  * lbt.api.macro_run('Math', 'myvec', '4 6 -1') is called
 --  * Latex code is generated and emitted
 lbt.api.macro_run = function (tn, fn, arg)
-  local t = Template.object_by_name(tn)
+  local t = lbt.fn.Template.object_by_name(tn)
   if t == nil then
     lbt.err.E159_macro_run_error("Template doesn't exist: %s", tn)
   end

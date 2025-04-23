@@ -64,7 +64,7 @@ function ExpansionContext:resolve_oparg(qkey)
   local value
   -- (2)
   value = self.opargs_cache[qkey]
-  if value ~= nil then return { true, lbt.core.sanitise_oparg_nil(value) } end
+  if value ~= nil then return true, lbt.core.sanitise_oparg_nil(value) end
   -- (3)
   value = self.opargs_local:lookup(qkey)
   if value ~= nil then return self:opargs_cache_store(qkey, value) end
@@ -74,9 +74,6 @@ function ExpansionContext:resolve_oparg(qkey)
   -- (5)
   local scope, option = lbt.core.oparg_split_qualified_key(qkey)
   for s in self.sources:iter() do
-    -- XXX: There could be a bug. What if we have (say) `TEXT* .o prespace=3em`?
-    -- TEXT* relies on TEXT for its implementation and opargs. Which opcode would
-    -- be sent to this function? TEXT* or TEXT?
     local spec = s.opargs[scope]
     if spec and spec[option] ~= nil then
       value = spec[option]

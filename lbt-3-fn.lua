@@ -231,7 +231,7 @@ lbt.fn.latex_for_command = function (parsed_command)
   lbt.log('emit', '')
   lbt.log('emit', 'Line: %s', cmdstr)
 
-  if opcode == 'DB' and args[2] == 'index' then DEBUGGER() end
+  -- if opcode == 'DB' and args[2] == 'index' then DEBUGGER() end
 
   -- 1a. Handle a register allocation. Do not increment command count.
   if opcode == 'STO' then

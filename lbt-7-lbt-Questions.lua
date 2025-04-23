@@ -323,6 +323,6 @@ return {
   functions = f,
   posargs = a,
   -- styles    = s,
-  opargs = o
+  opargs = op
 }
 

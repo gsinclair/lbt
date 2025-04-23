@@ -111,7 +111,7 @@ function OptionLookup:_lookup(key)
   v = rawget(self, _opargs_cmd_)[key]
   if v ~= nil then return true, lbt.core.sanitise_oparg_nil(v) end
   -- (3), (4)
-  ctx = rawget(self, _ctx_)
+  local ctx = rawget(self, _ctx_)
   return ctx:resolve_oparg(qk)
 end
 

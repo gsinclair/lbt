@@ -27,7 +27,6 @@ local impl = {}
 function Template.new(template_spec, path)
   lbt.assert_table(1, template_spec)
   local spec = template_spec
-  -- if spec.name == 'lbt.Doc.Section' then DEBUGGER() end
   local o = {
     type      = 'Template',
     name      = spec.name,
