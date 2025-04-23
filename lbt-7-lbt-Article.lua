@@ -15,17 +15,18 @@ local m = {}
 op.Article = { parskip = '2pt plus 2pt minus 1pt', parindent = '15pt'}
 
 -- Input: (pc) parsed content   (ocr) opcode resolver   (ol) option lookup
-local function expand(pc, ocr, ol)
+local function expand(pc)
   local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
   local author   = lbt.util.content_meta_or_error(pc, 'AUTHOR')
   local date     = lbt.util.content_meta_or_nil(pc, 'DATE')
   local tsize    = lbt.util.content_meta_or_nil(pc, 'TITLE_SIZE') or 'Large'
+  local getopt   = lbt.util.resolve_oparg
 
   -- 1. Preamble
   local a = F([[
     \setlength{\parindent}{%s}
     \setlength{\parskip}{%s}
-  ]], ol('Article.parindent'), ol('Article.parskip'))
+  ]], getopt('Article.parindent'), getopt('Article.parskip'))
 
   -- 2. New page and table-of-contents addition
   local b = F([[
@@ -52,7 +53,7 @@ local function expand(pc, ocr, ol)
     \bigskip
 
     %s
-  ]], lbt.util.latex_expand_content_list('BODY', pc, ocr, ol))
+  ]], lbt.util.latex_expand_content_list('BODY', pc))
 
   -- Put it all together!
   return lbt.util.combine_latex_fragments(a,b,c,d)

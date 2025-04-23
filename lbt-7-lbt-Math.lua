@@ -95,25 +95,25 @@ end
 -- Input: a pronumeral like 'a' or 'v' or the value zero '0'.
 -- Output: that letter/zero rendered as a bold vector.
 -- Comment: this allows author to force a desired style.
-m.vecbold = function (x)
+m.vecbold = function (x, _)
   return F([[\ensuremath{\mathbf{%s}}]], x)
 end
 
 -- Input: a pronumeral like 'a' or 'v' or the value zero '0'.
 -- Output: that letter/zero rendered as a vector with arrow overhead.
 -- Comment: this allows author to force a desired style.
-m.vecarrow = function (x)
+m.vecarrow = function (x, _)
   return F([[\ensuremath{\vv{%s}}]], x)
 end
 
 -- Input: a pronumeral like 'a' or 'v' or the value zero '0'.
 -- Output: that letter/zero rendered as a vector with tilde underneath.
 -- Comment: this allows author to force a desired style.
-m.vectilde = function (x)
+m.vectilde = function (x, _)
   return F([[\ensuremath{\underaccent{\tilde}{%s}}]], x)
 end
 
-m.vectorijk = function (text)
+m.vectorijk = function (text, ctx)
   local force_sign = function (x)
     if x:startswith('+') or x:startswith('-') or x == '0' then
       return x
@@ -136,7 +136,7 @@ m.vectorijk = function (text)
   if #terms < 2 or #terms > 3 then
     return lbt.util.latex_macro_error('expect 2-3 args to vectorijk')
   else
-    local i, j, k = m.vector('i'), m.vector('j'), m.vector('k')
+    local i, j, k = m.vector('i', ctx), m.vector('j', ctx), m.vector('k', ctx)
     local unitvectors = {i,j,k}
     local result = pl.List()
     for i = 1,#terms do
@@ -281,7 +281,7 @@ do
     sm = Ct(V'item'^0) * -1
   }
 
-  m.simplemath = function (text)
+  m.simplemath = function (text, _)
     simplemathlog('simplemath: ' .. text)
     local transformed = smparse:match(text)
     if transformed then

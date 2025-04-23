@@ -57,6 +57,7 @@ end
 -- result otherwise.
 lbt.util.resolve_oparg_for_macro = function (qkey, ctx)
   lbt.assert_string(1, qkey)
+  assert(ctx ~= nil)
   assert(ctx.type == 'ExpansionContext')
   local found, value = ctx:resolve_oparg(qkey)
   if found == false then
