@@ -96,9 +96,14 @@ lbt.init.init_system = function ()
   -- We subscribe to default channels, which don't need to be specified.
   lbt.system.log_channels     = pl.List{}
   -- Each expansion has an autoincrementing ID so that log messages can be
-  -- coherent and debug files can be written. We start at 100 so it is a
+  -- coherent and debug files can be written. Also so that ExpansionContext
+  -- objects can be recovered (see below). We start at 100 so it is a
   -- three-digit number.
   lbt.system.expansion_id = 100
+  -- Store the ExpansionContext object for each expansion ID so that they
+  -- can still be used afterwards. This is necessary for LBT macros to work,
+  -- as they are evaluated long after the Latex code is created.
+  lbt.system.expansion_contexts = pl.Map()
 end
 
 -- Reset the lbt.system table to a clean but workable state.

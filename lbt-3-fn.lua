@@ -70,17 +70,30 @@ end
 
 lbt.fn.set_current_expansion_context = function(ctx)
   assert(ctx.type == 'ExpansionContext')
+  local eid = lbt.fn.current_expansion_id()
+  lbt.system.expansion_contexts[eid] = ctx
   lbt.const.expansion_context = ctx
 end
 
-lbt.fn.unset_current_expansion_context = function()
+lbt.fn.unset_current_expansion_context = function(ctx)
   lbt.const.expansion_context = nil
 end
 
 lbt.fn.get_current_expansion_context = function()
   local ctx = lbt.const.expansion_context
   if ctx == nil then
-    lbt.err.E002_general('lbt.fn.get_current_expansion_context() failed: (nil)')
+    lbt.err.E002_general('lbt.fn.get_current_expansion_context() failed')
+  end
+  return ctx
+end
+
+lbt.fn.get_expansion_context_by_eid = function(eid)
+  if eid == nil then
+    lbt.err.E002_general('Unable to get expansion context: nil expansionID provided')
+  end
+  local ctx = lbt.system.expansion_contexts[eid]
+  if ctx == nil then
+    lbt.err.E002_general('lbt.fn.get_expansion_context_by_eid(eid) failed: eid = %s', eid)
   end
   return ctx
 end
@@ -90,28 +103,28 @@ end
 -- A very important function, turning parsed content into Latex, using the main
 -- template and any extra chosen sources to resolve each command.
 --
--- We need a template object t on which we call t.init() for any initialisation
--- and t.expand(pc, or, ol) to produce the Latex in line with the template's
--- implementation. (Consider that an Article, Exam and Worksheet template will
--- all produce different-looking documents, without even considering their
--- different contents.)
+-- We need a template object `template` on which we call t.init() for any
+-- initialisation and t.expand(pc) to produce the Latex in line with the
+-- template's implementation. (Consider that an Article, Exam and Worksheet
+-- template will all produce different-looking documents, without even
+-- considering their different contents.)
 --
 -- We need to know what sources are being used. The template itself will name
 -- some, and the document may name more. Thus we have the helper function
 -- consolidated_sources(pc, t) to produce a list of template objects in which
 -- we can search for command implementations.
 --
--- We need an opcode resolver ('ocr') so that 'ITEMIZE' in a document can be
--- resolved into a Lua function (template lbt.Basic -> functions -> ITEMIZE).
--- Thus we call the helper function opcode_resolver(sources). This returns a
--- function we can call to provide the template function for any opcode.
+-- We need an ExpansionContext `ctx` so that 'ITEMIZE' in a document can be
+-- resolved into a Lua function (template lbt.Basic -> functions -> ITEMIZE)
+-- using the method `ctx.resolve_opcode('ITEMIZE')`. This object will also
+-- help to resolve oparg values.
 --
--- We need an option lookup ('ol') so that commands may have access to options
--- that are defined in various places: document-wide with \lbtOptions{...},
--- document-narrow with META.OPTIONS, and command-local with '.o ...'. For
--- example, 'QQ .o color=red :: Evaluate $3 \times 5$'. The implementation of
--- QQ needs to be able to access 'o.color' and 'o.prespace' easily. Thus we call
--- OptionLookup.new{...}.
+-- After creating that object, we save it as a globally-accessible value so
+-- that all code actually doing the expansion can access it. (It is too much
+-- bother to pass it around everywhere. Also, it's a bit niche and technical,
+-- but LBT macros need access to expansion contexts long after the expansion
+-- has taken place.) We 'unset' the current expansion context afterwards, but
+-- it is still accessible using `()fn.get_expansion_context_by_eid()`.
 --
 -- With everything set up, we can call t.init() and t.expand(pc, or, ol).
 --
@@ -119,35 +132,20 @@ end
 -- compile time.
 --
 lbt.fn.latex_expansion_of_parsed_content = function (pc)
-  -- * -- OLD
-  -- * local t = pc:template_object_or_error()
-  -- * local sources = lbt.fn.impl.consolidated_sources(pc, t)
-  -- * local ocr = lbt.fn.opcode_resolver(sources)
-  -- * local ol = OptionLookup.new {
-  -- *   document_wide = lbt.system.opargs_global,
-  -- *   document_narrow = pc:opargs_local(),
-  -- *   sources = sources,
-  -- * }
-  -- * -- Save the option lookup for access by macros like Math.vector and commands like DB or STO.
-  -- * lbt.fn.set_current_opcode_resolver(ocr)
-  -- * lbt.fn.set_current_option_lookup_object(ol)
-  -- * -- /OLD
-  -- NEW
-  local t = pc:template_object_or_error()      -- TODO: rename variable to `template`
+  local template = pc:template_object_or_error()
   local ctx = lbt.fn.ExpansionContext.new {
     pc = pc,
-    template = t,
-    sources = lbt.fn.impl.consolidated_sources(pc, t)
+    template = template,
+    sources = lbt.fn.impl.consolidated_sources(pc, template)
   }
-  lbt.fn.set_current_expansion_context(ctx)  -- global variable to be used during this expansion
-  -- /NEW
+  lbt.fn.set_current_expansion_context(ctx)
   -- Allow the template to initialise counters, etc.
-  if type(t.init) == 'function' then t.init() end
+  if type(template.init) == 'function' then template.init() end
   -- And...go!
   lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
-  local result = t.expand(pc)
+  local result = template.expand(pc)
   lbt.log(4, ' ~> result has %d bytes', #result)
-  lbt.fn.unset_current_expansion_context(ctx)  -- the global variable is no longer usable
+  lbt.fn.unset_current_expansion_context(ctx)
   return result
 end
 
@@ -156,7 +154,7 @@ end
 -- It would usually be indirect. For example:
 --   lbt.WS0 (template)
 --     expand  (function)
---       lbt.util.latex_expand_content_list('BODY', pc, ocr, ol)
+--       lbt.util.latex_expand_content_list('BODY', pc)
 --         lbt.fn.latex_for_commands
 --
 -- Return List of strings, each containing Latex for a line of author content.
@@ -164,10 +162,8 @@ end
 -- we insert some bold red information into the Latex so the author can see,
 -- rather than halt the processing.
 --
--- commands: List of parsed commands like {'TEXT', o = {}, k = {}, a = {'Hello'}}
--- ocr:      opcode resolver         call ocr('Q') to get function for opcode Q
--- ol:       option lookup           call o.color to get option for current opcode
---                                   or o['Q.color'] to be specific
+-- parsed_commands:
+--   List of parsed commands like {'TEXT', o = {}, k = {}, a = {'Hello'}}
 --
 lbt.fn.latex_for_commands = function (parsed_commands)
   local buffer = pl.List()
@@ -203,8 +199,10 @@ end
 --
 -- Parameters:
 --  * command: parsed author content
---  * ocr:     an opcode resolver that we call to get an opcode function
---  * ol:      an options lookup that we pass to the function
+--
+-- Global variable:
+--  * `ctx` obtained from lbt.fn.get_current_expansion_context() so that opcodes
+--    and opargs can be resolved.
 --
 -- Return:
 --  * 'ok', latex list         [succesful]
@@ -311,44 +309,9 @@ lbt.fn.latex_for_command = function (parsed_command)
   return 'ok', result
 end
 
--- Produce a function that resolves tokens using the sources provided here.
--- This means the sources don't need to be passed around.
---
--- As a bonus, a memoisation cache is used to speed up token resolution.
---
--- The resolver function returns (token_function, argspec) if a token function
--- is found among the sources, or nil otherwise. Note that argspec might
--- legitimately be nil, although we will put a warning in the log file.
---
--- TODO: delete this once ExpansionContext is completed.
---
-lbt.fn.opcode_resolver = function (sources)
-  -- return pl.utils.memoize(
-    -- NOTE: 8 Dec 2024 - Experimenting with _not_ memoising the function, because
-    --       I am getting erroneous return values where 'starred' is making its way
-    --       in, for some reason.
-    return function (token)
-      -- if token:startswith('MATH') then DEBUGGER() end
-      for s in sources:iter() do
-        -- Each 'source' is a template object, with properties 'functions'
-        -- and 'arguments'.
-        local f = s.functions[token]
-        local a = s.arguments[token]
-        if f then
-          if a == nil then
-            lbt.log(2, 'WARN: no argspec provided for opcode <%s>', token)
-          end
-          return { opcode_function = f, argspec = a }
-        end
-      end
-      -- No token function found :(
-      return nil
-    end
-  -- )
-end
-
 -- }}}
 
+-- TODO: work out exactly where this should be. Perhaps it's here, perhaps not.
 lbt.fn.expand_directory = function (path)
   if path:startswith("PWD") then
     return path:replace("PWD", os.getenv("PWD"), 1)
