@@ -110,10 +110,28 @@ local db_functions = {
   index = function(t)
     if t.nargs ~= 1 then db_err('index needs one argument') end
     local n = tonumber(t.args[1])
+    local N = #t.db
+    if n < 0 then
+      -- Negative indexing from the end, like Python. db[-1] == db[N]
+      n = n + 1 + N
+    end
+    if n < 1 or n > N then
+      lbt.util.template_error_quit('vec index error: %d', n)
+    end
     local text = t.db[n]
     -- -- Now I have the entry from the database, I need to get LBT to process it.
     -- -- For now, just return number of characters.
     -- return text:sub(1,10)
+    return db_process_text_into_latex(text)
+  end,
+
+  key = function(t)
+    if t.nargs ~= 1 then db_err('index needs one argument') end
+    local k = t.args[1]
+    local text = t.db[k]
+    if text == nil then
+      lbt.util.template_error_quit('vec key error: %s', k)
+    end
     return db_process_text_into_latex(text)
   end
 }
