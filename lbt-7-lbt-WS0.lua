@@ -28,13 +28,13 @@ op.WS0 = { title_color = 'BlueViolet', teacher_notes_color = 'blue' }
 local function init()
 end
 
--- Input: (pc) parsed content   (ocr) opcode resolver   (ol) option lookup
-local function expand(pc, ocr, ol)
+-- Input: (pc) parsed content
+local function expand(pc)
   local title    = lbt.util.content_meta_or_error(pc, 'TITLE')
   local course   = lbt.util.content_meta_or_error(pc, 'COURSE')
   local tnotes   = lbt.util.content_meta_or_nil(pc, 'TEACHERNOTES') or '(none specified)'
-  local titlecol = ol['WS0.title_color']
-  local tncol    = ol['WS0.teacher_notes_color']
+  local titlecol = lbt.util.resolve_oparg('WS0.title_color')
+  local tncol    = lbt.util.resolve_oparg('WS0.teacher_notes_color')
 
   -- 1. Preamble
   local a = [[
@@ -85,7 +85,7 @@ local function expand(pc, ocr, ol)
     %s
 
     \clearpage
-  ]], lbt.util.latex_expand_content_list('BODY', pc, ocr, ol))
+  ]], lbt.util.latex_expand_content_list('BODY', pc))
 
   -- Put it all together!
   return lbt.util.combine_latex_fragments(a,b,c,d,e)

@@ -291,7 +291,7 @@ lbt.api.add_global_options = function (text)
   if options then
     lbt.log(3, 'Global options are being added to the stack:')
     lbt.log(3, lbt.pp(options))
-    lbt.system.opargs_latex:push(options)
+    lbt.system.opargs_global:push(options)
     return nil
   else
     lbt.err.E945_invalid_option_dictionary_global(text)

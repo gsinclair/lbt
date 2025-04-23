@@ -192,7 +192,7 @@ end
 
 -- MC lays out vertically as many options as are given using A, B, C, ...
 a.MC = '1+'
-op.MC = { formal = '(A)' }
+op.MC = { format = '(A)' }
 f.MC = function(n, args, o)
   -- We employ an enumerate environment with one line1, many line2 and one line3.
   local line0 = [[ \begin{adjustwidth}{2em}{}]]
@@ -202,7 +202,7 @@ f.MC = function(n, args, o)
   local line4 = [[ \end{adjustwidth} ]]
   local result = pl.List()
   result:append(line0)
-  result:append(F(line1, o('MC.format')))
+  result:append(F(line1, o.format))
   for x in args:iter() do
     result:append(F(line2, x))
   end

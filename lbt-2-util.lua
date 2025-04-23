@@ -26,44 +26,27 @@ end
 -- Arguments:
 --  * key:         the name of the content section (e.g. BODY, INTRO, OUTRO)
 --  * pc:          parsed content (passed to the `expand` function)
---  * tr:          token resolver (passed to the `expand` function)
---  * sr:          style resolver (passed to the `expand` function)
 --
--- TODO update to use ocr and ol.
---
-lbt.util.latex_expand_content_list = function (key, pc, ocr, ol)
+lbt.util.latex_expand_content_list = function (key, pc)
   local list = pc:list_or_nil(key)
   if list == nil then
     lbt.log(2, "Asked to expand content list '%s' but it is not included in the content", key)
     -- TODO ^^^ add contextual information
     return ''
   end
-  local lines = lbt.fn.latex_for_commands(list, ocr, ol)
+  local lines = lbt.fn.latex_for_commands(list)
   return lines:concat('\n')
 end
 
--- This is designed for use only in macro expansion, and only rarely.
--- Commands should use the resolver passed to them.
---
--- TODO: remove this
---
-lbt.util.get_style = function (key)
-  local sr = lbt.const.style_resolver
-  if sr == nil then
-    lbt.err.E001_internal_logic_error('lbt.const.style_resolver not available')
-  end
-  return sr(key)
-end
-
--- This is designed for use only in macro expansion, and only rarely.
---   Commands should use the option lookup passed to them.
+-- This is designed for use in template functions `init` and `expand`.
 --   The key needs to be qualified (e.g. vector.format, not just format); an error will
 -- result otherwise.
-lbt.util.get_option_for_macro = function (key)
+lbt.util.resolve_oparg = function (qkey, ctx)
+  lbt.assert_string(1, qkey)
   local ctx = lbt.fn.get_current_expansion_context()
-  local found, value = ctx:oparg_resolve(key)
+  local found, value = ctx:resolve_oparg(qkey)
   if found == false then
-    lbt.err.E193_option_lookup_for_macro_failed(key, ctx)
+    lbt.err.E192_oparg_lookup_failed(qkey)
   end
   return value
 end
