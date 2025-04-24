@@ -15,7 +15,7 @@
 
 \lbtLogChannels{all}
 
-\lbtDocumentWideOptions{vector.format = bold}
+\lbtGlobalOptions{vector.format = bold}
 
 \lbtDefineLatexMacro{integral=lbt.Math:integral}
 \lbtDefineLatexMacro{V=lbt.Math:vector}
@@ -56,7 +56,7 @@
     TEXT The \texttt{lbt.Doc.Chapter} template formats a whole chapter. You then use the command \texttt{SECTION} (and so on for subsection, etc.) to divide your document into sections.
     TEXT It is also fine to use the more general \texttt{lbt.Basic} template and use the \texttt{CHAPTER} command. It makes no difference. But it is probably convenient to put only one chapter's worth of content into a single \texttt{lbt} environment.
     SECTION (label) sec-numbered :: A numbered section
-    TEXT \kant[2-3]
+    TEXT \kant[3]
     SECTION* (label) sec-unnumbered :: A section without a number
     TEXT This section was created using \texttt{SECTION*}.
 \end{lbt}
@@ -74,6 +74,18 @@
     TEXT .o fobar :: Hello.
 \end{lbt}
 
+\begin{lbt}
+  @META
+    TEMPLATE lbt.Basic
+
+  +BODY
+    SECTION .o label = sec:sto :: A demonstration of \texttt{STO} (register allocation)
+
+    STO euler :: 1 :: $e^{i\pi} = -1$
+    TEXT Euler's fantastic fact, stored in register \texttt{euler}, is ◊euler.
+    TEXT Now that register has expired, so \texttt{◊◊euler} produces ◊euler.
+    
+\end{lbt}
 % }}}
 
 \end{document}
