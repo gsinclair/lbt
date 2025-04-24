@@ -2,6 +2,8 @@
 -- We act on the global table `lbt` and populate its subtable `lbt.fn`.
 --
 
+local reg = {}   -- namespace for functions to do with registers
+
 -- {{{ Preamble: local conveniences
 local F = string.format
 
@@ -189,6 +191,43 @@ lbt.fn.latex_for_commands = function (parsed_commands)
   return buffer
 end
 
+
+-- {{{ new implementation of latex_for_command ---------------------------------
+
+local impl1 = {}
+
+lbt.fn.latex_for_command = function (parsed_command)
+  local opcode = parsed_command[1]
+  local posargs = parsed_command.a
+  if opcode == 'STO' then
+    return impl1.handle_STO_command(posargs)
+  elseif opcode == 'CTRL' then
+    return impl1.handle_CTRL_command(posargs)
+  else
+    local lfc = lbt.fn.LatexForCommand.new(parsed_command, reg.expand_register_references)
+    return lfc:latex()
+  end
+end
+
+function impl1.handle_STO_command(posargs)
+  reg.assign_register(posargs)
+  return 'sto'
+end
+
+function impl1.handle_CTRL_command(posargs)
+  if posargs[1] == 'stop' then
+    return 'stop-processing'
+  elseif posargs[1] == 'eid' then
+    I('eid', lbt.fn.current_expansion_id())
+    lbt.debuglog('Current expansion ID: %d', lbt.fn.current_expansion_id())
+    return 'noop'
+  else
+    lbt.err.E938_unknown_CTRL_directive(posargs)
+  end
+end
+
+-- }}}
+
 -- Take a single command of parsed author content like
 --   { 'ITEMIZE', o = { float = true}, k = {}, a = {'One', 'Two', 'Three'} }
 -- and produce a pl.List of Latex code lines.
@@ -215,7 +254,7 @@ end
 -- Side effect:
 --  * lbt.var.line_count is increased (unless this is a register allocation)
 --  * lbt.var.registers might be updated
-lbt.fn.latex_for_command = function (parsed_command)
+lbt.fn.Xlatex_for_command = function (parsed_command)
   local pcmd = parsed_command
   local opcode = pcmd[1]
   local args   = pcmd.a      -- NOTE: many of these locals should be unnecessary now
@@ -493,7 +532,32 @@ lbt.fn.impl.latex_message_opcode_raised_error = function (opcode, err)
   return F([[{\color{lbtError}\bfseries Opcode \verb|%s| raised error: \emph{%s}} \par]], opcode, err)
 end
 
-lbt.fn.impl.assign_register = function (args)
+lbt.fn.impl.current_command_count = function ()
+  local command_count = lbt.var.command_count
+  if command_count == nil then
+    lbt.err.E001_internal_logic_error('current command_count not set')
+  end
+  return command_count
+end
+
+lbt.fn.impl.inc_command_count = function ()
+  local command_count = lbt.var.command_count
+  if command_count == nil then
+    lbt.err.E001_internal_logic_error('current command_count not set')
+  end
+  lbt.var.command_count = command_count + 1
+end
+
+lbt.fn.impl.sources_list_compact_representation = function (sources)
+  local name = function (td) return td.name end
+  return sources:map(name):join(', ')
+end
+
+-- }}}
+
+-- {{{ functions to do with register expansion ---------------------------------
+
+function reg.assign_register(args)
   if #args ~= 3 then
     lbt.err.E318_invalid_register_assignment_nargs(args)
   end
@@ -503,21 +567,21 @@ lbt.fn.impl.assign_register = function (args)
     mathmode = true
     defn = defn:sub(2,-2)
   end
-  local value = lbt.fn.impl.expand_register_references(defn, mathmode)
+  local value = reg.expand_register_references(defn, mathmode)
   local record = { name     = regname,
                    exp      = lbt.fn.impl.current_command_count() + ttl,
                    mathmode = mathmode,
                    value    = value }
-  lbt.fn.impl.register_store(record)
+  reg.register_store(record)
 end
 
 -- str: the string we are expanding (looking for ◊xyz and replacing)
 -- math_context: boolean that helps us decide whether to include \ensuremath
-lbt.fn.impl.expand_register_references = function (str, math_context)
+function reg.expand_register_references(str, math_context)
   local pattern = "◊%a[%a%d]*"
   local result = str:gsub(pattern, function (ref)
     local name = ref:sub(4)    -- skip the lozenge (bytes 1-3)
-    local status, value, mathmode = lbt.fn.impl.register_value(name)
+    local status, value, mathmode = reg.register_value(name)
     if status == 'nonexistent' then
       -- This register never existed; don't change anything.
       return ref
@@ -538,33 +602,12 @@ lbt.fn.impl.expand_register_references = function (str, math_context)
       lbt.err.E001_internal_logic_error('register_value return error')
     end
   end)
-  return result
-end
-
-lbt.fn.impl.current_command_count = function ()
-  local command_count = lbt.var.command_count
-  if command_count == nil then
-    lbt.err.E001_internal_logic_error('current command_count not set')
-  end
-  return command_count
-end
-
-lbt.fn.impl.inc_command_count = function ()
-  local command_count = lbt.var.command_count
-  if command_count == nil then
-    lbt.err.E001_internal_logic_error('current command_count not set')
-  end
-  lbt.var.command_count = command_count + 1
-end
-
-lbt.fn.impl.register_store = function (record)
-  -- TODO: check whether this name is already assigned and not expired
-  lbt.var.registers[record.name] = record
+  return result:gsub('◊◊', '◊')
 end
 
 -- Return status, value, mathmode
 -- status: nonexistent | stale | ok
-lbt.fn.impl.register_value = function (name)
+function reg.register_value(name)
   local re = lbt.var.registers[name]
   if re == nil then
     return 'nonexistent', nil
@@ -575,9 +618,9 @@ lbt.fn.impl.register_value = function (name)
   end
 end
 
-lbt.fn.impl.sources_list_compact_representation = function (sources)
-  local name = function (td) return td.name end
-  return sources:map(name):join(', ')
+function reg.register_store(record)
+  -- TODO: check whether this name is already assigned and not expired
+  lbt.var.registers[record.name] = record
 end
 
 -- }}}

@@ -276,7 +276,10 @@ end
 
 -- TODO: validate opargs (near future)
 -- TODO: validate kwargs (later)
-function Command:validate_all_arguments()
+--
+-- Return an error message for the first error found in the posargs, opargs or
+-- kwargs. Or, hopefully, return nil if there are no errors.
+function Command:error_in_arguments()
   local spec = self.spec
   local nargs = #self.details.posargs
   -- local opargs = self.opargs
