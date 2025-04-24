@@ -21,6 +21,7 @@ function ExpansionContext.new(args)
     command_lookup = impl.comprehensive_command_lookup_map(args.sources),
     opargs_global  = lbt.system.opargs_global,
     opargs_local   = lbt.core.DictionaryStack.new(),
+    opargs_default = impl.comprehensive_oparg_default_map(args.sources),
     opargs_cache   = {},
   }
   o.opargs_local:push(args.pc:opargs_local())
@@ -54,36 +55,41 @@ end
 --   Thus, the sequence is:
 --     1. Check that we have a qualified key.
 --     2. See if the key is in the cache.
---     3. Check the oparg_local stack.
---     4. Check the oparg_global stack.
---     5. Check among the sources to find a default for this oparg.
--- If a value is found, return { true, value }. Otherwise, { false, nil }. Note that
--- the value _can_ be nil. We sanitise the value on the way out, turning 'nil' into
--- nil.
+--     3. Check the opargs_local stack.
+--     4. Check the opargs_global stack.
+--     5. Check the opargs_default map.
+-- If a value is found, `return true, value`. Otherwise, `return false, nil`.
+-- Note that the value _can_ be nil. We sanitise the value on the way out,
+-- turning 'nil' into nil.
 function ExpansionContext:resolve_oparg(qkey)
   -- (1)
   lbt.core.oparg_check_qualified_key(qkey)
-  local value
   -- (2)
-  value = self.opargs_cache[qkey]
-  if value ~= nil then return true, lbt.core.sanitise_oparg_nil(value) end
+  local value = self.opargs_cache[qkey]
+  if value ~= nil then
+    return true, lbt.core.sanitise_oparg_nil(value)
+  end
   -- (3)
   value = self.opargs_local:lookup(qkey)
-  if value ~= nil then return self:opargs_cache_store(qkey, value) end
+  if value ~= nil then
+    self:opargs_cache_store(qkey, value)
+    return true, lbt.core.sanitise_oparg_nil(value)
+  end
   -- (4)
   value = self.opargs_global:lookup(qkey)
-  if value ~= nil then return self:opargs_cache_store(qkey, value) end
+  if value ~= nil then
+    self:opargs_cache_store(qkey, value)
+    return true, lbt.core.sanitise_oparg_nil(value)
+  end
   -- (5)
   local scope, option = lbt.core.oparg_split_qualified_key(qkey)
-  for name in self.sources:iter() do
-    local template = lbt.fn.Template.object_by_name(name)
-    local spec = template.opargs[scope]
-    if spec and spec[option] ~= nil then
-      value = spec[option]
-      if value ~= nil then return self:opargs_cache_store(qkey, value) end
-    end
+  local spec = self.opargs_default[scope]
+  if spec and spec[option] ~= nil then
+    value = spec[option]
+    self:opargs_cache_store(qkey, value)
+    return true, lbt.core.sanitise_oparg_nil(value)
   end
-  -- (6)
+  -- Not found
   return false, nil
 end
 
@@ -93,7 +99,7 @@ end
 
 function ExpansionContext:opargs_cache_store(qkey, value)
   self.opargs_cache[qkey] = value
-  return true, lbt.core.sanitise_oparg_nil(value)
+  return nil
 end
 
 -- If an oparg_local gets updated mid-document, the cache needs to be invalidated.
@@ -113,6 +119,16 @@ impl.comprehensive_command_lookup_map = function(sources)
   for name in sources_rev:iter() do
     local template = lbt.fn.Template.object_by_name(name)
     result:update(template:command_register())
+  end
+  return result
+end
+
+impl.comprehensive_oparg_default_map = function(sources)
+  local result = pl.Map()
+  local sources_rev = sources:clone(); sources_rev:reverse()
+  for name in sources_rev:iter() do
+    local template = lbt.fn.Template.object_by_name(name)
+    result:update(template.opargs)
   end
   return result
 end
