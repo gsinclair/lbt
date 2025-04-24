@@ -75,7 +75,7 @@ lbt.fn.set_current_expansion_context = function(ctx)
   lbt.const.expansion_context = ctx
 end
 
-lbt.fn.unset_current_expansion_context = function(ctx)
+lbt.fn.unset_current_expansion_context = function()
   lbt.const.expansion_context = nil
 end
 
@@ -145,7 +145,7 @@ lbt.fn.latex_expansion_of_parsed_content = function (pc)
   lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
   local result = template.expand(pc)
   lbt.log(4, ' ~> result has %d bytes', #result)
-  lbt.fn.unset_current_expansion_context(ctx)
+  lbt.fn.unset_current_expansion_context()
   return result
 end
 
@@ -414,10 +414,10 @@ end
 -- Return a table of pragmas (draft, debug, ignore) and a consolidated string of
 -- the actual content, with » line continations taken care of.
 lbt.fn.impl.pragmas_and_content = function(input_lines)
-  pragmas = { draft = false, ignore = false, debug = false }
-  lines   = pl.List()
+  local pragmas = { draft = false, ignore = false, debug = false }
+  local lines   = pl.List()
   for line in input_lines:iter() do
-    p = line:match("!(%u+)%s*$")
+    local p = line:match("!(%u+)%s*$")
     if p then
       update_pragma_set(pragmas, p)
     elseif line:match('^%s*%%') then

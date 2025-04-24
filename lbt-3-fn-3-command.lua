@@ -262,6 +262,18 @@ function Command.new(parsed_command, expansion_context)
   end
 end
 
+function Command:posargs()
+  return self.details.posargs
+end
+
+function Command:opargs()
+  return self.details.opargs
+end
+
+function Command:kwargs()
+  return self.details.kwargs
+end
+
 -- TODO: validate opargs (near future)
 -- TODO: validate kwargs (later)
 function Command:validate_all_arguments()
