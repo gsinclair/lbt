@@ -229,8 +229,6 @@ lbt.fn.latex_for_command = function (parsed_command)
   lbt.log('emit', '')
   lbt.log('emit', 'Line: %s', cmdstr)
 
-  -- if opcode == 'DB' and args[2] == 'index' then DEBUGGER() end
-
   -- 1a. Handle a register allocation. Do not increment command count.
   if opcode == 'STO' then
     lbt.fn.impl.assign_register(args)
@@ -267,17 +265,19 @@ lbt.fn.latex_for_command = function (parsed_command)
   lbt.fn.impl.inc_command_count()
   -- 5. Expand register references where necessary.
   --    We are not necessarily in mathmode, hence false.
-  if opcode == 'TEXT' and args[1]:startswith('Euler') then DEBUGGER() end
+  --    Update the `cmd` object after processing.
   args = args:map(lbt.fn.impl.expand_register_references, false)
   for k, v in kwargs:iter() do
     v = lbt.fn.impl.expand_register_references(v, false)
     kwargs[k] = v
   end
+  cmd:update_posargs(args)
+  cmd:update_kwargs(kwargs)
   -- 6. Call the opcode function and return 'error', ... if necessary.
   ;         -- XXX: I want opargs to be resolved at this stage, so that 'nopar = true' becomes 'par = false'.
   ;         --      But this is a challenge.
   ;         -- NOTE: Actually,  think it can happen inside set_opcode_and_options().
-  local result = cmd:apply()
+  local result = cmd:apply_function()
   if type(result) == 'string' then
     result = pl.List({result})
   elseif type(result) == 'table' and type(result.error) == 'string' then

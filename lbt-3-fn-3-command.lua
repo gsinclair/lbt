@@ -281,7 +281,19 @@ function Command:validate_all_arguments()
   return nil
 end
 
-function Command:apply()
+-- After creating a Command object, the posargs might need to be changed (e.g.
+-- to expand registers).
+function Command:update_posargs(x)
+  self.details.posargs = x
+end
+
+-- After creating a Command object, the kwargs might need to be changed (e.g.
+-- to expand registers).
+function Command:update_kwargs(x)
+  self.details.kwargs = x
+end
+
+function Command:apply_function()
   local fn      = self.spec.fn
   local posargs = self.details.posargs
   local ol      = self.option_lookup

@@ -6,6 +6,8 @@
 --  * resolve opcodes into CommandSpec objects
 --  * look up global and local opargs
 
+local F = string.format
+
 local ExpansionContext = {}
 ExpansionContext.mt = { __index = ExpansionContext }
 local impl = {}
@@ -113,7 +115,6 @@ impl.comprehensive_command_lookup_map = function(sources)
     result:update(template:command_register())
   end
   return result
-
 end
 -- }}}
 
