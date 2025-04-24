@@ -301,7 +301,7 @@ end
 -- Example invocation: \mathlistand{a,b,c,d}
 -- Output: $a$, $b$, $c$ and $d$
 
-m.mathlistand = function (text)
+m.mathlistand = function (text, _)
   local values = lbt.util.comma_split(text)
   local n = values:len()
   values:transform(function(x) return F('$%s$', pl.stringx.strip(x)) end)
@@ -317,7 +317,7 @@ end
 -- Example invocation: \mathlistor{a,b,c,d}
 -- Output: $a$, $b$, $c$ or $d$
 
-m.mathlistor = function (text)
+m.mathlistor = function (text, _)
   local values = lbt.util.comma_split(text)
   local n = values:len()
   values:transform(function(x) return F('$%s$', pl.stringx.strip(x)) end)
@@ -335,14 +335,14 @@ end
 --
 -- Note: no 'and' before final element
 
-m.mathlist = function (text)
+m.mathlist = function (text, _)
   local values = lbt.util.comma_split(text)
   values:transform(function(x) return F('$%s$', pl.stringx.strip(x)) end)
   return values:concat(', ')
 end
 
 -- TODO: document
-m.mathlistdots = function (text)
+m.mathlistdots = function (text, _)
   local values = lbt.util.comma_split(text)
   values:transform(function(x) return F('$%s$', pl.stringx.strip(x)) end)
   values:insert(#values-1, [[\dots]])
@@ -356,7 +356,7 @@ end
 -- Example invocation: \mathsum{a,b,c,d}
 -- Output: $a+b+c+d+e$
 
-m.mathsum = function (text)
+m.mathsum = function (text, _)
   local values = lbt.util.comma_split(text)
   values:transform(pl.stringx.strip)
   return '\\ensuremath{' .. values:concat('+') .. '}'
@@ -364,7 +364,7 @@ end
 
 -- NOTE: Idea -- just use mathsum but transform DOTS into \dots.
 -- Thus gain flexibility over where the dots appear.
-m.mathsumdots = function (text)
+m.mathsumdots = function (text, _)
   local values = lbt.util.comma_split(text)
   values:transform(pl.stringx.strip)
   values:insert(#values, [[\dots]])
@@ -402,32 +402,32 @@ local mathseqdotsterms = function (text)
   return terms
 end
 
-m.mathseq = function (text)
+m.mathseq = function (text, _)
   local terms = mathseqterms(text)
   return '\\ensuremath{' .. terms:concat(', ') .. '}'
 end
 
-m.mathseqsum = function (text)
+m.mathseqsum = function (text, _)
   local terms = mathseqterms(text)
   return '\\ensuremath{' .. terms:concat(' + ') .. '}'
 end
 
-m.mathseqproduct = function (text)
+m.mathseqproduct = function (text, _)
   local terms = mathseqdotsterms(text)
   return '\\ensuremath{' .. terms:concat(' \\, ') .. '}'
 end
 
-m.mathseqdots = function (text)
+m.mathseqdots = function (text, _)
   local terms = mathseqdotsterms(text)
   return '\\ensuremath{' .. terms:concat(', ') .. '}'
 end
 
-m.mathseqdotssum = function (text)
+m.mathseqdotssum = function (text, _)
   local terms = mathseqdotsterms(text)
   return '\\ensuremath{' .. terms:concat(' + ') .. '}'
 end
 
-m.mathseqdotsproduct = function (text)
+m.mathseqdotsproduct = function (text, _)
   local terms = mathseqdotsterms(text)
   return '\\ensuremath{' .. terms:concat(' \\, ') .. '}'
 end
@@ -442,7 +442,7 @@ end
 -- Example invocation: \primefactorisation{explicit 2,2,2,5,7,7,19}
 -- Output: $2^3 \cdot 5^1 \cdot 7^2 \cdot 19^1$
 
-m.primefactorisation = function (text)
+m.primefactorisation = function (text, _)
   local explicit = false
   if text:startswith('explicit ') then
     explicit = true
