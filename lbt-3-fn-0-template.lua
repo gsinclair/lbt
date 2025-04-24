@@ -2,7 +2,8 @@
 -- Template class
 --
 --  * Template.new(details)
---  * Template.object_by_name(tn, notfound)
+--  * Template.object_by_name(tn)
+--  * Template.object_by_name_or_nil(tn)
 --  * Template.path_by_name(tn, notfound)
 --  * t:register(path)
 --  * t:command_details(opcode)        [maybe - not properly considered yet]
@@ -60,8 +61,8 @@ end
 
 function Template:register()
   -- Check for a template already registered with the same name. (Warning only.)
-  if Template.object_by_name(self.name) ~= nil then
-    local curr_path = Template.path_by_name(self.name, 'error')
+  if Template.object_by_name_or_nil(self.name) ~= nil then
+    local curr_path = Template.path_by_name(self.name)
     lbt.log(2, "WARN: Template name <%s> already exists; overwriting.", self.name)
     lbt.log(2, "       * existing path: %s", curr_path)
     lbt.log(2, "       * new path:      %s", self.path)
@@ -88,18 +89,26 @@ end
 
 -- {{{ static methods
 
-function Template.object_by_name(tn, notfound)
+function Template.object_by_name(tn)
   local t = lbt.system.template_register[tn]
-  if t == nil and notfound == 'error' then
+  if t == nil then
     lbt.err.E200_no_template_for_name(tn)
   end
   return t
 end
 
-function Template.path_by_name(tn, notfound)
+function Template.object_by_name_or_nil(tn)
+  local t = lbt.system.template_register[tn]
+  if t == nil then
+    return nil
+  end
+  return t
+end
+
+function Template.path_by_name(tn)
   local t = lbt.system.template_register[tn]
   local path = t and t.path
-  if path == nil and notfound == 'error' then
+  if path == nil then
     lbt.err.E200_no_template_for_name(tn)
   end
   return path

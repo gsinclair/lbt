@@ -98,7 +98,7 @@ end
 
 function ParsedContent:template_object_or_error()
   local tn = self:template_name()
-  local t = lbt.fn.Template.object_by_name(tn, 'error')
+  local t = lbt.fn.Template.object_by_name(tn)
   return t
 end
 

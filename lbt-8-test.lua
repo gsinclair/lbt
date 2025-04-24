@@ -466,7 +466,7 @@ end
 local function T_simplemath()
   lbt.api.set_log_channels('allbuttrace')
   -- Gain backdoor access to the simplemath macro
-  local t = lbt.fn.Template.object_by_name('lbt.Math', 'error')
+  local t = lbt.fn.Template.object_by_name('lbt.Math')
   local m = t.macros.simplemath
   local assert_math = function(input, expected)
     local actual = m(input)

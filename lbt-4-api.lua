@@ -343,7 +343,7 @@ end
 lbt.api.macro_define = function (text)
   -- lm = latex macro   tn = template name   fn = function name
   local lm, tn, fn = lbt.fn.parse_macro_define_argument(text)
-  local t = lbt.fn.Template.object_by_name(tn)
+  local t = lbt.fn.Template.object_by_name_or_nil(tn)
   if t == nil then
     lbt.err.E158_macro_define_error("Template doesn't exist: %s", tn)
   elseif t.macros == nil then
@@ -374,7 +374,7 @@ lbt.api.macro_run = function (t)
   local fn = t.macro      -- fn is 'function name' (e.g. myvec)
   local eid = t.eid       -- expansion id for the LBT document in which the macro call occurred
   local arg = t.arg       -- the argument to the macro (e.g. '4 6 -1')
-  local template = lbt.fn.Template.object_by_name(tn)
+  local template = lbt.fn.Template.object_by_name_or_nil(tn)
   if template == nil then
     lbt.err.E159_macro_run_error("Template doesn't exist: %s", tn)
   end

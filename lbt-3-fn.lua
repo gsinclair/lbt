@@ -458,7 +458,7 @@ lbt.fn.impl.consolidated_sources = function (pc, template)
   end
   local result = pl.List()
   for name in sources:iter() do
-    local t = lbt.fn.Template.object_by_name(name)
+    local t = lbt.fn.Template.object_by_name_or_nil(name)
     if t then
       result:append(name)
     else
@@ -467,7 +467,7 @@ lbt.fn.impl.consolidated_sources = function (pc, template)
   end
   local basic_sources = result:filter(function(x) return x == 'lbt.Basic' end)
   if basic_sources:len() == 0 then
-    local _ = lbt.fn.Template.object_by_name('lbt.Basic', 'error')
+    local _ = lbt.fn.Template.object_by_name('lbt.Basic')
     result:append('lbt.Basic')
   end
   return result
