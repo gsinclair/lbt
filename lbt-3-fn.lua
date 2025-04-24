@@ -135,7 +135,7 @@ lbt.fn.latex_expansion_of_parsed_content = function (pc)
   local template = pc:template_object_or_error()
   local ctx = lbt.fn.ExpansionContext.new {
     pc = pc,
-    template = template,
+    template = template.name,
     sources = lbt.fn.impl.consolidated_sources(pc, template)
   }
   lbt.fn.set_current_expansion_context(ctx)
@@ -267,6 +267,7 @@ lbt.fn.latex_for_command = function (parsed_command)
   lbt.fn.impl.inc_command_count()
   -- 5. Expand register references where necessary.
   --    We are not necessarily in mathmode, hence false.
+  if opcode == 'TEXT' and args[1]:startswith('Euler') then DEBUGGER() end
   args = args:map(lbt.fn.impl.expand_register_references, false)
   for k, v in kwargs:iter() do
     v = lbt.fn.impl.expand_register_references(v, false)
@@ -443,11 +444,8 @@ end
 -- It is imperative that lbt.Basic appear somewhere, without having to be named
 -- by the user. It might as well appear at the end, so we add it.
 --
--- Return: a List of source template _objects_ in the order they should be referenced.
--- Error: if any template name cannot be resolved into a template object.
---
--- TODO: I want this to be just _names_ instead. Code can use the template registry
--- to gain access to the actual templates.
+-- Return: a List of source template _names_ in the order they should be referenced.
+-- Client code will use `Template.object_by_name(name)` to access the actual template.
 --
 lbt.fn.impl.consolidated_sources = function (pc, template)
   local src1 = pc:extra_sources()          -- optional specific source names (List)
@@ -462,15 +460,15 @@ lbt.fn.impl.consolidated_sources = function (pc, template)
   for name in sources:iter() do
     local t = lbt.fn.Template.object_by_name(name)
     if t then
-      result:append(t)
+      result:append(name)
     else
-      lbt.err.E206_cant_form_list_of_sources(name)
+      lbt.err.E206_cant_form_list_of_sources(name)  -- TODO: look to improve this error message
     end
   end
-  local basic_sources = result:filter(function(s) return s.name == 'lbt.Basic' end)
+  local basic_sources = result:filter(function(x) return x == 'lbt.Basic' end)
   if basic_sources:len() == 0 then
-    local basic = lbt.fn.Template.object_by_name('lbt.Basic', 'error')
-    result:append(basic)
+    local _ = lbt.fn.Template.object_by_name('lbt.Basic', 'error')
+    result:append('lbt.Basic')
   end
   return result
 end

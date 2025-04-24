@@ -73,8 +73,9 @@ function ExpansionContext:resolve_oparg(qkey)
   if value ~= nil then return self:opargs_cache_store(qkey, value) end
   -- (5)
   local scope, option = lbt.core.oparg_split_qualified_key(qkey)
-  for s in self.sources:iter() do
-    local spec = s.opargs[scope]
+  for name in self.sources:iter() do
+    local template = lbt.fn.Template.object_by_name(name, 'error')
+    local spec = template.opargs[scope]
     if spec and spec[option] ~= nil then
       value = spec[option]
       if value ~= nil then return self:opargs_cache_store(qkey, value) end
@@ -107,7 +108,8 @@ end
 impl.comprehensive_command_lookup_map = function(sources)
   local result = pl.Map()
   local sources_rev = sources:clone(); sources_rev:reverse()
-  for template in sources_rev:iter() do
+  for name in sources_rev:iter() do
+    local template = lbt.fn.Template.object_by_name(name, 'error')
     result:update(template:command_register())
   end
   return result
