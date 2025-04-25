@@ -8,6 +8,9 @@ local reg = {}   -- namespace for functions to do with registers
 
 local F = string.format
 
+lbt.fn.test = {} -- namespace in which certain private functions are shared
+                 -- for testing purposes
+
 -- {{{ (lbt.fn) expansion ID, expansion content, command count -----------------
 
 lbt.fn.current_expansion_id = function ()
@@ -509,5 +512,12 @@ function reg.register_store(record)
   -- TODO: check whether this name is already assigned and not expired
   lbt.var.registers[record.name] = record
 end
+
+-- }}}
+
+-- {{{ (lbt.fn.test) exposure to some private functions for testing ------------
+
+lbt.fn.test.consolidated_sources = auth.consolidated_sources
+lbt.fn.test.pragmas_and_content = auth.pragmas_and_content
 
 -- }}}

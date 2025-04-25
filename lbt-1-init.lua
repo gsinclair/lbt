@@ -185,7 +185,7 @@ lbt.fn = {
   ParsedContent = {},     -- defined in lbt-3-fn-1-parsed_content.lua
   ExpansionContext = {},  -- defined in lbt-3-fn-2-expansion_context.lua
   Command = {},           -- defined in lbt-3-fn-3-command.lua
-  impl = {},              -- a place for low-level implementation functions to go
+  LatexForCommand = {},   -- defined in lbt-3-fn-4-latex_for_command.lua
 }
 
 

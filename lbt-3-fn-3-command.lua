@@ -288,6 +288,9 @@ function Command:error_in_arguments()
     local max = spec.posargs[2]
     if nargs < min or nargs > max then
       local msg = F("%d args given but %d..%d expected", nargs, min, max)
+      if max > 1000 then
+        msg = F("%d args given but %d+ expected", nargs, min)
+      end
       lbt.log('emit', '    --> ERROR: %s', msg)
       lbt.log(1, 'Error attempting to expand opcode:\n    %s', msg)
       return msg
