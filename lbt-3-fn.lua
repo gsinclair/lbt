@@ -178,7 +178,8 @@ lbt.fn.latex_expansion_of_parsed_content = function (pc)
   if type(template.init) == 'function' then template.init() end
   -- And...go!
   ;   lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
-  local result = template.expand(pc)
+  local expander = template.expand or lbt.api.default_template_expander()
+  local result = expander(pc)
   ;   lbt.log(4, ' ~> result has %d bytes', #result)
   lbt.fn.unset_current_expansion_context()
   return result
