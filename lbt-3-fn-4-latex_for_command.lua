@@ -39,7 +39,7 @@ function LatexForCommand:latex()
   ;   if errmsg then return err.command_arguments_invalid(errmsg) end
 
   -- (3) Increase the command count so register lifetimes can be tracked.
-  impl.inc_command_count()
+  lbt.fn.inc_command_count()
 
   -- (4) Expand register references in posargs and kwargs.
   local posargs, kwargs = impl.expand_register_references(cmd, self.register_expander)
@@ -78,14 +78,6 @@ end
 -- }}}
 
 -- {{{ implementation functions ------------------------------------------------
-
-function impl.inc_command_count()
-  local command_count = lbt.var.command_count
-  if command_count == nil then
-    lbt.err.E001_internal_logic_error('current command_count not set')
-  end
-  lbt.var.command_count = command_count + 1
-end
 
 function impl.expand_register_references(cmd, expander_function)
   local posargs = cmd:posargs(); local kwargs = cmd:kwargs()
