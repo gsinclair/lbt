@@ -4,6 +4,7 @@
 \RequirePackage{luacode}   % and luatextras, luacodeloader etc.?
 \RequirePackage[shortlabels]{enumitem}  % things like QQ and MC depend on it
 \RequirePackage{mathtools} % loads amsmath, and is standard these days for scientific documents
+\RequirePackage{float}     % best practice for modern documents; gives float styles and H placement
 \RequirePackage{amssymb}   % another standard package; this loads amsfonts too
 %                          % I will omit amsthm as that is more specialised and a user could
 %                          % choose a different theorem package like tcolorbox
@@ -12,7 +13,8 @@
 \RequirePackage{changepage} % to get \adjustwidth for EXAMPLE and NOTE in WS0
 \RequirePackage{multicol}  % lbt.Basic supports 'COLUMNS 3' and 'ENDCOLUMNS'
 \RequirePackage{microtype} % A generally good thing to have.
-\RequirePackage{fancyvrb}  % need \Verb in some error messages (\verb doesn't work)
+\RequirePackage{fvextra}   % need \Verb in some error messages (\verb doesn't work); also
+                           %   implement a rich VERBATIM
 \RequirePackage{color} % color is needed to signal processing errors
   \definecolor{lbtError}{rgb}{1.0, 0.03, 0.0}
 \RequirePackage{tabularray} % tables are a common need!
@@ -43,7 +45,7 @@
   require('lbt-4-api')
   require('lbt-5-parser')
   require('lbt-6-err')
-
+ 
   -- Load the builtin templates.
   local register_builtin = function (lua_file)
     local spec = require(lua_file)          -- the file contains a template specification
