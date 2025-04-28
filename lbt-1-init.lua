@@ -23,7 +23,7 @@ lbt.system = {}
 
 -- lbt.const contains constant data used by a single expansion.
 --
--- It is reset using lbt.init.reset_const() every time a new expansion begins 
+-- It is reset using lbt.init.reset_const() every time a new expansion begins
 --
 -- The constants are a list of lines typed by the author in the `lbt`
 -- environment, and a list of source templates to search when trying to resolve
@@ -208,4 +208,3 @@ lbt.err = {}
 
 -- lbt.test contains unit tests.
 lbt.test = {}
-

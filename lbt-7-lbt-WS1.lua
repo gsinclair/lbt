@@ -65,7 +65,7 @@ local function intro_box(data)
   x:append([[\begin{tblr}{
     width=0.8\textwidth,
     colspec = lX,
-    rowsep = 0.4em, 
+    rowsep = 0.4em,
     column{1} = {font = \bfseries}
   }]])
   helper('PROBLEM', 'Problem')

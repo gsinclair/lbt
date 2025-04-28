@@ -1,14 +1,34 @@
 \documentclass{article}
+\usepackage{fancyvrb}
+\usepackage[svgnames,table]{xcolor}
 
-\usepackage{markdown}
-\usepackage{enumitem}
+% Define a stylish custom verbatim environment
+\DefineVerbatimEnvironment{MyCodeBlock}{Verbatim}{
+  fontsize=\small,
+  frame=single,
+  rulecolor=\color{blue!70!black},
+  framerule=0.8pt,
+  framesep=6pt,
+  xleftmargin=1em,
+  xrightmargin=1em,
+  bgcolor=blue!5,
+  numbers=left,
+  numbersep=8pt,
+  numberblanklines=false,
+  numberstyle=\tiny\color{gray}
+}
 
 \begin{document}
 
-\begin{itemize}
-\item One
-\item Two 
-\item Three 
-\end{itemize} 
+Here is some normal text.
+
+\begin{MyCodeBlock}
+def add(a, b):
+    return a + b
+
+print(add(2, 3))
+\end{MyCodeBlock}
+
+More text follows here.
 
 \end{document}

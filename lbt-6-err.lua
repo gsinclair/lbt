@@ -91,7 +91,7 @@ lbt.err.E215_invalid_template_details = function(td, path, error_details)
 E215: Invalid template details. An attempt was made to register a
 template with a table that has missing or invalid information. A Lua
 file that describes a template should have at the bottom:
-  
+
   return {
     name      = <string>,
     desc      = <string>,

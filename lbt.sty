@@ -45,7 +45,7 @@
   require('lbt-4-api')
   require('lbt-5-parser')
   require('lbt-6-err')
- 
+
   -- Load the builtin templates.
   local register_builtin = function (lua_file)
     local spec = require(lua_file)          -- the file contains a template specification
@@ -80,20 +80,20 @@
 {\directlua{lbt.api.author_content_collect()}}%
 {\directlua{lbt.api.author_content_emit_latex()}}
 
-\newcommand{\lbtDraftModeOn}{\directlua{lbt.api.set_draft_mode(true)}} 
-\newcommand{\lbtDraftModeOff}{\directlua{lbt.api.set_draft_mode(false)}} 
+\newcommand{\lbtDraftModeOn}{\directlua{lbt.api.set_draft_mode(true)}}
+\newcommand{\lbtDraftModeOff}{\directlua{lbt.api.set_draft_mode(false)}}
 
-\newcommand{\lbtTemplateDirectory}[1]{\directlua{lbt.api.add_template_directory("#1")}} 
+\newcommand{\lbtTemplateDirectory}[1]{\directlua{lbt.api.add_template_directory("#1")}}
 
 \newcommand{\lbtGlobalOptions}[1]{%
   \directlua{lbt.api.add_global_options("#1")}}
 
-\newcommand{\lbtLogChannels}[1]{\directlua{lbt.api.set_log_channels("#1")}} 
+\newcommand{\lbtLogChannels}[1]{\directlua{lbt.api.set_log_channels("#1")}}
 
-\newcommand{\lbtDefineLatexMacro}[1]{\directlua{lbt.api.macro_define("#1")}} 
+\newcommand{\lbtDefineLatexMacro}[1]{\directlua{lbt.api.macro_define("#1")}}
 
-\newcommand{\lbtPersistentCounterReset}[1]{\directlua{lbt.api.persistent_counter_reset('#1')}} 
-\newcommand{\lbtPersistentDataSet}[1]{\directlua{lbt.api.persistent_data_set_keyval('#1')}} 
+\newcommand{\lbtPersistentCounterReset}[1]{\directlua{lbt.api.persistent_counter_reset('#1')}}
+\newcommand{\lbtPersistentDataSet}[1]{\directlua{lbt.api.persistent_data_set_keyval('#1')}}
 
 % This command (actually, setting) is best described with an example.
 % In lbt.WS0, the worksheet is manually added to the table of contents.
@@ -102,6 +102,6 @@
 % Likely usage: redefine it in a \begingroup .. \endgroup so it reverts afterwards.
 % While in general I prefer settings to be in Lua rather than in Latex, in this case
 % it makes sense to use Latex so that it can be in a group, as described above.
-\newcommand{\lbtCurrentContentsLevel}{section} 
+\newcommand{\lbtCurrentContentsLevel}{section}
 
 % \newcommand{\lbtResetChapterCounters}{\luaexec{lbt.api.reset_chapter_counters()}}

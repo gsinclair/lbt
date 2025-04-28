@@ -38,7 +38,7 @@ https://github.com/gsinclair/lua-based-templates
 
 ## Files
 
-* `lbt.tex`: 
+* `lbt.tex`:
 * `lbt.lua`: The entry point to the Lua code of the package.
 * `vendor/*`: Third-party libraries used in the implementation: penlight.
 * `documentation.tex`: The LaTeX code to generate the documentation
@@ -64,7 +64,7 @@ https://github.com/gsinclair/lua-based-templates
     make install
 
     # What gets run:
-    # 
+    #
     # rm -rf ~/Library/texmf/tex/luatex/lua-based-templates
     # mkdir -p ~/Library/texmf/tex/luatex/lua-based-templates
     # cp -f lbt.tex ~/Library/texmf/tex/luatex/lua-based-templates
@@ -74,7 +74,7 @@ https://github.com/gsinclair/lua-based-templates
 ## Compile the documentation:
 
     # I don't know about this yet. This is what CLOZE does.
-    # 
+    #
     # lualatex --shell-escape documentation.tex
     # makeindex -s gglo.ist -o documentation.gls documentation.glo
     # makeindex -s gind.ist -o documentation.ind documentation.idx
