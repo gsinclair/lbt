@@ -7,4 +7,4 @@ tmp
 *.aux
 *.dbg
 _minted*
-/test/dbg-tex/
+dbg-tex/

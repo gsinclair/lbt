@@ -1,0 +1,113 @@
+\documentclass[a4paper,oneside,11pt,article]{memoir}
+
+\usepackage{lbt}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{newpxtext}
+\usepackage{tcolorbox}
+\usepackage{caption}
+  \captionsetup{labelfont={small,bf,color=blue4},textfont={small,color=blue4},labelsep=quad,margin=10pt}
+\usepackage[hidelinks]{hyperref}
+\usepackage{cleveref}
+
+\setsecnumdepth{subsubsection}
+\renewcommand{\thefootnote}{\textcolor{blue4}{\arabic{footnote}}}
+
+\lbtLogChannels{all}
+\lbtTemplateDirectory{PWD/templates}
+\lbtGlobalOptions{vector.format = bold}
+
+\lbtDefineLatexMacro{integral=lbt.Math:integral}
+\lbtDefineLatexMacro{V=lbt.Math:vector}
+\lbtDefineLatexMacro{Vijk=lbt.Math:vectorijk}
+\lbtDefineLatexMacro{sm=lbt.Math:simplemath}
+\lbtDefineLatexMacro{smallnote=lbt.WS0:smallnote}
+\lbtDefineLatexMacro{mathlistand=lbt.Math:mathlistand}   % TODO: add to other tex files
+\lbtDefineLatexMacro{mathlistor=lbt.Math:mathlistor}     % TODO: add to other tex files
+\lbtDefineLatexMacro{mathlist=lbt.Math:mathlist}   % TODO: add to other tex files
+\lbtDefineLatexMacro{mathlistdots=lbt.Math:mathlistdots}   % TODO: add to other tex files
+\lbtDefineLatexMacro{mathsum=lbt.Math:mathsum}     % TODO: add to other tex files
+\fvset{formatcom=\obeyspaces}
+\hfuzz=5pt
+
+% \setcounter{tocdepth}{2}
+
+% ----------------------------------------------------------------------
+
+\begin{document}
+
+\lbtDraftModeOff{}
+
+{\Huge LBT examples}
+
+\settocdepth{subsubsection}
+\tableofcontents
+\clearpage
+
+\newcommand{\package}[1]{{\color{NavyBlue}\textsf{#1}}}
+\newcommand{\code}[1]{{\color{NavyBlue}\texttt{#1}}}
+\newcommand{\boldcode}[1]{{\bfseries\color{NavyBlue}\texttt{#1}}}
+\newcommand{\lbtlogo}{\textsc{lbt}}
+
+\begin{lbt}
+  @META
+    TEMPLATE   lbt.Doc.Chapter
+    TITLE      Demonstrations of core LBT features
+    LABEL      ch-demonstration
+    SOURCES    LbtDoc
+
+  +BODY
+    SECTION Basics
+
+    SUBSECTION Verbatim text
+    TEXT The command \code{VERBATIM} opens a \code{Verbatim} environment from the \package{fancyvrb} package. Note the use of the \lbtlogo{} primitive \boldcode{.v} to provide verbatim text to the command.
+    LBTEXAMPLE :: (substitute) /ENDV/>>/ :: .v <<
+      VERBATIM .v <<
+        10 PRINT "Hello"
+        20 GOTO 10
+      ENDV
+    >>
+\end{lbt}
+
+\begin{lbt}
+  @META
+    TEMPLATE   lbt.Doc.Section
+    TITLE      Things outside of lbt.Basic
+    LABEL      sec-examples
+    SOURCES    LbtDoc, lbt.Questions
+
+  +BODY
+    SUBSECTION Questions for worksheets
+
+    TEXT The \package{lbt.Questions} template offers useful commands for typesetting questions, subquestions, and multiple-choice options.
+
+    TEXT Use \code{Q} for a top-level question and \code{QQ} for a question part. Use \code{QQ*} for question parts laid out horizontally.
+
+    LBTEXAMPLE .o vertical :: .v <<
+      Q Name three different kinds of clouds.
+
+      Q Evaluate the following.
+      QQ $3 + 12 / 4$
+      QQ $(3 + 12) / 4$
+
+      Q How many vowels appear in each word?
+      QQ* [ncols=3]
+      :: appear :: Augustine :: crimsom :: toast :: glyph :: transformer
+    >>
+
+    TEXT Use \code{MC} or \code{MC*} to lay out \textbf{multiple-choice options}.
+
+    LBTEXAMPLE .o vertical :: .v <<
+      Q Which planet of the solar system has the most moons?
+      MC Earth :: Mars :: Jupiter :: Saturn
+
+      Q Which planet of the solar system has the fewest moons?
+      MC* [ncols=4] :: Mercury :: Venus :: Uranus :: Neptune
+    >>
+
+    SUBSUBSECTION Further things to know
+
+    TEXT \dots
+
+\end{lbt}
+
+\end{document}

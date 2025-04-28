@@ -1,0 +1,151 @@
+\documentclass[a4paper,oneside,11pt,article]{memoir}
+
+\usepackage{lbt}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{newpxtext}
+\usepackage{parskip}
+\usepackage{tcolorbox}
+\usepackage{pdfpages}     % \includepdf
+\usepackage{caption}
+  \captionsetup{labelfont={small,bf,color=blue4},textfont={small,color=blue4},labelsep=quad,margin=10pt}
+\usepackage[hidelinks]{hyperref}
+\usepackage{cleveref}
+
+\renewcommand{\thefootnote}{\textcolor{blue4}{\arabic{footnote}}}
+
+\lbtLogChannels{all}
+
+\lbtGlobalOptions{vector.format = bold}
+\lbtTemplateDirectory{PWD/templates}
+
+\lbtDefineLatexMacro{integral=lbt.Math:integral}
+\lbtDefineLatexMacro{V=lbt.Math:vector}
+\lbtDefineLatexMacro{Vijk=lbt.Math:vectorijk}
+\lbtDefineLatexMacro{sm=lbt.Math:simplemath}
+\lbtDefineLatexMacro{smallnote=lbt.WS0:smallnote}
+\lbtDefineLatexMacro{mathlistand=lbt.Math:mathlistand}   % TODO: add to other tex files
+\lbtDefineLatexMacro{mathlistor=lbt.Math:mathlistor}     % TODO: add to other tex files
+\lbtDefineLatexMacro{mathlist=lbt.Math:mathlist}   % TODO: add to other tex files
+\lbtDefineLatexMacro{mathlistdots=lbt.Math:mathlistdots}   % TODO: add to other tex files
+\lbtDefineLatexMacro{mathsum=lbt.Math:mathsum}     % TODO: add to other tex files
+
+\hfuzz=5pt
+
+\setcounter{tocdepth}{2}
+
+% ----------------------------------------------------------------------
+
+\begin{document}
+
+% ------------------------------------------------------------ Commands etc.
+\DefineVerbatimEnvironment{CodeSample}{Verbatim}{
+  breaklines=true,
+  fontsize=\small,
+  frame=single,
+  xleftmargin=5mm
+}
+\DefineShortVerb{\|}
+\lbtDraftModeOff{}
+\newcommand{\q}[1]{`#1'}
+\newcommand{\qq}[1]{``#1''}
+\setlist[itemize]{itemsep=2pt, topsep=1pt}
+\newcommand{\package}[1]{{\color{NavyBlue}\textsf{#1}}}
+\newcommand{\code}[1]{{\color{NavyBlue}\texttt{#1}}}
+\newcommand{\boldcode}[1]{{\bfseries\color{NavyBlue}\texttt{#1}}}
+\newcommand{\lbtlogo}{\textsc{lbt}}
+
+
+% ------------------------------------------------------------ Title page
+{\Huge LBT documentation}
+\clearpage
+
+% ------------------------------------------------------------ Contents
+\tableofcontents
+\clearpage
+
+% ------------------------------------------------------------ Ch: An introduction to LBT
+\begin{lbt}
+  @META
+    TEMPLATE   lbt.Doc.Chapter
+    TITLE      An introduction to LBT
+    LABEL      sec-introduction
+    SOURCES    LbtDoc, lbt.Questions
+
+  +BODY
+    CODESAMPLE .o float, position=hbp
+    :: (label) fig:openingsample
+    :: (caption) A code sample using only basic commands
+    :: .v <<
+      TEXT We consider the following modern surrealist painters in turn:
+      ITEMIZE
+      :: Salvdore Dali;
+      :: Ren\'e Magritte, whose \emph{The Son of Man} appears below;
+      :: Max Ernst.
+
+      TEXT Some key information about these painters is shown in \cref{table:artists}.
+
+      TABLE .o float, position=p
+      :: (spec) colspec={llr}, row{1}={bf}
+      :: (caption) Key information about three painters
+      :: (label) table:artists
+      :: Painter  & Nationality & Number of paintings
+      :: \hline
+      :: Dali     & Spanish     & 1500
+      :: Magritte & Belgian     & 370
+      :: Ernst    & German      & 600
+    >>
+
+    TEXT LBT, short for \emph{Lua-based templates}, is a package for LuaLatex that can simplify document writing in a number of ways. If you just want to write an ordinary article containing paragraphs, lists, tables, and figures, it has much to offer you with little to learn. For instance, you should have little trouble predicting the Latex output of the document code in \cref{fig:openingsample}.
+
+    TEXT A few aspects of LBT you can see right away:
+    ITEMIZE
+    :: Every paragraph or other vertical object is brought into being by a \emph{command}.
+    :: Commands have an \emph{opcode} (|TEXT|, |ITEMIZE|, |TABLE|) and \emph{arguments}.
+    :: Arguments (e.g. the lines in |ITEMIZE| or the rows of a table) are separated by |::|.
+    :: Commands can have \emph{optional arguments} (\qq{opargs} for short) that customise the output. For example, |TABLE .o float| produces a floating table, whereas a plain |TABLE| produces a table right there in the text.
+    :: Commands can have \emph{keyword arguments} (\qq{kwargs} for short) that give necessary infomation (table specification, caption, label) to the command in a structured way.
+    :: The end of the |ITEMIZE| command is implicit. We are accessing an environment without needing to provide an |\end{...}|.
+
+    TEXT There is far more that can and will be said about these, but it's worth pausing to consider \emph{why} the items above might be good things. This is, of course, a matter of opinion.
+    ITEMIZE
+    :: Documents generally have vertical structure, and explicit commands with upper case opcodes serve to highlight that structure.
+    :: Having arguments separated by |::| spreads them out and gives a much more readable result than the backslashes and braces so common in Latex code.
+    :: Optional arguments offer a lot of scope for per-command customisation.
+    :: Keyword arguments allow commands to receive information in a way that is readable, not dependent on order, and not cramped.
+
+    LBTEXAMPLE .o float, vertical, position = p
+    :: (caption) Typesetting some questions using the built-in \package{lbt.Questions} template
+    :: (label) fig:xyz
+    :: .v <<
+      Q Name three different kinds of clouds.
+
+      Q Evaluate the following.
+      QQ $3 + 12 / 4$
+      QQ $(3 + 12) / 4$
+
+      Q How many vowels appear in each word?
+      QQ* [ncols=3]
+      :: appear :: Augustine :: crimsom :: toast :: glyph :: transformer
+
+      Q Which planet of the solar system has the most moons?
+      MC Earth :: Mars :: Jupiter :: Saturn
+
+      Q Which planet of the solar system has the fewest moons?
+      MC* [ncols=4] :: Mercury :: Venus :: Uranus :: Neptune
+    >>
+
+    TEXT Moving beyond basic structures, consider the example in \cref{fig:xyz}, which typesets some questions that could appear on an educational handout. The brevity of the document code is remarkable, compared with \dots
+\end{lbt}
+
+% ------------------------------------------------------------ Ch: Examples of use
+\begin{lbt}
+  @META
+    TEMPLATE   lbt.Doc.Chapter
+    TITLE      Examples of use
+    LABEL      sec-examples
+
+  +BODY
+    TEXT Hello
+\end{lbt}
+
+\end{document}
