@@ -122,7 +122,7 @@ local db_functions = {
     -- -- Now I have the entry from the database, I need to get LBT to process it.
     -- -- For now, just return number of characters.
     -- return text:sub(1,10)
-    return db_process_text_into_latex(text)
+    return lbt.util.lbt_commands_text_into_latex(text)
   end,
 
   key = function(t)

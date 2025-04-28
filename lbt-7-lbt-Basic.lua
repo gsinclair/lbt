@@ -202,7 +202,7 @@ end
 
 -- Itemize and enumerate
 
-op.ITEMIZE = { notop = false, compact = false, sep = 1 }
+op.ITEMIZE = { notop = false, compact = false, sep = 1, env = 'nil' }
 ;           -- ^^^^^ NOTE: noX is now implemented; shouldn't need explicit notop
 a.ITEMIZE = '1+'
 f.ITEMIZE = function (n, args, o, k)
@@ -225,16 +225,18 @@ f.ITEMIZE = function (n, args, o, k)
   -- build result
   local prepend_item = function(text) return [[\item ]] .. text end
   local items = args:map(prepend_item):join("\n  ")
-  local result = F([[
-\begin{itemize}[%s]
-  %s
-\end{itemize}
-  ]], spec, items)
-  return result
+  return T {
+    [[\begin{!ENV!}[!OPTIONS!] ]],
+    items,
+    [[\end{!ENV!} ]],
+    values = {
+      ENV = o.env or 'itemize',
+      OPTIONS = spec
+    }
+  }
 end
 
 -- TODO: Factor out code from ITEMIZE and ENUMERATE.
--- TODO: Support custom environments via .o env=...
 op.ENUMERATE = { notop = false, compact = false }
 ;             -- ^^^^^ NOTE: noX is now implemented; shouldn't need explicit notop
 a.ENUMERATE = '1+'
@@ -255,12 +257,15 @@ f.ENUMERATE = function (n, args, o, k)
   -- build result
   local prepend_item = function(text) return [[\item ]] .. text end
   local items = args:map(prepend_item):join("\n  ")
-  local result = F([[
-\begin{enumerate}[%s]
-  %s
-\end{enumerate}
-  ]], spec, items)
-  return result
+  return T {
+    [[\begin{!ENV!}[!OPTIONS!] ]],
+    items,
+    [[\end{!ENV!} ]],
+    values = {
+      ENV = o.env or 'enumerate',
+      OPTIONS = spec
+    }
+  }
 end
 
 -- Headings H1 H2 H3
@@ -294,29 +299,35 @@ end
 
 -- Columns (because why not? And because multicols doesn't let you do 1 col)
 a.COLUMNS = 1
-f.COLUMNS = function(n, args)
+op.COLUMNS = { starred = false }
+f.COLUMNS = function(n, args, o)
   local ncols = tonumber(args[1])
   if ncols == nil or n < 1 then
     return { error = 'COLUMNS argument must be a positive integer' }
   elseif ncols == 1 then
-    lbt.api.data_set('Basic.ncols', 1)
+    lbt.api.data_set('Basic.COLUMNS.ncols', 1)
     return ''
   else
-    lbt.api.data_set('Basic.ncols', ncols)
-    return F([[\begin{multicols}{%d}]], ncols)
+    lbt.api.data_set('Basic.COLUMNS.ncols', ncols)
+    local starred = ''
+    if o.starred then starred = '*' end
+    lbt.api.data_set('Basic.COLUMNS.starred', starred)
+    return F([[\begin{multicols%s}{%d}]], starred, ncols)
   end
 end
 
 a.ENDCOLUMNS = 0
 f.ENDCOLUMNS = function (n, args)
-  local ncols = lbt.api.data_get('Basic.ncols')
-  lbt.api.data_delete('Basic.ncols')
+  local ncols = lbt.api.data_get('Basic.COLUMNS.ncols')
+  local starred = lbt.api.data_get('Basic.COLUMNS.starred')
+  lbt.api.data_delete('Basic.COLUMNS.ncols')
+  lbt.api.data_delete('Basic.COLUMNS.starred')
   if ncols == nil then
     return { error = 'ENDCOLUMNS without COLUMNS' }
   elseif ncols == 1 then
     return ''
   else
-    return [[\end{multicols}]]
+    return F([[\end{multicols%s}]], starred)
   end
 end
 
@@ -518,9 +529,9 @@ a.VERBATIM = 1
 f.VERBATIM = function (n, args)
   local lines = args[1]
   return F([[
-    \begin{verbatim}
+    \begin{Verbatim}
       %s
-    \end{verbatim}
+    \end{Verbatim}
   ]], lines)
 end
 
