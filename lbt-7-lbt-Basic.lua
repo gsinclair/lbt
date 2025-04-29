@@ -268,6 +268,100 @@ f.ENUMERATE = function (n, args, o, k)
   }
 end
 
+-- LIST: a generalisation of ITEMIZE and ENUMERATE that uses them flexibly, including sublists.
+-- Example:
+--   LIST .o markers = * (a) i.    -- bullets for top level, then (a) (b) (c), then (i) (ii) (iii)
+--   :: Cats
+--   :: * Black
+--   :: * White
+--   :: Dogs
+--   :: * Large
+--   :: * * Bloodhound
+--   :: * * Labrador
+--   :: * Small
+--   :: * * Toy poodle
+--
+-- It takes any opargs that ITEMIZE or ENUMERATE do.
+-- TODO: Find a way to accept any opargs. Or perhaps 'update' some opargs like a dictionary.
+
+local itemize_markers = {
+  ['*'] = [[\textbullet]],
+  cdot  = [[$\cdot$]],
+  star  = [[$\star$]],
+  bigstar  = [[$\bigstar$]],
+  ast   = [[$\ast$]],
+  circ  = [[$\circ$]],
+  blackstar = '★',            -- replace with dingbat?
+  whitestar = '☆',
+  hand = [[\ding{43}]],
+  arrow = [[\ding{213}]],
+  check = [[\ding{51}]],
+  cross = [[\ding{55}]],
+  snowflake = [[\ding{101}]],
+  blacksquare = [[\ding{110}]],
+  todo = [[\ding{111}]],
+}
+
+local enumerate_markers = {
+  circnumsans  = { env = 'dingautolist', argument = '192'},
+  circnumserif = { env = 'dingautolist', argument = '172'},
+  circnum      = { env = 'dingautolist', argument = '192'}
+}
+
+a.LIST = '1+'
+op.LIST = { markers = '* * * *' }
+f.LIST = function(n, args, o)
+  local groups = lbt.util.analyse_indented_items(args, 'grouped')
+  local markers = lbt.util.space_split(o.markers)
+  local result = pl.List()
+  local additem  = function(text)  result:append(F([[\item %s]], text)) end
+  local additems = function(items) for x in items:iter() do additem(x) end end
+  -- local addbegin = function(env, mr) result:append(F([[\begin{%s}[%s] ]], env, mr)) end
+  local addbegin = function(t)
+    if t.argument then result:append(F([[\begin{%s}{%s}]], t.env, t.argument)) end
+    if t.option   then result:append(F([[\begin{%s}[%s] ]], t.env, t.option)) end
+  end
+  -- local addend   = function(env)   result:append(F([[\end{%s}]], env)) end
+  local addend   = function(t) result:append(F([[\end{%s}]], t.env)) end
+  local environment_for_marker = function(mr)
+    if itemize_markers[mr] then
+      return { env = 'itemize', option = itemize_markers[mr] }
+    end
+    if mr:isdigit() and tonumber(mr) >= 31 then
+      return { env = 'itemize', option = F([[\ding{%s}]], mr) }
+    end
+    if enumerate_markers[mr] then
+      return enumerate_markers[mr]
+    end
+    return { env = 'enumerate', option = mr }
+  end
+  local environment_for_level = function(n)
+    return environment_for_marker(markers[n+1])
+  end
+  local L = -1              -- current nested level
+  local stack = pl.List()   -- environments that have to be ended
+  for group in groups:iter() do
+    local level, items = table.unpack(group)
+    if level == L + 1 then
+      local t = environment_for_level(level)
+      stack:append(t)
+      addbegin(t)
+      additems(items)
+      L = level
+    elseif level < L then
+      while level < L do
+        addend(stack:pop())
+        L = L - 1
+      end
+      additems(items)
+    end
+  end
+  while stack:len() > 0 do
+    addend(stack:pop())
+  end
+  return result:join('\n')
+end
+
 -- Headings H1 H2 H3
 --   (plain design, specific templates can overwrite)
 a.H1 = 1

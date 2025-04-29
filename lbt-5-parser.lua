@@ -455,4 +455,21 @@ lbt.parser.parse_table_datarows = function(text)
   return r or nil
 end
 
+local listitem = P { 'item',
+  bullet = P('*'),
+  stars = (C(V'bullet') * hsp)^0,
+  item = hsp * Ct(V'stars') * C(RestOfLine),
+}
+
+lbt.parser.parse_list_item = function(text)
+  -- local f = function(x) return listitem:match(x) end
+  -- DEBUGGER()
+  local stars, rest = listitem:match(text)
+  if stars == nil then
+    return nil
+  else
+    return { #stars, rest }
+  end
+end
+
 -- }}}

@@ -1,34 +1,25 @@
 \documentclass{article}
-\usepackage{fancyvrb}
 \usepackage[svgnames,table]{xcolor}
-
-% Define a stylish custom verbatim environment
-\DefineVerbatimEnvironment{MyCodeBlock}{Verbatim}{
-  fontsize=\small,
-  frame=single,
-  rulecolor=\color{blue!70!black},
-  framerule=0.8pt,
-  framesep=6pt,
-  xleftmargin=1em,
-  xrightmargin=1em,
-  bgcolor=blue!5,
-  numbers=left,
-  numbersep=8pt,
-  numberblanklines=false,
-  numberstyle=\tiny\color{gray}
-}
+\usepackage[shortlabels]{enumitem}
 
 \begin{document}
 
-Here is some normal text.
-
-\begin{MyCodeBlock}
-def add(a, b):
-    return a + b
-
-print(add(2, 3))
-\end{MyCodeBlock}
-
-More text follows here.
+\begin{itemize}[\textbullet]   % BEGIN  0 - open environment and list all items
+  \item Cats
+    \begin{enumerate}[(a)]     % BEGIN  1 - open environment and list all items
+      \item Black
+      \item White
+        \begin{itemize}[--]    % BEGIN  2 - open environment and list all items
+          \item Furry
+          \item Cuddly
+        \end{itemize}          % END  2 - next level is 0 so we do two ends
+    \end{enumerate}            % END  1 - (second end)
+  \item Dogs                   %          This is level 0 and 0 < 2 so we just add list items
+    \begin{enumerate}[(a)]     % BEGIN  1
+      \item Fido
+      \item Spot
+    \end{enumerate}            % END  1
+\end{itemize}                  % END  0
 
 \end{document}
+

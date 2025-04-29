@@ -392,7 +392,17 @@ local function T_util()
   local d = lbt.util.parse_date('2023-07-22')
   EQ(d:year(), 2023); EQ(d:month(), 7); EQ(d:day(), 22)
   EQ(d:hour(), 12); EQ(d:min(), 0); EQ(d:sec(), 0)
+  -- Analyse list items for their different levels
+  local args = pl.List{'Cats', '* Black', '* White', 'Dogs', '* Large', '* * Labrador', '* * Bloodhound', '* Small', '* * Toy poodle',}
+  local expected1 = {{0, 'Cats'}, {1, 'Black'}, {1, 'White'}, {0, 'Dogs'}, {1, 'Large'}, {2, 'Labrador'}, {2, 'Bloodhound'}, {1, 'Small'}, {2, 'Toy poodle'}}
+  local expected2 = {{0, {'Cats'}}, {1, {'Black', 'White'}}, {0, {'Dogs'}}, {1, {'Large'}}, {2, {'Labrador', 'Bloodhound'}}, {1, {'Small'}}, {2, {'Toy poodle'}}}
+  local out1 = lbt.util.analyse_indented_items(args)
+  local out2 = lbt.util.analyse_indented_items(args, 'grouped')
+  EQ(out1, expected1)
+  EQ(out2, expected2)
 end
+
+
 
 local function T_number_in_alphabet()
   lbt.api.reset_global_data()

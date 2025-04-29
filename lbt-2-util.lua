@@ -8,6 +8,8 @@
 
 local F = string.format
 
+local impl = {}   -- namespace for helper functions
+
 -- `tex.print` but with formatting. Hint: local-alias this to `P`.
 function lbt.util.tex_print_formatted(text, ...)
   tex.print(string.format(text, ...))
@@ -438,6 +440,59 @@ end
 function lbt.util.split(text, sep)
   local result = pl.utils.split(text, sep)
   return pl.List(result)
+end
+
+-- Input: four arguments 'Cats' '* Black' '* White' 'Dogs' '* Large' '* * Bloodhound' '* * Labrador'
+-- Output, with grouped == nil:
+--   {0, Cats} {1, Black} {1, White} {0, Dogs} {1, Large} {2, Bloodhound} {2, Labrador}
+-- Output, with grouped == 'grouped':
+--   {0, {Cats}} {1, {Black, White}} {0, {Dogs}} {1, {Large}} {2, {Bloodhound, Labrador}}
+function lbt.util.analyse_indented_items(args, grouped)
+  if grouped == nil then
+    return args:map(impl.analyse_item)
+  elseif grouped == 'grouped' then
+    local items = lbt.util.analyse_indented_items(args, nil)
+    return impl.grouped_items(items)
+  else
+    error('lbt.util.analyse_indented_items: second argument must be nil or "grouped"')
+  end
+end
+
+impl.analyse_item = function(text)
+  return lbt.parser.parse_list_item(text)
+end
+
+-- Input:   {0, Cats} {1, Black} {1, White} {0, Dogs} {1, Large} {2, Bloodhound} {2, Labrador}
+-- Output:  {0, {Cats}} {1, {Black, White}} {0, {Dogs}} {1, {Large}} {2, {Bloodhound, Labrador}}
+impl.grouped_items = function(items)
+  local err = function () error('unable to group items for list') end
+  local mkentry = function(l,t) return { l, pl.List{t} } end
+  local addtext = function(e,t) e[2]:append(t) end
+  ;   if items:len() == 0 then err() end
+  local result = pl.List()
+  -- E is the 'current entry' and L is the 'current level'
+  local L, E, text, level
+  L, text = table.unpack(items[1])
+  ;   if L ~= 0 then err() end
+  E = mkentry(L, text)
+  result:append(E)
+  for i = 2,items:len() do
+    level, text = table.unpack(items[i])
+    if level == L then
+      addtext(E, text)
+    elseif level == L + 1 then
+      L = level
+      E = mkentry(L, text)
+      result:append(E)
+    elseif level > L + 1 then
+      err()
+    else
+      L = level
+      E = mkentry(L, text)
+      result:append(E)
+    end
+  end
+  return result
 end
 
 -- Replace curly quotes (single or double) with straight quotes.
