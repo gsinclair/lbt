@@ -19,8 +19,8 @@ function ExpansionContext.new(args)
     template       = args.template,
     sources        = args.sources,
     command_lookup = impl.comprehensive_command_lookup_map(args.sources),
-    opargs_global  = lbt.system.opargs_global,
     opargs_local   = lbt.core.DictionaryStack.new(),
+    opargs_global  = lbt.system.opargs_global,
     opargs_default = impl.comprehensive_oparg_default_map(args.sources),
     opargs_cache   = {},
   }
