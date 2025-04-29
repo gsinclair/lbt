@@ -237,7 +237,7 @@ f.ITEMIZE = function (n, args, o, k)
 end
 
 -- TODO: Factor out code from ITEMIZE and ENUMERATE.
-op.ENUMERATE = { notop = false, compact = false }
+op.ENUMERATE = { env = 'nil', notop = false, compact = false }
 ;             -- ^^^^^ NOTE: noX is now implemented; shouldn't need explicit notop
 a.ENUMERATE = '1+'
 f.ENUMERATE = function (n, args, o, k)
@@ -526,13 +526,18 @@ f.CENTER = function (n, args)
 end
 
 a.VERBATIM = 1
-f.VERBATIM = function (n, args)
+op.VERBATIM = { env = 'nil', breaklines = true }
+f.VERBATIM = function (n, args, o)
   local lines = args[1]
+  local env = 'Verbatim'
+  if o.env then env = o.env end
+  local spec = ''
+  if not o.env and o.breaklines then spec = '[breaklines]' end  -- XXX: temporary hack
   return F([[
-    \begin{Verbatim}
+    \begin{%s}%s
       %s
-    \end{Verbatim}
-  ]], lines)
+    \end{%s}
+  ]], env, spec, lines, env)
 end
 
 ----- TABLE and supporting code

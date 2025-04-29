@@ -8,3 +8,4 @@ tmp
 *.dbg
 _minted*
 dbg-tex/
+lbt.debuglog
