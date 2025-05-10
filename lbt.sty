@@ -1,26 +1,31 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{lbt}[2023/12/01 Lua-based templates]
 
+% \PassOptionsToPackage{dvipsnames,svgnames}{xcolor}
+
 \RequirePackage{luacode}   % and luatextras, luacodeloader etc.?
+\RequirePackage[dvipsnames,svgnames]{xcolor}    % color is needed to signal processing errors
 \RequirePackage[shortlabels]{enumitem}  % things like QQ and MC depend on it
-\RequirePackage{mathtools} % loads amsmath, and is standard these days for scientific documents
 \RequirePackage{float}     % best practice for modern documents; gives float styles and H placement
-\RequirePackage{amssymb}   % another standard package; this loads amsfonts too
-%                          % I will omit amsthm as that is more specialised and a user could
-%                          % choose a different theorem package like tcolorbox
+\RequirePackage{mathtools} % loads amsmath, and is standard these days for scientific documents
 \RequirePackage{esvect}    % to get \vv for vectors with arrows
 \RequirePackage{accents}   % to get \underaccent{\tilde} for vectors
+\RequirePackage{amssymb}   % another standard package; this loads amsfonts too
+\RequirePackage{unicode-math}  % \setmathfont command
+%                          % I will omit amsthm as that is more specialised and a user could
+%                          % choose a different theorem package like tcolorbox
 \RequirePackage{pifont}    % to get \ding{62} for list markers
 \RequirePackage{changepage} % to get \adjustwidth for EXAMPLE and NOTE in WS0
 \RequirePackage{multicol}  % lbt.Basic supports 'COLUMNS 3' and 'ENDCOLUMNS'
 \RequirePackage{microtype} % A generally good thing to have.
+\RequirePackage{siunitx}   % Generally good.
 \RequirePackage{fvextra}   % need \Verb in some error messages (\verb doesn't work); also
                            %   implement a rich VERBATIM
-\RequirePackage{color} % color is needed to signal processing errors
   \definecolor{lbtError}{rgb}{1.0, 0.03, 0.0}
 \RequirePackage{tabularray} % tables are a common need!
   \UseTblrLibrary{varwidth}
 \RequirePackage{pdfpages} % to get \includepdf in Basic
+% TODO: include tcolorbox? After all, Basic provides BOX.
 
 \begin{luacode*}
   -- Load penlight libraries from vendor directory.

@@ -21,8 +21,8 @@ end
 
 lbt.fn.LatexForCommand = LatexForCommand
 
--- Return:  (todo: check this!)
---   { status = 'ok', latex = [[\paragraph{Cats} Domestic creatures...]] }
+-- Return:
+--   { status = 'ok', latex = <list of Latex lines> }
 --   { status = 'error', errormsg = [[ ... ]] }
 --   { status = 'ctrl', ... }
 function LatexForCommand:latex()
@@ -53,8 +53,9 @@ function LatexForCommand:latex()
   ok, result = impl.classify_result(result, opcode)
   ;   if not ok then return 'error', result end
 
-  -- (6) Do some light processing of the result: apply options (no)par and pre-/post-space.
-  result = impl.post_process(result, cmd)
+  -- (6) Do some light processing of the result.
+  impl.post_process(result, cmd)
+  impl.slap_on_a_comment(result, cmd)
 
   -- (7) Done! Log the result and return.
   ;   impl.log_successful_result(result)
@@ -109,17 +110,43 @@ function impl.classify_result(result, opcode)
 end
 
 function impl.post_process(result, cmd)
-  local extras = cmd:oparg_values { 'par', 'prespace', 'postspace' }
+  local extras = cmd:oparg_values {
+    'par', 'pre', 'post', 'center', 'centre', 'adjustwidth', 'needspace'
+    -- NOTE: I plan to remove 'centre' and standardise on one spelling
+  }
   if extras.par then
-    result:append('\\par') -- TODO: replace with general_formatting_wrap ?
+    result:append('\\par')
   end
-  if extras.prespace then
-    result:insert(1, F([[\vspace{%s}]], extras.prespace))
+  if extras.needspace then
+    result:insert(1, [[\needspace{%s}]], extras.needspace)
   end
-  if extras.postspace then
-    result:append(F([[\vspace{%s}]], extras.postspace))
+  if extras.center or extras.centre then
+    result:insert(1, [[\begin{center}]])
+    result:append([[\end{center}]])
   end
-  return result
+  if extras.adjustwidth then
+    local specs = lbt.util.space_split(extras.adjustwidth)
+    if #specs ~= 2 then
+      lbt.err.E002_general('Command %s gave oparg `adjustwidth` value `%s`; two values needed',
+                           cmd.oparg, extras.adjustwidth)
+      result:insert(1, [[\begin{adjustwidth}]])
+      result:append([[\end{adjustwidth}]])
+    end
+  end
+  if extras.pre then
+    result:insert(1, F([[\vspace{%s}]], extras.pre))
+  end
+  if extras.post then
+    result:append(F([[\vspace{%s}]], extras.post))
+  end
+end
+
+function impl.slap_on_a_comment(result, cmd)
+  local comment_text = F([[
+%%
+%% %s
+%%]], cmd.opcode)
+  result:insert(1, comment_text)
 end
 
 function impl.log_successful_result(result)

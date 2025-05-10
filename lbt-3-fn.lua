@@ -168,14 +168,19 @@ end
 --
 lbt.fn.latex_expansion_of_parsed_content = function (pc)
   local template = pc:template_object_or_error()
+  local sources = auth.consolidated_sources(pc, template)
   local ctx = lbt.fn.ExpansionContext.new {
     pc = pc,
     template = template.name,
-    sources = auth.consolidated_sources(pc, template)
+    sources = sources
   }
   lbt.fn.set_current_expansion_context(ctx)
-  -- Allow the template to initialise counters, etc.
-  if type(template.init) == 'function' then template.init() end
+  -- Call init() on all sources to allow for counters, Latex commands, etc.
+  local sources_rev = sources:clone(); sources_rev:reverse()
+  for tn in sources_rev:iter() do
+    local T = lbt.fn.Template.object_by_name(tn)
+    if type(T.init) == 'function' then T.init() end
+  end
   -- And...go!
   ;   lbt.log(4, 'About to latex-expand template <%s>', pc:template_name())
   local expander = template.expand or lbt.api.default_template_expander()

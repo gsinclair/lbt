@@ -73,7 +73,7 @@ lbt.util.lbt_commands_text_into_latex = function (text)
   if not x.ok then
     lbt.err.E002_general('(util.lbt_commands_text_into_latex) could not parse commands:\n'..text)
   end
-  return lbt.fn.latex_for_commands(x.commands):join('\n\n')
+  return lbt.fn.latex_for_commands(x.commands):join('\n%\n')
 end
 
 -- `x` may be a string or a table.

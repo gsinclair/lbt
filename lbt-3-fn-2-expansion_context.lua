@@ -8,6 +8,13 @@
 
 local F = string.format
 
+local opargs_bedrock = {
+  par = true,              -- NOTE: slightly experimental
+  pre = 'nil',
+  post = 'nil',
+  center = false, centre = false
+}
+
 local ExpansionContext = {}
 ExpansionContext.mt = { __index = ExpansionContext }
 local impl = {}
@@ -22,6 +29,7 @@ function ExpansionContext.new(args)
     opargs_local   = lbt.core.DictionaryStack.new(),
     opargs_global  = lbt.system.opargs_global,
     opargs_default = impl.comprehensive_oparg_default_map(args.sources),
+    opargs_bedrock = opargs_bedrock,
     opargs_cache   = {},
   }
   o.opargs_local:push(args.pc:opargs_local())
@@ -44,7 +52,8 @@ end
 -- To resolve an oparg, we need to look at options set in this LBT document and
 -- options set in the Latex document. Both of these are a DictionaryStack. We also
 -- need to look at oparg defaults in the template definitions. Thus we use the
--- `sources` field, much like `resolve_opcode` does.
+-- `sources` field, much like `resolve_opcode` does. Finally, there are 'bedrock'
+-- opargs that apply to every command: pre, post, center.
 --   Options specified in a command are not seen here. That is handled inside
 -- OptionLookup, which is inside Command. The principal purpose of this function
 -- is to support OptionLookup. However, there are cases where an oparg needs to be
@@ -58,6 +67,7 @@ end
 --     3. Check the opargs_local stack.
 --     4. Check the opargs_global stack.
 --     5. Check the opargs_default map.
+--     6. Check the opargs_bedrock map.
 -- If a value is found, `return true, value`. Otherwise, `return false, nil`.
 -- Note that the value _can_ be nil. We sanitise the value on the way out,
 -- turning 'nil' into nil.
@@ -87,6 +97,12 @@ function ExpansionContext:resolve_oparg(qkey)
   if spec and spec[option] ~= nil then
     value = spec[option]
     self:opargs_cache_store(qkey, value)
+    return true, lbt.core.sanitise_oparg_nil(value)
+  end
+  -- (6)
+  value = self.opargs_bedrock[option]           -- for a bedrock oparg only the option matters
+  if value ~= nil then
+    self:opargs_cache_store(qkey, value)               -- but the cache key is fully qualified
     return true, lbt.core.sanitise_oparg_nil(value)
   end
   -- Not found

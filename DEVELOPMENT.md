@@ -687,3 +687,35 @@ Also, it will be possible to insert into the db from inside the LBT document.
 Interestingly, some of the commands above demonstrate that it might be nice to allow optional arguments to appear later in the argument sequence. They are currently forced to be at the beginning.
 
     DB vec :: all :: .o order = random
+
+Update 2/5/2025: DB is partially implemented. 'index' and 'key' are implemented. Not 'all'.
+
+## Questions revamp
+
+May 2025: I am reimplementing lbt.Questions from scratch to use tables and introduce more formatting flexibility.
+
+## Upcoming changes to opargs
+
+I want to shorten the names prespace and postspace to pre and post, and I want every command to be able to use them without specifying them at the command-oparg level. Implementation-wise, there will be the idea of opargs_bedrock. I can think of pre, post, center.
+
+Speaking of opargs, it's time I implemented the validation. And for kwargs as well.
+
+## Some ideas for refinement (9 May 2025)
+
+* Have lbt.core.bedrock_opargs as a set containing the bedrock opargs and their default values. This serves to document their existence (sort of) and show that they are part of the core. It will also improve implementation, both looking up those arguments and checking that a command has valid opargs.
+  * needspace, adjustmargins
+* \lbtSettings{...} to be parsed by lbt.parser.parse_dictionary or whatever it is called. This will allow consolidation of settings and easy creation of more. For example:
+    \lbtSettings{DraftMode = true, HaltOnWarning = true}
+    \lbtSettings{
+      CurrentContentsLevel = section,
+      LogChannels = 4 emit trace,
+      TemplateDirectory = PWD/templates
+    }
+* Have a way to expand _only_ a particular eID, like \lbtSettings{ExpandOnly = 113}
+  * Blue sky thinking, but bisection debugging of an expansion would be great.
+* \lbtGlobalOptions to be renamed \lbtGlobalOpargs for consistency and clarity. It is easy to confuse 'options' with 'settings'.
+* Maybe \lbtCommand{...} to provide a unified interface and keep the number of \lbtX macros down.
+    \lbtCommand{DefineLatexMacro}{V = lbt.Math:vector}
+    \lbtCommand{PersistentCounterReset}{Hints}
+* The simplemath macro (typically accessed with \sm) should use display mode \[ ... \] when the beginning and ending of the argument is space. That is, \sm{E=mc^2} is inline but \sm{ E=mc^2 } is display. (I believe Typst does this.)
+  * Speaking of simplemath, I'd love to have automatic superscript, as in sm{E=mc2}. Does Typst do this? Is it a good idea?

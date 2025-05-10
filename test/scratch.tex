@@ -1,25 +1,61 @@
 \documentclass{article}
 \usepackage[svgnames,table]{xcolor}
 \usepackage[shortlabels]{enumitem}
+\usepackage{pifont}
+\usepackage{tabularray}
+\usepackage{siunitx}
+\usepackage[margin=1in]{geometry}
 
 \begin{document}
 
-\begin{itemize}[\textbullet]   % BEGIN  0 - open environment and list all items
-  \item Cats
-    \begin{enumerate}[(a)]     % BEGIN  1 - open environment and list all items
-      \item Black
-      \item White
-        \begin{itemize}[--]    % BEGIN  2 - open environment and list all items
-          \item Furry
-          \item Cuddly
-        \end{itemize}          % END  2 - next level is 0 so we do two ends
-    \end{enumerate}            % END  1 - (second end)
-  \item Dogs                   %          This is level 0 and 0 < 2 so we just add list items
-    \begin{enumerate}[(a)]     % BEGIN  1
-      \item Fido
-      \item Spot
-    \end{enumerate}            % END  1
-\end{itemize}                  % END  0
+The \textsf{siunitx} package provides \verb|\ang{-37}|: \ang{-37}.
+
+\begin{tblr}{
+  colspec = {X[l] X[r]},
+  width = \textwidth,
+  row{1} = {font=\bfseries},
+  hlines, vlines
+}
+Left Column & Right Column \\
+{Line one \\ Line two} & {Another line \\ and yet another} \\
+\end{tblr}
+
+% Question -- a 'Question'-formatted question (only one column)
+\NewTblrEnviron{Question}
+\SetTblrInner[Question]{colspec={X},width=\textwidth}
+
+\begingroup
+\begin{Question}{colspec = X, hlines, vlines, }
+{\bfseries\color{blue}Question 1} \enspace Hello.
+\end{Question}\par
+\begin{Question}{colspec = X, hlines, vlines, }
+{\bfseries\color{blue}Question 2} \enspace Goodbye.
+\end{Question}
+\begin{Question}{colspec = X, hlines, vlines, }
+{\bfseries\color{blue}Question 3} \enspace Goodbye.
+\end{Question}
+\endgroup
+
+% \NewTblrEnviron{Qm}
+% \SetTblrInner[Qm]{colspec={lXc},hlines,vlines,width=\textwidth,column{1}={6mm,font=\bfseries},column{3}={6mm,font=\bfseries}}
+%
+% \NewTblrEnviron{QQm}
+% \SetTblrInner[QQm]{colspec={llXc},hlines,vlines,width=\textwidth,column{1-2}={6mm,font=\bfseries},column{4}={6mm,font=\bfseries}}
+%
+% \noindent
+% \begin{Qm}{lXc}
+% \end{Qm}
+%
+%
+% \noindent
+% \begin{Qm}{lXc}
+%   1. & Evaluate the following. & \\
+% \end{Qm}
+% %
+% \begin{QQm}{llXc}
+%   & (a) & $f(17)$ & 1 \\
+%   & (b) & $f(-1)$ & 1 \\
+%   & (c) & $x$ if $f(x) = 0$ & 2 \\
+% \end{QQm}
 
 \end{document}
-
