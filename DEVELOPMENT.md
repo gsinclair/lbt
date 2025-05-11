@@ -713,7 +713,8 @@ Speaking of opargs, it's time I implemented the validation. And for kwargs as we
     }
 * Have a way to expand _only_ a particular eID, like \lbtSettings{ExpandOnly = 113}
   * Blue sky thinking, but bisection debugging of an expansion would be great.
-* \lbtGlobalOptions to be renamed \lbtGlobalOpargs for consistency and clarity. It is easy to confuse 'options' with 'settings'.
+    * More realistically: if an expansion has a DEBUG pragma, then print each command to the Tex stream as it is expanded (and send it to debuglog as well), so that errors are caught immediately, and the debluglog shows which line is the problem.
+* \lbtGlobalOptions to be renamed \lbtGlobalOpargs for consistency and clarity. It is easy to confuse 'options' with 'settings'. [DONE]
 * Maybe \lbtCommand{...} to provide a unified interface and keep the number of \lbtX macros down.
     \lbtCommand{DefineLatexMacro}{V = lbt.Math:vector}
     \lbtCommand{PersistentCounterReset}{Hints}

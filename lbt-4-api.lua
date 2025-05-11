@@ -286,15 +286,15 @@ lbt.api.default_template_expander = function()
   end
 end
 
-lbt.api.add_global_options = function (text)
-  local options = lbt.parser.parse_dictionary(text)
-  if options then
-    lbt.log(3, 'Global options are being added to the stack:')
-    lbt.log(3, lbt.pp(options))
-    lbt.system.opargs_global:push(options)
+lbt.api.add_global_opargs = function (text)
+  local opargs = lbt.parser.parse_dictionary(text)
+  if opargs then
+    lbt.log(3, 'Global opargs are being added to the stack:')
+    lbt.log(3, lbt.pp(opargs))
+    lbt.system.opargs_global:push(opargs)
     return nil
   else
-    lbt.err.E945_invalid_option_dictionary_global(text)
+    lbt.err.E945_invalid_oparg_dictionary_global(text)
   end
 end
 

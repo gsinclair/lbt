@@ -193,14 +193,14 @@ lbt.err.E192_oparg_lookup_failed = function (opcode, oparg)
   E('E192 Attempt to resolve oparg failed: %s.%s', opcode, oparg)
 end
 
-lbt.err.E945_invalid_option_dictionary_global = function (text)
-  E([[The text provided to \lbtGlobalOptions is invalid:
+lbt.err.E945_invalid_oparg_dictionary_global = function (text)
+  E([[The text provided to \lbtGlobalOpargs is invalid:
       %s
 Use format: key1 = value1, key2 = value2, ...]], text)
 end
 
-lbt.err.E946_invalid_option_dictionary_narrow = function (text)
-  E([[The text provided to OPTIONS is invalid:
+lbt.err.E946_invalid_oparg_dictionary_narrow = function (text)
+  E([[The text provided to OPARGS is invalid:
       %s
 Use format: key1 = value1, key2 = value2, ...]], text)
 end
