@@ -89,7 +89,7 @@
 \newcommand{\lbtDraftModeOn}{\directlua{lbt.api.set_draft_mode(true)}}
 \newcommand{\lbtDraftModeOff}{\directlua{lbt.api.set_draft_mode(false)}}
 
-\newcommand{\lbtTemplateDirectory}[1]{\directlua{lbt.api.add_template_directory("#1")}}
+\newcommand{\lbtLoadTemplates}[1]{\directlua{lbt.api.load_templates_from_directory("#1")}}
 
 \newcommand{\lbtGlobalOpargs}[1]{%
   \directlua{lbt.api.add_global_opargs("#1")}}

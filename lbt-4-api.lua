@@ -18,9 +18,9 @@ end
 -- that functions as a template description. This table and the path are stored
 -- together in the template register, where both can be easily retrieved in
 -- future by name. See:
---  * lbt.fn.template_object_or_nil(name)    _or_error
---  * lbt.fn.template_path_or_nil(name)      _or_error
-lbt.api.add_template_directory = function (dir)
+--  * lbt.fn.Template.object_by_name(name)    _or_nil
+--  * lbt.fn.Template.path_by_name(name)      _or_nil
+lbt.api.load_templates_from_directory = function (dir)
   dir = lbt.fn.expand_directory(dir)
   if not pl.path.isdir(dir) then
     lbt.err.E208_nonexistent_template_dir(dir)
