@@ -205,6 +205,12 @@ lbt.err.E946_invalid_oparg_dictionary_narrow = function (text)
 Use format: key1 = value1, key2 = value2, ...]], text)
 end
 
+lbt.err.E948_invalid_settings_dictionary = function (text)
+  E([[The text provided to \lbtSettings is invalid:
+      %s
+Use format: key1 = value1, key2 = value2, ...]], text)
+end
+
 lbt.err.E190_invalid_OptionLookup = function (field)
   E('Some kind of error involving OptionLookup: %s', field)
 end

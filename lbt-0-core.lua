@@ -16,6 +16,32 @@ local F = string.format
 
 lbt.core = {}
 
+
+-- {{{ Settings --------------------------------------------------------------
+
+    -- \lbtSettings{DraftMode = true, HaltOnWarning = true}
+    -- \lbtSettings{
+    --   CurrentContentsLevel = section,
+    --   LogChannels = 4 emit trace,
+    --   TemplateDirectory = PWD/templates
+local DefaultSettings = {
+  DraftMode = false,
+  HaltOnWarning = false,
+  CurrentContentsLevel = 'section',    -- this should perhaps be in WS0, WS1, ... rather than a setting
+  LogChannels = '1',                   -- format?
+}
+
+local Settings = {}
+Settings.mt = { __index = Settings }
+
+-- Create a Settings object with default values.
+function Settings.new()
+end
+
+lbt.core.Settings = Settings
+
+-- }}}
+
 -- {{{ DictionaryStack --------------------------------------------------------------
 -- Useful for layers of options.
 
@@ -110,4 +136,3 @@ end
 
 lbt.core.CommandSpec = CommandSpec
 -- }}}
-

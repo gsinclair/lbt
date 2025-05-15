@@ -68,6 +68,8 @@ end
 -- Warning: only call this once, as it wipes out builtin template.
 -- See: lbt.init.soft_reset_system()
 lbt.init.init_system = function ()
+  -- Draft mode, log channels, halt on error, ...
+  lbt.system.settings = lbt.core.Settings.new()
   -- Collection of templates that are loaded and ready to use.
   -- Type: pl.Map { string -> Template }
   --

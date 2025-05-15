@@ -11,6 +11,23 @@ local F = string.format
 lbt.fn.test = {} -- namespace in which certain private functions are shared
                  -- for testing purposes
 
+
+-- {{{ (lbt.fn) settings -------------------------------------------------------
+
+lbt.fn.apply_lbt_settings = function (dict)
+  dict = pl.Map(dict)
+  for k, v in dict:iter() do
+    local errmsg = lbt.system.settings:apply(k, v)
+    if errmsg then
+      -- TODO: specific error function
+      local msg = F("Unable to apply lbt setting '%s' -> '%s': details below\n  * %s", k, v, errmsg)
+      lbt.err.E002_general(msg)
+    end
+  end
+end
+
+-- }}}
+
 -- {{{ (lbt.fn) expansion ID, expansion content, command count -----------------
 
 lbt.fn.current_expansion_id = function ()

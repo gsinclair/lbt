@@ -298,6 +298,15 @@ lbt.api.add_global_opargs = function (text)
   end
 end
 
+lbt.api.lbt_settings = function (text)
+  local settings = lbt.parser.parse_dictionary(text)
+  if settings then
+    lbt.fn.apply_lbt_settings(settings)
+  else
+    lbt.err.E948_invalid_settings_dictionary(text)
+  end
+end
+
 lbt.api.set_log_channels = function (csv)
   lbt.system.log_channels = pl.List()
   local channels = lbt.util.comma_split(csv)

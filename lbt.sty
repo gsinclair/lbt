@@ -91,6 +91,17 @@
 
 \newcommand{\lbtLoadTemplates}[1]{\directlua{lbt.api.load_templates_from_directory("#1")}}
 
+% New in May 2025. This will replace \lbtTemplateDirectory,
+% \lbtDraftModeOn/Off, \lbtLogChannels, \lbtCurrentContentsLevel and make
+% possible more settings.
+\newcommand{\lbtSettings}[1]{%
+  \directlua{lbt.api.lbt_settings("#1")}}
+
+% New in May 2025. This will, if implemented, replace \lbtDefineLatexMacro,
+  % \lbtPersistentDataSet, etc.
+\newcommand{\lbtCommand}[2]{%
+  \directlua{lbt.api.lbt_command("#1", "#2")}}
+
 \newcommand{\lbtGlobalOpargs}[1]{%
   \directlua{lbt.api.add_global_opargs("#1")}}
 
