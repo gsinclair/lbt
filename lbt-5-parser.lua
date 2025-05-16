@@ -91,17 +91,19 @@ local process_quoted_value = function(text)
   return text:sub(2,-2)             -- remove the double-quotes that surround the text
 end
 local process_plain_value = function(text)
-  return parsed_value:match(text)   -- 'true' becomes true, etc.
+  local text1 = text:strip()
+  return parsed_value:match(text1)   -- 'true' becomes true, etc.
 end
 local kvlist = P({'kvlist',
   key = C(identifier),
   notcomma = P(1) - ',',
+  optional_comma = P(',')^-1 * hsp,
   notquote = P(1) - dquote,
   plain_val  = C((V'notcomma')^1) / process_plain_value,
   quoted_val = C(dquote * (V'notquote')^1 * dquote) / process_quoted_value,
   val = V'quoted_val' + V'plain_val',
   entry = Ct( Pos * hsp * V('key') * hsp * ('=' * hsp * V('val'))^-1 * hsp ) / tag('entry'),
-  kvlist = Ct( V('entry') * (',' * V('entry'))^0 ) / process_kvlist
+  kvlist = Ct( V('entry') * (',' * V('entry'))^0 ) * V'optional_comma' / process_kvlist
 })
 -- }}}
 
