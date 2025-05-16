@@ -6,6 +6,8 @@ local auth = {}  -- namespace for functions to do with author content
 local lfc = {}   -- namespace for functions to do with latex_for_command
 local reg = {}   -- namespace for functions to do with registers
 
+local __expansion_files_cleared__ = false
+
 local F = string.format
 
 lbt.fn.test = {} -- namespace in which certain private functions are shared
@@ -301,7 +303,8 @@ end
 -- Return List of strings, each containing Latex for a line of author content.
 -- If a line cannot be evaluated (no function to support a given token) then
 -- we insert some bold red information into the Latex so the author can see,
--- rather than halt the processing.
+-- rather than halt the processing. (Unless the setting HaltOnWarning is in
+-- effect.)
 --
 -- parsed_commands:
 --   List of parsed commands like {'TEXT', o = {}, k = {}, a = {'Hello'}}
@@ -316,10 +319,12 @@ lbt.fn.latex_for_commands = function (parsed_commands)
     elseif status == 'notfound' then
       local msg = lfc.latex_message_opcode_not_resolved(opcode)
       buffer:append(msg)
+      lfc.halt_on_warning { opcode_unresolved = opcode }
     elseif status == 'error' then
       local err = latex
       local msg = lfc.latex_message_opcode_raised_error(opcode, err)
       buffer:append(msg)
+      lfc.halt_on_warning { opcode_error = err, opcode = opcode }
     elseif status == 'noop' then
       -- do nothing
     elseif status == 'stop-processing' then
@@ -396,6 +401,15 @@ lfc.latex_message_opcode_raised_error = function (opcode, err)
   return F([[{\color{lbtError}\bfseries Opcode \verb|%s| raised error: \emph{%s}} \par]], opcode, err)
 end
 
+lfc.halt_on_warning = function(args)
+  if not lbt.setting('HaltOnWarning') then return end
+  if args.opcode_unresolved then
+    lbt.err.E002_general("Opcode not resolved: '%s'", args.opcode_unresolved)
+  elseif args.opcode_error then
+    lbt.err.E002_general("Opcode '%s' raised error: %s", args.opcode, args.opcode_error)
+  end
+end
+
 -- }}}
 
 -- {{{ (lbt.fn) Debugging and debug log file -----------------------------------
@@ -414,11 +428,19 @@ lbt.fn.reset_log_channels_if_necessary = function ()
   end
 end
 
-lbt.fn.write_debug_expansion_file_if_necessary = function (content, pc, latex)
-  if lbt.core.query_log_channels('emit') then
-    pl.dir.makepath('dbg-tex')
-    local eid = lbt.fn.current_expansion_id()
-    local filename = F('dbg-tex/%d.tex', eid)
+lbt.fn.clear_expansion_files = function ()
+  if lbt.setting('ClearExpansionFiles') and not __expansion_files_cleared__ then
+    pcall(function()
+      pl.dir.rmtree('./lbt-expansions')
+    end)
+    __expansion_files_cleared__ = true
+  end
+end
+
+lbt.fn.write_expansion_file = function (eid, latex)
+  if lbt.setting('WriteExpansionFiles') then
+    pl.dir.makepath('lbt-expansions')
+    local filename = F('lbt-expansions/%d.tex', eid)
     local content = nil
     if type(latex) == 'string' then
       content = latex
