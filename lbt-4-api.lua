@@ -104,7 +104,7 @@ lbt.api.author_content_emit_latex = function()
       Title is `%s` }]], eid, pc:title())
     tex.print(skipmsg)
     return
-  elseif pc.pragmas.draft == false and lbt.api.get_draft_mode() == true then
+  elseif pc.pragmas.draft == false and lbt.setting('DraftMode') == true then
     local draftskipmsg = F([[{\noindent\color{lbtError}\bfseries Skipping non-draft content (eID=%d).
       Title is `%s' }]], eid, pc:title())
     tex.print(draftskipmsg)
@@ -126,20 +126,8 @@ end
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
--- If true, populate_content will short-circuit to (nearly) a no-op unless the
--- content contains a `!DRAFT` pragma. This will speed up compilation.
-lbt.api.set_draft_mode = function(x)
-  lbt.assert_bool(1,x)
-  lbt.system.draft_mode = x
-  if x then
-    lbt.log(3, 'Draft mode is enabled (only content with !DRAFT will be rendered)')
-  else
-    lbt.log(3, 'Draft mode is disabled (all content will be rendered)')
-  end
-end
-
-lbt.api.get_draft_mode = function()
-  return lbt.system.draft_mode
+lbt.api.set_draft_mode = function(_)
+  lbt.err.E002_general("Don't use \\lbtDraftModeOn|Off anymore. Use \\lbtSettings{DraftMode = true}")
 end
 
 -- Debug mode allows for extra debug information to be generated only

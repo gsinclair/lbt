@@ -155,9 +155,14 @@ lbt.core.Settings = Settings
 function impl.consider_setting_more_carefully(dict, key, value)
   if key == 'LogChannels' then
     lbt.core.set_log_channels(value, 'space')
+  elseif key == 'DraftMode' then
+    if value then
+      lbt.log(3, 'Draft mode is enabled (only content with !DRAFT will be rendered)')
+    else
+      lbt.log(3, 'Draft mode is disabled (all content will be rendered)')
+    end
   end
 end
-
 
 -- }}}
 

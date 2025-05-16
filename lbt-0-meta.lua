@@ -18,6 +18,10 @@ modules['lbt'] = {
 -- It is appropriate to have easy access to the logging functions.
 lbt.log = lbt.core.log
 lbt.debuglog = lbt.core.debuglog
+-- Also to get access to settings.
+lbt.setting = function(key)
+  return lbt.system.settings:get(key)
+end
 
 -- Some essential functions that are defined here so they don't have to be
 -- local to just about every file.
