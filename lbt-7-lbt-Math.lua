@@ -283,8 +283,11 @@ do
 
   m.simplemath = function (text, _)
     simplemathlog('simplemath: ' .. text)
+    local displaymode = text:startswith(' ') and text:endswith(' ')
     local transformed = smparse:match(text)
-    if transformed then
+    if transformed and displaymode then
+      return F([[ \[ %s \] ]], table.concat(transformed, ''))
+    elseif transformed then
       return F([[\ensuremath{%s}]], table.concat(transformed, ''))
     else
       local errormsg = F('«Unable to parse simplemath text: \\Verb====%s====»', text)

@@ -718,7 +718,7 @@ Speaking of opargs, it's time I implemented the validation. And for kwargs as we
 * Maybe \lbtCommand{...} to provide a unified interface and keep the number of \lbtX macros down.
     \lbtCommand{DefineLatexMacro}{V = lbt.Math:vector}
     \lbtCommand{PersistentCounterReset}{Hints}
-* The simplemath macro (typically accessed with \sm) should use display mode \[ ... \] when the beginning and ending of the argument is space. That is, \sm{E=mc^2} is inline but \sm{ E=mc^2 } is display. (I believe Typst does this.)
+* The simplemath macro (typically accessed with \sm) should use display mode \[ ... \] when the beginning and ending of the argument is space. That is, \sm{E=mc^2} is inline but \sm{ E=mc^2 } is display. (I believe Typst does this.) [DONE]
   * Speaking of simplemath, I'd love to have automatic superscript, as in sm{E=mc2}. Does Typst do this? Is it a good idea?
 * Use dictionary parsing to improve definition of Latex macro.
   * Old:
@@ -730,5 +730,5 @@ Speaking of opargs, it's time I implemented the validation. And for kwargs as we
             smallnote = lbt.WS0:smallnote
          }
 * Improve dictionary parsing to:
-  * Strip spaces from value (done)
-  * Allow trailing comma (done)
+  * Strip spaces from value [DONE]
+  * Allow trailing comma [DONE]
