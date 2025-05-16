@@ -415,7 +415,7 @@ lbt.fn.reset_log_channels_if_necessary = function ()
 end
 
 lbt.fn.write_debug_expansion_file_if_necessary = function (content, pc, latex)
-  if lbt.api.query_log_channels('emit') then
+  if lbt.core.query_log_channels('emit') then
     pl.dir.makepath('dbg-tex')
     local eid = lbt.fn.current_expansion_id()
     local filename = F('dbg-tex/%d.tex', eid)

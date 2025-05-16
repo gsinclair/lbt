@@ -38,8 +38,8 @@
 
   -- Load lbt module into global variable lbt.
   lbt = {}                           -- todo check it doesn't exist already
-  require('lbt-0-meta')
   require('lbt-0-core')
+  require('lbt-0-meta')
   require('lbt-1-init');   lbt.init.initialize_all()
   require('lbt-2-util')
   require('lbt-3-fn-0-template')
@@ -105,7 +105,8 @@
 \newcommand{\lbtGlobalOpargs}[1]{%
   \directlua{lbt.api.add_global_opargs("#1")}}
 
-\newcommand{\lbtLogChannels}[1]{\directlua{lbt.api.set_log_channels("#1")}}
+% \lbtLogChannels is DEPRECATED
+\newcommand{\lbtLogChannels}[1]{\directlua{lbt.core.set_log_channels("#1")}}
 
 \newcommand{\lbtDefineLatexMacro}[1]{\directlua{lbt.api.macro_define("#1")}}
 

@@ -15,15 +15,104 @@
 local F = string.format
 
 lbt.core = {}
+local impl = {}
 
+
+-- {{{ Logging ---------------------------------------------------------------
+
+-- There are two log files:
+--  * lbt.log is written to with lbt.log('emit', 'Hello %s', name)
+--    * set the active channels with lbt.core.set_log_channels
+--  * lbt.debuglog is written to with lbt.debuglog('Hello %s', name)
+--    * this doesn't have channels; it is for temporary development and debugging
+
+local logfile = io.open("lbt.log", "w")
+
+local _debuglogfile = nil
+local debuglogfile = function()
+  if _debuglogfile then
+    return _debuglogfile
+  else
+    _debuglogfile = io.open('lbt.debuglog', 'w')
+    return _debuglogfile
+  end
+end
+
+local channel_name = { [0] = 'ANN',  [1] = 'ERROR', [2] = 'WARN',
+                       [3] = 'INFO', [4] = 'TRACE' }
+
+lbt.core.log = function (channel, format, ...)
+  if lbt.core.query_log_channels(channel) then
+    local message
+    if ... == nil then
+      message = format
+    else
+      message = F(format, ...)
+    end
+    local name = channel_name[channel] or channel
+    local line = F('[#%-10s] %s\n', name, message)
+    logfile:write(line)
+    logfile:flush()
+  end
+end
+
+lbt.core.debuglog = function(format, ...)
+  local file = debuglogfile()
+  local line
+  if format == nil then
+    line = 'nil'
+  else
+    line = F(format, ...)
+  end
+  file:write(line)
+  file:write('\n')
+  file:flush()
+end
+
+lbt.core.set_log_channels = function (text, separator)
+  text = tostring(text)
+  lbt.system.log_channels = pl.List()
+  local channels
+  if separator == 'comma' then
+    channels = lbt.util.comma_split(text)       -- NOTE: this is temporary
+  elseif separator == 'space' then
+    channels = lbt.util.space_split(text)
+  else
+    lbt.err.E002_general("Don't use \\lbtLogChannels anymore; use \\lbtSettings{LogChannels = ...}")
+  end
+  for c in channels:iter() do
+    if c:match('^[1234]$') then
+      c = tonumber(c)
+    end
+    lbt.system.log_channels:append(c)
+  end
+  lbt.log(0, 'Log channels set to: %s', lbt.system.log_channels)
+end
+
+lbt.core.query_log_channels = function (ch)
+  local x = lbt.system.log_channels
+  if ch == 0 or ch == 1 or ch == 2 or ch == 3 then
+    return true
+  elseif x:contains('all') then
+    return true
+  elseif x:contains('allbuttrace') and ch ~= 4 then
+    return true
+  elseif x:contains(ch) then
+    return true
+  else
+    return false
+  end
+end
+
+-- }}}
 
 -- {{{ Settings --------------------------------------------------------------
 
-    -- \lbtSettings{DraftMode = true, HaltOnWarning = true}
-    -- \lbtSettings{
-    --   CurrentContentsLevel = section,
-    --   LogChannels = 4 emit trace,
-    --   TemplateDirectory = PWD/templates
+-- \lbtSettings{DraftMode = true, HaltOnWarning = true}
+-- \lbtSettings{
+--   CurrentContentsLevel = section,
+--   LogChannels = 4 emit trace,
+-- }
 local DefaultSettings = {
   DraftMode = false,
   HaltOnWarning = false,
@@ -32,13 +121,43 @@ local DefaultSettings = {
 }
 
 local Settings = {}
-Settings.mt = { __index = Settings }
+Settings.mt = { __index = Settings }   -- XXX: maybe metatable not needed here?
 
 -- Create a Settings object with default values.
 function Settings.new()
+  local o = {}
+  o.dict = pl.tablex.copy(DefaultSettings)
+  setmetatable(o, Settings.mt)
+  return o
+end
+
+function Settings:apply(key, value)
+  if DefaultSettings[key] == nil then
+    lbt.err.E002_general("Attempt to set invalid setting: '%s'", key)
+  else
+    self.dict[key] = value
+    local errmsg = impl.consider_setting_more_carefully(self.dict, key, value)
+    return errmsg
+  end
+end
+
+function Settings:get(key)
+  if DefaultSettings[key] == nil then
+    lbt.err.E002_general("Attempt to look up invalid setting: '%s'", key)
+  else
+    return self.dict[key]
+  end
 end
 
 lbt.core.Settings = Settings
+
+-- Validate (and return error message if needed) and apply side effects.
+function impl.consider_setting_more_carefully(dict, key, value)
+  if key == 'LogChannels' then
+    lbt.core.set_log_channels(value, 'space')
+  end
+end
+
 
 -- }}}
 

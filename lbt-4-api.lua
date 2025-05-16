@@ -307,33 +307,6 @@ lbt.api.lbt_settings = function (text)
   end
 end
 
-lbt.api.set_log_channels = function (csv)
-  lbt.system.log_channels = pl.List()
-  local channels = lbt.util.comma_split(csv)
-  for c in channels:iter() do
-    if c:match('^[1234]$') then
-      c = tonumber(c)
-    end
-    lbt.system.log_channels:append(c)
-  end
-  lbt.log(0, 'Log channels set to: %s', lbt.system.log_channels)
-end
-
-lbt.api.query_log_channels = function (ch)
-  local x = lbt.system.log_channels
-  if ch == 0 or ch == 1 or ch == 2 or ch == 3 then
-    return true
-  elseif x:contains('all') then
-    return true
-  elseif x:contains('allbuttrace') and ch ~= 4 then
-    return true
-  elseif x:contains(ch) then
-    return true
-  else
-    return false
-  end
-end
-
 -- Usage: macro_define('\myvec=lbt.Math.myvec')
 --
 -- This looks up the module lbt.Math and sees if it has a macro 'myvec', which

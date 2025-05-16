@@ -15,56 +15,9 @@ modules['lbt'] = {
   license = 'The LaTeX Project Public License Version 1.3c 2008-05-04',
 }
 
---
--- We set up a log file and log function here because they are "meta" to the
--- package.
---
--- Also a 'debuglog' file, which is really just for absolutely targeted and temporary
--- debugging.
---
-
-local logfile = io.open("lbt.log", "w")
-
-local _debuglogfile = nil
-local debuglogfile = function()
-  if _debuglogfile then
-    return _debuglogfile
-  else
-    _debuglogfile = io.open('lbt.debuglog', 'w')
-    return _debuglogfile
-  end
-end
-
-local channel_name = { [0] = 'ANN',  [1] = 'ERROR', [2] = 'WARN',
-                       [3] = 'INFO', [4] = 'TRACE' }
-
-lbt.log = function (channel, format, ...)
-  if lbt.api.query_log_channels(channel) then
-    local message
-    if ... == nil then
-      message = format
-    else
-      message = F(format, ...)
-    end
-    local name = channel_name[channel] or channel
-    local line = F('[#%-10s] %s\n', name, message)
-    logfile:write(line)
-    logfile:flush()
-  end
-end
-
-lbt.debuglog = function(format, ...)
-  local file = debuglogfile()
-  local line
-  if format == nil then
-    line = 'nil'
-  else
-    line = F(format, ...)
-  end
-  file:write(line)
-  file:write('\n')
-  file:flush()
-end
+-- It is appropriate to have easy access to the logging functions.
+lbt.log = lbt.core.log
+lbt.debuglog = lbt.core.debuglog
 
 -- Some essential functions that are defined here so they don't have to be
 -- local to just about every file.
