@@ -115,9 +115,12 @@ end
 -- }
 local DefaultSettings = {
   DraftMode = false,
+  DebugMode = false,                   -- TODO: this is seldom used; keep it?
   HaltOnWarning = false,
-  CurrentContentsLevel = 'section',    -- this should perhaps be in WS0, WS1, ... rather than a setting
-  LogChannels = '1',                   -- format?
+  CurrentContentsLevel = 'section',
+    -- TODO: this ^^^ should perhaps be in WS0, WS1, ... rather than a setting,
+    -- or maybe named AddToContentsLevel instead
+  LogChannels = '1',                   -- TODO: determine suitable default
 }
 
 local Settings = {}

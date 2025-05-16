@@ -325,11 +325,11 @@ local function T_command_spec()
   EQ(cspec.kwargs, nil)
 end
 
-local function T_add_template_directory()
+local function T_load_templates_from_directory()
   lbt.api.reset_global_data()
   local t1 = lbt.fn.Template.object_by_name_or_nil("HSCLectures")
   assert(t1 == nil)
-  lbt.api.add_template_directory("PWD/templates")
+  lbt.api.load_templates_from_directory("PWD/templates")
   -- Note: the templates directory has a file HSCLectures.lua in it.
   local t2 = lbt.fn.Template.object_by_name("HSCLectures")
   local p2 = lbt.fn.Template.path_by_name("HSCLectures")
@@ -415,7 +415,7 @@ end
 
 local function T_styles_in_test_question_template_5a()
   lbt.api.reset_global_data()
-  lbt.api.add_template_directory("PWD/templates")
+  lbt.api.load_templates_from_directory("PWD/templates")
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_5a)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
@@ -437,7 +437,7 @@ end
 
 local function T_styles_in_test_question_template_5b()
   lbt.api.reset_global_data()
-  lbt.api.add_template_directory("PWD/templates")
+  lbt.api.load_templates_from_directory("PWD/templates")
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_5b)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
@@ -591,15 +591,13 @@ local function RUN_TESTS(flag)
   print("\n\n======================= <TESTS>")
   lbt.api.set_debug_mode(true)
 
-  -- IX(lbt.system.template_register)
-
   T_pragmas_and_other_lines()
   T_DictionaryStack()
   T_parsed_content_from_content_lines_1()
   T_extra_sources()
   T_resolve_oparg()
   T_command_spec()
-  T_add_template_directory()
+  T_load_templates_from_directory()
   T_expand_Basic_template_1()
   T_expand_Basic_template_2()
   T_util()
