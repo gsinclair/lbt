@@ -116,6 +116,8 @@ end
 local DefaultSettings = {
   DraftMode = false,
   DebugMode = false,                   -- TODO: this is seldom used; keep it?
+  WriteExpansionFiles = true,
+  ClearExpansionFiles = true,
   HaltOnWarning = false,
   CurrentContentsLevel = 'section',
     -- TODO: this ^^^ should perhaps be in WS0, WS1, ... rather than a setting,

@@ -732,3 +732,40 @@ Speaking of opargs, it's time I implemented the validation. And for kwargs as we
 * Improve dictionary parsing to:
   * Strip spaces from value [DONE]
   * Allow trailing comma [DONE]
+
+## Considerations about generating and logging expanded Latex code (May 2025)
+
+I want to rename the directory 'dbg-tex' to 'lbt-expansions' and clear it at the begining
+of each run. Also have a setting WriteExpansionFiles which defaults to true. I could have
+a setting ClearExpansionFiles defaulting to true as well, perhaps. [DONE]
+
+The expected return of an expander function could be: list of { command, latex_result }
+pairs. Then all the printing (to the Latex stream and the expansion file) can be done at
+once, and the output can contain comments indicating the command.
+
+That's good for the default expander, but how about `init()` and (for example) `WS0.expand()`?
+They potentially inject Latex into the stream without it being collected anywhere. Perhaps
+the output of init() could be collected and the calling function could pass it to
+`util.write_latex_result('WS0.init', {...})`. That function checks for the existence of an
+expansion file and writes to it if it can.
+  * Hmmm, not sure. The `expand()` function returns *everything* from that expansion. All
+    the command-by-command stuff is internalised in there.
+
+Now, some of the above thoughts were prompted by the desire to print smaller chunks to the
+tex stream at a time, in the hope of locating errors early. This is not possible. The
+things we print are not processed until later. But it's still worth thinking about how the
+template code (as opposed to the body code) can be better commented in the expansion
+file.
+
+## DEBUG pragma and the lbt.debuglog file (May 2025)
+
+I want the DEBUG pragma to cause the following to happen: for every command, write the
+full command and the full latex output to the debuglog file. (And probably remove the
+output that currently goes to the normal log file.)
+
+Use lines like +++++++... to separate each command and -------... to separate command from
+Latex.
+
+The DEBUG pragma turns this on for a particular expansion, and retains the effect of
+turning on all log channels. What does the DebugMode setting do? It seems like the answer
+is nothing.

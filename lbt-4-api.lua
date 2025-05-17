@@ -84,6 +84,7 @@ lbt.api.author_content_collect = function()
 end
 
 -- This is called at the end of an lbt environment. See above and lby.sty.
+-- TODO: Tidy this code up. Move all logging statements elsewhere (new file lbt-0-log.lua?)
 lbt.api.author_content_emit_latex = function()
   local c  = lbt.const.author_content
   local eid = lbt.fn.current_expansion_id()
@@ -119,7 +120,8 @@ lbt.api.author_content_emit_latex = function()
   local output = lbt.util.normalise_latex_output(l)
   lbt.log(3, '  * latex expansion complete (eid=%d)', eid)
   lbt.util.print_tex_lines(output)
-  lbt.fn.write_debug_expansion_file_if_necessary(c, pc, output)
+  lbt.fn.clear_expansion_files()
+  lbt.fn.write_expansion_file(eid, output)
   lbt.fn.reset_log_channels_if_necessary()
 end
 
