@@ -27,6 +27,17 @@ lbt.core.DefaultPragmas = {
   DEBUG  = false
 }
 
+lbt.core.default_pragmas = function()
+  return pl.tablex.copy(lbt.core.DefaultPragmas)
+end
+
+lbt.core.default_pragma = function(key)
+  local value = lbt.core.DefaultPragmas[key]
+  if value == nil then
+    lbt.err.E002_general("Attempt to get default for non-existent pragma: '%s'", key)
+  end
+end
+
 -- }}}
 
 -- {{{ Logging ---------------------------------------------------------------

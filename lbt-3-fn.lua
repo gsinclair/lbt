@@ -128,11 +128,11 @@ lbt.fn.parsed_content_from_content_lines = function(content_lines)
   -- as well. It also removes comments lines. This is a pre-parsing stage.
   local pragmas, content = auth.pragmas_and_content(content_lines)
   -- Detect ignore and act accordingly.
-  if pragmas.ignore then
+  if pragmas.IGNORE then
     return { pragmas = pragmas }
   end
   -- Detect debug and act accordingly.
-  if pragmas.debug then
+  if pragmas.DEBUG then
     lbt.fn.set_log_channels_for_debugging_single_expansion()
   end
   -- Now we are ready to parse the actual content, courtesy of lbt.parser.
@@ -210,31 +210,16 @@ lbt.fn.latex_expansion_of_parsed_content = function (pc)
   return result
 end
 
-local update_pragma_set = function(pragmas, setting)
-  local p = setting
-  if     p == 'DRAFT'    then pragmas.draft  = true
-  elseif p == 'NODRAFT'  then pragmas.draft  = false
-  elseif p == 'SKIP'     then pragmas.skip   = true
-  elseif p == 'NOSKIP'   then pragmas.skip   = false
-  elseif p == 'IGNORE'   then pragmas.ignore = true
-  elseif p == 'NOIGNORE' then pragmas.ignore = false
-  elseif p == 'DEBUG'    then pragmas.debug  = true
-  elseif p == 'NODEBUG'  then pragmas.debug  = false
-  else
-    lbt.err.E102_invalid_pragma(p)
-  end
-end
-
 -- Extract pragmas from the lines into a table.
 -- Return a table of pragmas (draft, debug, ignore) and a consolidated string of
 -- the actual content, with » line continations taken care of.
 auth.pragmas_and_content = function(input_lines)
-  local pragmas = { draft = false, ignore = false, debug = false }
+  local pragmas = lbt.core.default_pragmas()
   local lines   = pl.List()
   for line in input_lines:iter() do
     local p = line:match("!(%u+)%s*$")
     if p then
-      update_pragma_set(pragmas, p)
+      auth.update_pragma_set(pragmas, p)
     elseif line:match('^%s*%%') then
       -- ignore comment line
     else
@@ -286,6 +271,21 @@ auth.consolidated_sources = function (pc, template)
     result:append('lbt.Basic')
   end
   return result
+end
+
+auth.update_pragma_set = function(pragmas, setting)
+  local p = setting
+  if     p == 'DRAFT'    then pragmas.DRAFT  = true
+  elseif p == 'NODRAFT'  then pragmas.DRAFT  = false
+  elseif p == 'SKIP'     then pragmas.SKIP   = true
+  elseif p == 'NOSKIP'   then pragmas.SKIP   = false
+  elseif p == 'IGNORE'   then pragmas.IGNORE = true
+  elseif p == 'NOIGNORE' then pragmas.IGNORE = false
+  elseif p == 'DEBUG'    then pragmas.DEBUG  = true
+  elseif p == 'NODEBUG'  then pragmas.DEBUG  = false
+  else
+    lbt.err.E102_invalid_pragma(p)
+  end
 end
 
 -- }}}

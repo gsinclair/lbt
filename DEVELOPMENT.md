@@ -780,3 +780,9 @@ goes to the debuglog file in the event of DEBUG is very good.
 This is a minor thing, but the messages like "Skipping non-draft content" could go inside
 a frame, maybe be centered, and have a little LBT logo. And a better colour than stark
 red. For the logo, I'm thinking of a small-caps LBT inside a rectangle.
+
+## Handle vector formatting in-house; don't use packages (May 2025)
+
+A recent commit introduced \lbtUnderTilde for vector formatting, and got rid of the
+'accents' package. I'd like to do the same with arrows above. Lose the esvect package and
+implement \lbtOverArrow.

@@ -55,7 +55,7 @@ end
 function ParsedContent.validate(pc)
   -- We check that META and META.TEMPLATE are present.
   if pc:meta() == nil then
-    lbt.err.E203_no_META_defined()
+    lbt.err.E203_no_META_defined()      -- NOTE: This is redundant; meta() raises error anyway.
   end
   if pc:template_name() == nil then
     lbt.err.E204_no_TEMPLATE_defined()

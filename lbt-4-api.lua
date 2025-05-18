@@ -96,18 +96,16 @@ lbt.api.author_content_emit_latex = function()
   lbt.log('read', ">>>")
   lbt.log('read', "")
   local pc = lbt.fn.parsed_content_from_content_lines(c)
-  if pc.pragmas.ignore then
+  if pc.pragmas.IGNORE then
     lbt.log(3, '  * IGNORE pragma detected - no further action for eID %d', eid)
     return
-  elseif pc.pragmas.skip then
+  elseif pc.pragmas.SKIP then
     lbt.log(3, '  * SKIP pragma detected - no further action for eID %d', eid)
-    local skipmsg = F([[{\noindent\color{lbtError}\bfseries Explicitly instructed to skip content (eID=%d).
-      Title is `%s` }]], eid, pc:title())
+    local skipmsg = F([[{\noindent\color{lbtError}\bfseries Explicitly instructed to skip content (eID=%d). Title is `%s`. }]], eid, pc:title())
     tex.print(skipmsg)
     return
-  elseif pc.pragmas.draft == false and lbt.setting('DraftMode') == true then
-    local draftskipmsg = F([[{\noindent\color{lbtError}\bfseries Skipping non-draft content (eID=%d).
-      Title is `%s' }]], eid, pc:title())
+  elseif pc.pragmas.DRAFT == false and lbt.setting('DraftMode') == true then
+    local draftskipmsg = F([[{\noindent\color{lbtError}\bfseries Skipping non-draft content (eID=%d). Title is `%s' }]], eid, pc:title())
     tex.print(draftskipmsg)
     lbt.log(3, '  * DRAFT pragma _not_ detected - no further action for eID %d', eid)
     return
