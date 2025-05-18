@@ -37,8 +37,7 @@ local function vector_pronumeral(x, format)
     -- Use \vv from 'esvect' package
     return F([[\ensuremath{\vv{%s}}]], x)
   elseif format == 'tilde' then
-    -- Use \underaccent from 'accents' package
-    return F([[\ensuremath{\underaccent{\tilde}{%s}}]], x)
+    return F([[\ensuremath{\lbtUnderTilde{%s}}]], x)
   else
     local errormsg1 = F('Invalid style value for vector.format: <%s>', format)
     local errormsg2 = 'Valid options: bold | arrow | tilde'
@@ -110,7 +109,7 @@ end
 -- Output: that letter/zero rendered as a vector with tilde underneath.
 -- Comment: this allows author to force a desired style.
 m.vectilde = function (x, _)
-  return F([[\ensuremath{\underaccent{\tilde}{%s}}]], x)
+  return F([[\ensuremath{\lbtUnderTilde{%s}}]], x)
 end
 
 m.vectorijk = function (text, ctx)

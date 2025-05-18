@@ -9,7 +9,6 @@
 \RequirePackage{float}     % best practice for modern documents; gives float styles and H placement
 \RequirePackage{mathtools} % loads amsmath, and is standard these days for scientific documents
 \RequirePackage{esvect}    % to get \vv for vectors with arrows
-\RequirePackage{accents}   % to get \underaccent{\tilde} for vectors
 \RequirePackage{amssymb}   % another standard package; this loads amsfonts too
 \RequirePackage{unicode-math}  % \setmathfont command
 %                          % I will omit amsthm as that is more specialised and a user could
@@ -123,5 +122,17 @@
 \newcommand{\lbtCurrentContentsLevel}{section}
 
 \newcommand{\lbtDebugLog}[1]{\directlua{lbt.debuglog('#1')}}
+
+% We provide our own definition of undertilde to avoid loading a package just for this.
+% I had the 'accents' package working for ages, then a problem occurred that I couldn't
+% easily solve. So here we are.
+% NOTE: the 3.0pt distance for placing the tilde works well for at least some letters.
+% But I'll keep an eye on it.
+\newcommand{\lbtUnderTilde}[1]{%
+  \oalign{%
+    $#1$\cr
+    \hidewidth\smash{\raisebox{-3.0pt}{$\scriptstyle\sim$}}\hidewidth\cr
+  }%
+}
 
 % \newcommand{\lbtResetChapterCounters}{\luaexec{lbt.api.reset_chapter_counters()}}
