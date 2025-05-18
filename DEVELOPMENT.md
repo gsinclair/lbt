@@ -769,3 +769,14 @@ Latex.
 The DEBUG pragma turns this on for a particular expansion, and retains the effect of
 turning on all log channels. What does the DebugMode setting do? It seems like the answer
 is nothing.
+
+Status: this is now complete (commit Sun May 18 22:48:53 2025), more or less as per the
+above. I actually don't include the LBT command text. I would need to edit the parser to
+preserve the raw text. Probably a good idea, but not a priority. The information that now
+goes to the debuglog file in the event of DEBUG is very good.
+
+## Use a frame and logo for LBT messages inside the PDF (May 2025)
+
+This is a minor thing, but the messages like "Skipping non-draft content" could go inside
+a frame, maybe be centered, and have a little LBT logo. And a better colour than stark
+red. For the logo, I'm thinking of a small-caps LBT inside a rectangle.

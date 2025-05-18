@@ -142,10 +142,12 @@ function impl.post_process(result, cmd)
 end
 
 function impl.slap_on_a_comment(result, cmd)
+  local eid = lbt.fn.current_expansion_id()
+  local count = lbt.fn.current_command_count()
   local comment_text = F([[
 %%
-%% %s
-%%]], cmd.opcode)
+%% (%d:%d) %s
+%%]], eid, count, cmd.opcode)
   result:insert(1, comment_text)
 end
 
@@ -157,4 +159,3 @@ function impl.log_successful_result(result)
 end
 
 -- }}}
-

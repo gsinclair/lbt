@@ -18,6 +18,17 @@ lbt.core = {}
 local impl = {}
 
 
+-- {{{ Pragmas ---------------------------------------------------------------
+
+lbt.core.DefaultPragmas = {
+  DRAFT  = false,
+  IGNORE = false,
+  SKIP   = false,
+  DEBUG  = false
+}
+
+-- }}}
+
 -- {{{ Logging ---------------------------------------------------------------
 
 -- There are two log files:
@@ -57,16 +68,24 @@ lbt.core.log = function (channel, format, ...)
 end
 
 lbt.core.debuglog = function(format, ...)
-  local file = debuglogfile()
   local line
   if format == nil then
     line = 'nil'
   else
     line = F(format, ...)
   end
-  file:write(line)
+  lbt.core.debuglograw(line)
+end
+
+lbt.core.debuglograw = function(text)
+  local file = debuglogfile()
+  file:write(text)
   file:write('\n')
   file:flush()
+end
+
+lbt.core.remove_debuglog = function()
+  pl.file.delete('lbt.debuglog')
 end
 
 lbt.core.set_log_channels = function (text, separator)
@@ -115,9 +134,9 @@ end
 -- }
 local DefaultSettings = {
   DraftMode = false,
-  DebugMode = false,                   -- TODO: this is seldom used; keep it?
   WriteExpansionFiles = true,
   ClearExpansionFiles = true,
+  DebugAllExpansions = false,
   HaltOnWarning = false,
   CurrentContentsLevel = 'section',
     -- TODO: this ^^^ should perhaps be in WS0, WS1, ... rather than a setting,

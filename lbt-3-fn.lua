@@ -133,7 +133,7 @@ lbt.fn.parsed_content_from_content_lines = function(content_lines)
   end
   -- Detect debug and act accordingly.
   if pragmas.debug then
-    auth.set_log_channels_for_debugging_single_expansion()
+    lbt.fn.set_log_channels_for_debugging_single_expansion()
   end
   -- Now we are ready to parse the actual content, courtesy of lbt.parser.
   if content:find('[@META]', 1, true) then
@@ -191,7 +191,8 @@ lbt.fn.latex_expansion_of_parsed_content = function (pc)
   local ctx = lbt.fn.ExpansionContext.new {
     pc = pc,
     template = template.name,
-    sources = sources
+    sources = sources,
+    pragmas = pc.pragmas
   }
   lbt.fn.set_current_expansion_context(ctx)
   -- Call init() on all sources to allow for counters, Latex commands, etc.
@@ -366,13 +367,17 @@ end
 lbt.fn.latex_for_command = function (parsed_command)
   local opcode = parsed_command[1]
   local posargs = parsed_command.a
+  -- lfc.debug_log_parsed_command(parsed_command)
   if opcode == 'STO' then
     return lfc.handle_STO_command(posargs)
   elseif opcode == 'CTRL' then
     return lfc.handle_CTRL_command(posargs)
   else
     local L = lbt.fn.LatexForCommand.new(parsed_command, reg.expand_register_references)
-    return L:latex()
+    local ok, latex = L:latex()
+    if ok then lfc.prepend_debug_info(latex, opcode) end
+    lfc.debug_log_latex(latex)
+    return ok, latex
   end
 end
 
@@ -408,6 +413,44 @@ lfc.halt_on_warning = function(args)
   elseif args.opcode_error then
     lbt.err.E002_general("Opcode '%s' raised error: %s", args.opcode, args.opcode_error)
   end
+end
+
+-- `latex` is a list of strings.
+-- We insert a \lbtDebugLog{(TexExp 108:23) VSPACE} before the latex.
+-- (Only if this expansion has the DEBUG pragma set.)
+lfc.prepend_debug_info = function(latex, opcode)
+  if lfc.debug_this_expansion() then
+    local eid = lbt.fn.current_expansion_id()
+    local count = lbt.fn.current_command_count()
+    local debug_info = F([[\lbtDebugLog{(TexExp %d:%d) %s}%%]], eid, count, opcode)
+    latex:insert(2, debug_info)  -- into position 2 because index 1 is the comment with opcode
+  end
+end
+
+local row_of_pluses = '++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+local row_of_dashes = '----------------------------------------------------------------------'
+lfc.debug_log_parsed_command = function(pc)
+  if lfc.debug_this_expansion() then
+    local eid = lbt.fn.current_expansion_id()
+    local count = lbt.fn.current_command_count()
+    lbt.debuglog(row_of_pluses)
+    lbt.debuglog('(%d:%d) %s', eid, count, pc[1])
+  end
+end
+
+lfc.debug_log_latex = function(latex)
+  if lfc.debug_this_expansion() then
+    lbt.debuglog(row_of_dashes)
+    lbt.debuglograw(latex:concat('\n'))
+    lbt.debuglog(row_of_dashes)
+  end
+end
+
+-- Predicate.
+-- We debug "this expansion" if the DEBUG pragma or the DebugAllExpansions setting is active.
+lfc.debug_this_expansion = function()
+  local debug_pragma = lbt.fn.get_current_expansion_context().pragmas.DEBUG
+  return debug_pragma or lbt.setting('DebugAllExpansions')
 end
 
 -- }}}

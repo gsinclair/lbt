@@ -25,6 +25,7 @@ function ExpansionContext.new(args)
     type           = 'ExpansionContext',
     template       = args.template,
     sources        = args.sources,
+    pragmas        = args.pragmas,
     command_lookup = impl.comprehensive_command_lookup_map(args.sources),
     opargs_local   = lbt.core.DictionaryStack.new(),
     opargs_global  = lbt.system.opargs_global,
@@ -35,6 +36,15 @@ function ExpansionContext.new(args)
   o.opargs_local:push(args.pc:opargs_local())
   setmetatable(o, ExpansionContext.mt)
   return o
+end
+
+-- TODO: This seemed like a good idea, but it's not currently used.
+--       Rethink the approach.
+function ExpansionContext:pragma(name)
+  if lbt.core.DefaultPragmas[name] == nil then
+    lbt.err.E002_general("Attempt to look up invalid pragma: '%s'", name)
+  end
+  return self.pragmas[name]
 end
 
 -- {{{ command_spec

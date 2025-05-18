@@ -122,4 +122,6 @@
 % it makes sense to use Latex so that it can be in a group, as described above.
 \newcommand{\lbtCurrentContentsLevel}{section}
 
+\newcommand{\lbtDebugLog}[1]{\directlua{lbt.debuglog('#1')}}
+
 % \newcommand{\lbtResetChapterCounters}{\luaexec{lbt.api.reset_chapter_counters()}}

@@ -55,6 +55,7 @@ lbt.init = {}
 --------------------------------------------------------------------------------
 
 lbt.init.initialize_all = function ()
+  lbt.core.remove_debuglog()
   lbt.init.init_system()
   lbt.init.reset_const()
   lbt.init.reset_var()
