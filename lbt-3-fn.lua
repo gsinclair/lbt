@@ -367,17 +367,17 @@ end
 lbt.fn.latex_for_command = function (parsed_command)
   local opcode = parsed_command[1]
   local posargs = parsed_command.a
-  -- lfc.debug_log_parsed_command(parsed_command)
+  lfc.debug_log_parsed_command(parsed_command)
   if opcode == 'STO' then
     return lfc.handle_STO_command(posargs)
   elseif opcode == 'CTRL' then
     return lfc.handle_CTRL_command(posargs)
   else
     local L = lbt.fn.LatexForCommand.new(parsed_command, reg.expand_register_references)
-    local ok, latex = L:latex()
-    if ok then lfc.prepend_debug_info(latex, opcode) end
-    lfc.debug_log_latex(latex)
-    return ok, latex
+    local status, latex = L:latex()
+    if status == 'ok' then lfc.prepend_debug_info(latex, opcode) end
+    lfc.debug_log_latex(status, latex)
+    return status, latex
   end
 end
 
@@ -399,11 +399,11 @@ function lfc.handle_CTRL_command(posargs)
 end
 
 lfc.latex_message_opcode_not_resolved = function (opcode)
-  return F([[{\color{lbtError}\bfseries Opcode \verb|%s| not resolved} \par]], opcode)
+  return F([[\lbtWarning{Opcode \Verb|%s| not resolved} \par]], opcode)
 end
 
 lfc.latex_message_opcode_raised_error = function (opcode, err)
-  return F([[{\color{lbtError}\bfseries Opcode \verb|%s| raised error: \emph{%s}} \par]], opcode, err)
+  return F([[\lbtWarning{Opcode \Verb|%s| raised error: \emph{%s}} \par]], opcode, err)
 end
 
 lfc.halt_on_warning = function(args)
@@ -438,10 +438,14 @@ lfc.debug_log_parsed_command = function(pc)
   end
 end
 
-lfc.debug_log_latex = function(latex)
+lfc.debug_log_latex = function(status, latex)
   if lfc.debug_this_expansion() then
     lbt.debuglog(row_of_dashes)
-    lbt.debuglograw(latex:concat('\n'))
+    if status == 'ok' then
+      lbt.debuglograw(latex:concat('\n'))
+    else
+      lbt.debuglog(">> status = '%s'", status)
+    end
     lbt.debuglog(row_of_dashes)
   end
 end

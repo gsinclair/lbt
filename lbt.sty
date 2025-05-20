@@ -20,7 +20,8 @@
 \RequirePackage{siunitx}   % Generally good.
 \RequirePackage{fvextra}   % need \Verb in some error messages (\verb doesn't work); also
                            %   implement a rich VERBATIM
-  \definecolor{lbtError}{rgb}{1.0, 0.03, 0.0}
+  \definecolor{lbtLogo}{HTML}{8B52BF}
+  \definecolor{lbtError}{HTML}{6F2DA8}
 \RequirePackage{tabularray} % tables are a common need!
   \UseTblrLibrary{varwidth}
 \RequirePackage{pdfpages} % to get \includepdf in Basic
@@ -136,3 +137,40 @@
 }
 
 % \newcommand{\lbtResetChapterCounters}{\luaexec{lbt.api.reset_chapter_counters()}}
+
+% --- LBT logo ---
+
+\newsavebox{\LBTbox}
+\newcommand{\lbtLogoInit}{%
+  \sbox{\LBTbox}{%
+    \begingroup
+      \setlength{\fboxsep}{1.5pt}  % Minimal padding
+      \scriptsize
+      \color{lbtLogo}
+      \raisebox{0.3ex}{%
+        \fbox{%
+          {\addfontfeatures{%
+             RawFeature={+smcp},% enable small caps
+             RawFeature={+ss01},% optional: stylistic set if needed
+           }%
+           \fontspec{TeX Gyre Heros}%
+           LBT%
+          }%
+        }%
+      }%
+    \endgroup
+  }%
+}
+\lbtLogoInit
+\newcommand{\lbtLogo}{\usebox{\LBTbox}}
+
+% --- LBT warning messages ---
+\newcommand{\lbtWarningCrossFill}{%
+  \leavevmode%
+  \leaders\hbox{\ding{54}\kern1.5em}\hfill\kern0pt%
+}
+\newcommand{\lbtWarning}[1]{
+  \medskip
+  \noindent {\color{lbtError}\bfseries \lbtLogo \enspace #1 \lbtWarningCrossFill}
+  \medskip
+}

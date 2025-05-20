@@ -89,6 +89,11 @@ local db_process_text_into_latex = function(text)
   end
 end
 
+local keylist = function(db)
+  local keys = db:keys():filter(function(k) return type(k) == 'string' end)
+  return keys:concat(',')
+end
+
 local db_functions = {
   loadfile = function(t)
     if t.nargs ~= 1 then db_err('loadfile needs one argument') end
@@ -130,7 +135,8 @@ local db_functions = {
     local k = t.args[1]
     local text = t.db[k]
     if text == nil then
-      lbt.util.template_error_quit('vec key error: %s', k)
+      local msg = 'Database (%s) key error: %s\n  available keys: %s'
+      lbt.util.template_error_quit(msg, t.label, k, keylist(t.db))
     end
     return db_process_text_into_latex(text)
   end
@@ -148,7 +154,7 @@ f.DB = function(n, args, o)
     local command = args[2]
     local func = db_functions[command] or db_err("no function implementation for '%s'", command)
     local db = db_retrieve(label)
-    local result = func { db = db, nargs = n-2, args = args:slice(3,-1), opts = o }
+    local result = func { label = label, db = db, nargs = n-2, args = args:slice(3,-1), opts = o }
     return result or '{}'
   end
 end

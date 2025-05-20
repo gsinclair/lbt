@@ -369,7 +369,7 @@ f.H1 = function(n, args)
   return F([[
 %% Heading 1
 \par \vspace{1.5em}
-{\Large %s}
+{\noindent\Large %s}
   ]], args[1])
 end
 
@@ -378,7 +378,7 @@ f.H2 = function(n, args)
   return F([[
 %% Heading 2
 \par \vspace{1em}
-{\large %s}
+{\noindent\large %s}
   ]], args[1])
 end
 
@@ -387,7 +387,7 @@ f.H3 = function(n, args)
   return F([[
 %% Heading 3
 \par \vspace{0.7em}
-\textbf{%s}
+\noindent\textbf{%s}
   ]], args[1])
 end
 
