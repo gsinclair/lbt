@@ -119,7 +119,7 @@ local q_sourcenote = function(source, note)
 end
 
 a.Q = 1
-op.Q = { prespace = '1ex', color = 'blue', newpage = false }
+op.Q = { pre = '1ex', color = 'blue', newpage = false }
 f.Q = function(n, args, o, kw)
   lbt.api.counter_reset('qq')
   lbt.api.counter_reset('mc')
@@ -133,7 +133,7 @@ f.Q = function(n, args, o, kw)
     {\noindent\color{!COLOR!}\bfseries Question~!NUMBER!}{!SOURCENOTE!}\quad !TEXT! \par
   ]]
   template.values = {
-    VSPACE = o.prespace, COLOR = o.color, NUMBER = q,
+    VSPACE = o.pre, COLOR = o.color, NUMBER = q,
     SOURCENOTE = q_sourcenote(kw.source, kw.note),
     TEXT = args[1] }
   return T(template)

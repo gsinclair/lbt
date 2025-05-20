@@ -8,7 +8,7 @@
 -- in particular command options like vspace, color.
 --
 -- Styles provided:
---  * Q.prespace            vertical space before a question
+--  * Q.pre               vertical space before a question  [a bedrock oparg]
 --  * Q.color             text color
 --  * QQ.alphabet         (arabic), Arabic, roman, Roman
 --  * MC.alphabet         arabic, (Arabic), roman, Roman
@@ -33,7 +33,7 @@ local init = function()
 end
 
 a.Q = 1
-op.Q = { prespace = '12pt', color = 'blue' }
+op.Q = { pre = '12pt', color = 'blue' }
 f.Q = function(n, args, o)
   lbt.api.counter_reset('qq')
   local col = o.color

@@ -17,6 +17,9 @@ local T = function(t, n, a)
   return { token = t, nargs = n, args = pl.List(a) }
 end
 
+local sans_comments = function(L)
+  return L:filter(function(x) return not x:startswith('%') end)
+end
 ----------------------------------------------------------------------
 
 -- For testing parsed_content_from_content_lines
@@ -70,7 +73,7 @@ local good_input_4 = content_lines([[
   [+BODY]
     TEXT Examples of animals:
     ITEMIZE .o topsep=0pt :: Bear :: Chameleon :: Frog
-    TEXT* .o prespace=30pt :: Have you seen any of these?]])
+    TEXT* .o pre=30pt :: Have you seen any of these?]])
 
 -- For testing negative expansion of Basic template
 local bad_input_1 = content_lines([[
@@ -98,9 +101,9 @@ local good_input_5a = content_lines([[
 local good_input_5b = content_lines([[
   [@META]
     TEMPLATE TestQuestions
-    OPTIONS  .d Q.prespace = 18pt, MC.alphabet = roman
+    OPTIONS  .d Q.pre = 18pt, MC.alphabet = roman
   [+BODY]
-    TEXT .o prespace=30pt :: Complete these questions in the space below.
+    TEXT .o pre=30pt :: Complete these questions in the space below.
     Q Evaluate:
     QQ $2+2$
     QQ $5 \times 6$
@@ -214,7 +217,7 @@ local function T_pragmas_and_other_lines()
   lbt.api.reset_global_data()
   local input = pl.List.new{"!DRAFT", "Line 1", "!IGNORE", "Line 2", "Line 3"}
   local pragmas, lines = lbt.fn.test.pragmas_and_content(input)
-  EQ(pragmas, { draft = true, ignore = true, debug = false })
+  EQ(pragmas, { DRAFT = true, IGNORE = true, DEBUG = false, SKIP = false })
   EQ(lines, 'Line 1\nLine 2\nLine 3')
 end
 
@@ -222,7 +225,7 @@ end
 local function T_parsed_content_from_content_lines_1()
   lbt.api.reset_global_data()
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_1)
-  EQ(pc.pragmas, { draft = true, ignore = false, debug = false })
+  EQ(pc.pragmas, { DRAFT = true, IGNORE = false, DEBUG = false, SKIP = false })
   EQ(pc.type, 'ParsedContent')
   -- check META is correct
   local m = pc:meta()
@@ -345,14 +348,14 @@ local function T_expand_Basic_template_1()
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_4)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
-  EQ(l[1], [[Examples of animals:]])
-  EQ(l[2], [[\par]])
-  assert(l[3]:lfind("\\item Bear"))
-  assert(l[3]:lfind("\\item Chameleon"))
-  assert(l[3]:lfind("\\item Frog"))
-  EQ(l[4], [[\vspace{30pt}]])
-  EQ(l[5], [[Have you seen any of these?]])
-  EQ(l[6], nil)
+  EQ(l[2], [[Examples of animals:]])
+  EQ(l[3], [[\par]])
+  assert(l[5]:lfind("\\item Bear"))
+  assert(l[5]:lfind("\\item Chameleon"))
+  assert(l[5]:lfind("\\item Frog"))
+  EQ(l[7], [[\vspace{30pt}]])
+  EQ(l[8], [[Have you seen any of these?]])
+  EQ(l[9], nil)
 end
 
 local function T_expand_Basic_template_2()
@@ -361,11 +364,11 @@ local function T_expand_Basic_template_2()
   local pc = lbt.fn.parsed_content_from_content_lines(bad_input_1)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
-  assert(l[1]:lfind([[Opcode \verb|TEXT| raised error]]))
+  assert(l[1]:lfind([[Opcode \Verb|TEXT| raised error]]))
   assert(l[1]:lfind([[0 args given but 1+ expected]]))
-  assert(l[2]:lfind([[Opcode \verb|ITEMIZE| raised error]]))
+  assert(l[2]:lfind([[Opcode \Verb|ITEMIZE| raised error]]))
   assert(l[2]:lfind([[0 args given but 1+ expected]]))
-  assert(l[3]:lfind([[Opcode \verb|XYZ| not resolved]]))
+  assert(l[3]:lfind([[Opcode \Verb|XYZ| not resolved]]))
 end
 
 local function T_util()
@@ -419,6 +422,7 @@ local function T_styles_in_test_question_template_5a()
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_5a)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
+  l = sans_comments(l)
   EQ(l[1], [[Complete these questions in the space below.]])
   EQ(l[2], [[\par]])
   EQ(l[3], [[\vspace{12pt}]])
@@ -441,6 +445,7 @@ local function T_styles_in_test_question_template_5b()
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_5b)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
+  l = sans_comments(l)
   EQ(l[1], [[\vspace{30pt}]])
   EQ(l[2], [[Complete these questions in the space below.]])
   EQ(l[3], [[\par]])
@@ -462,21 +467,21 @@ local function T_register_expansion()
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_6)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
-  EQ(l[1], [=[The quadratic formula is \[ \ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}. \]]=])
-  EQ(l[2], [[\par]])
-  EQ(l[3], [[Viewers of Roy and HG's \emph{The Dream}\footnote{Hello Bolivia!} \dots]])
-  EQ(l[4], [[\par]])
-  EQ(l[5], [[No longer defined: ◊fn1]])
+  EQ(l[2], [=[The quadratic formula is \[ \ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}. \]]=])
+  EQ(l[3], [[\par]])
+  EQ(l[5], [[Viewers of Roy and HG's \emph{The Dream}\footnote{Hello Bolivia!} \dots]])
   EQ(l[6], [[\par]])
-  EQ(l[7], [[Never was defined: ◊abc]])
-  EQ(l[8], [[\par]])
-  EQ(l[9], [[◊abc and $\ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}$]])
-  EQ(l[10], [[\par]])
-  EQ(l[11], nil)
+  EQ(l[8], [[No longer defined: ◊fn1]])
+  EQ(l[9], [[\par]])
+  EQ(l[11], [[Never was defined: ◊abc]])
+  EQ(l[12], [[\par]])
+  EQ(l[14], [[◊abc and $\ensuremath{x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}}$]])
+  EQ(l[15], [[\par]])
+  EQ(l[16], nil)
 end
 
 local function T_simplemath()
-  lbt.api.set_log_channels('allbuttrace')
+  lbt.core.set_log_channels('allbuttrace', 'space')
   -- Gain backdoor access to the simplemath macro
   local t = lbt.fn.Template.object_by_name('lbt.Math')
   local m = t.macros.simplemath
@@ -520,6 +525,7 @@ local function T_Basic_various()
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_8)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
+  l = sans_comments(l)
   assert(l[1]:lfind('Hello'))
   assert(l[2]:lfind('\\par'))
   assert(l[3]:lfind('minipage'))
@@ -589,7 +595,6 @@ local function RUN_TESTS(flag)
   if flag == 0 then return end
 
   print("\n\n======================= <TESTS>")
-  lbt.api.set_debug_mode(true)
 
   T_pragmas_and_other_lines()
   T_DictionaryStack()

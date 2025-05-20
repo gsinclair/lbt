@@ -130,19 +130,6 @@ lbt.api.set_draft_mode = function(_)
   lbt.err.E002_general("Don't use \\lbtDraftModeOn|Off anymore. Use \\lbtSettings{DraftMode = true}")
 end
 
--- Debug mode allows for extra debug information to be generated only
--- where it is needed. It is designed to support unit tests and hasn't been
--- used in quite a while, so it might disappear.
---   To use, code can check lbt.api.get_debug_mode() and act accordingly.
-lbt.api.set_debug_mode = function(x)
-  lbt.assert_bool(1,x)
-  lbt.system.settings:apply('DebugMode', x)
-end
-
-lbt.api.get_debug_mode = function()
-  return lbt.setting('DebugMode')
-end
-
 -- Counters are auto-created, so this will always return a value. The initial
 -- value will be zero.
 -- Normal counters are stored in lbt.var because they are variable and they get

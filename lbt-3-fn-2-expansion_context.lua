@@ -9,7 +9,6 @@
 local F = string.format
 
 local opargs_bedrock = {
-  par = true,              -- NOTE: slightly experimental
   pre = 'nil',
   post = 'nil',
   center = false, centre = false
