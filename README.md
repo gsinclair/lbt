@@ -1,11 +1,17 @@
 # Description
 
-`lua-based-templates` is a LuaLaTeX package to ease writing structured content (e.g.
+`lbt` stands for *Lua-Based Templates*.
+
+It is a LuaLaTeX package to ease writing structured content (e.g.
 exam, course material, worksheet, anything!) by allowing the user to define templates
 using the Lua programming language. This means content can be written without the
 usual LaTeX boilerplate.
 
-Example...
+# Status
+
+`lbt` has been in private development and heavy use since about 2022. It first appeared on Github in May 2025. It is in active development but is absolutely **alpha** software: anything can change anytime.
+
+Anybody who clones the respository should do a hard reset often, in case history has been rewritten. I will try to avoid rewriting published history, but I can't promise it will never happen. Use `git fetch origin` followed by `git reset --hard origin/main`.
 
 # License
 
@@ -25,113 +31,55 @@ version 2005/12/01 or later.
 
 Not yet.
 
-* TeX archive: http://mirror.ctan.org/tex-archive/macros/luatex/...
-* Package page: https://www.ctan.org/pkg/...
-
 # Distributions
 
 Not yet.
 
 # Repository
 
-https://github.com/gsinclair/lua-based-templates
+https://github.com/gsinclair/lbt
 
 ## Files
 
-* `lbt.tex`:
-* `lbt.lua`: The entry point to the Lua code of the package.
-* `vendor/*`: Third-party libraries used in the implementation: penlight.
-* `documentation.tex`: The LaTeX code to generate the documentation
-  `lua-based-templates.pdf` from. Maybe.
+* `lbt.sty`: The Latex package, which requires a lot of packages and creates the `lbt` environment and some supporting commands like `\lbtSettings` and `\lbtLoadTemplates`.
+* `lbt-*.lua`: The Lua code that implements the `lbt` core and the inbuilt templates.
+* `vendor/`: Third-party libraries used in the implementation: penlight and `debugger.lua`.
+* `test/`: Some files that support testing of the project.
+* `justfile`: Tasks that support development: edit in neovim, test, ...
+
+### Other files
+
+* `etc/`: Some scripts etc. that may have fallen out of date.
+* `doc/`: Some documentation that is 1\% complete.
+* `DOC-SCRATCH.md`: an old attempt at writing some documentation
 
 # Documentation
 
-* [User documentation as a PDF](http://example.com)
+* There will be some PDF documentation one day.
 
 # Installation
 
 ## TeX Live
 
-    tlmgr install lua-based-templates    # not yet
+    tlmgr install lbt    # not available yet!
 
 ## Manually
 
-    git clone git@github.com:gsinclair/lua-based-templates.git    # not yet
-    cd lua-based-templates
-
-### Using make (uses `kpsewhich -var-value TEXMFHOME` to find your local texmf directory)
-
+    git clone https://github.com/gsinclair/lbt.git
+    cd lbt
     make install
 
-    # What gets run:
-    #
-    # rm -rf ~/Library/texmf/tex/luatex/lua-based-templates
-    # mkdir -p ~/Library/texmf/tex/luatex/lua-based-templates
-    # cp -f lbt.tex ~/Library/texmf/tex/luatex/lua-based-templates
-    # cp -f lbt.sty ~/Library/texmf/tex/luatex/lua-based-templates
-    # cp -f lbt.lua ~/Library/texmf/tex/luatex/lua-based-templates
+You can now put `\usepackage{lbt}` in your Latex code. The code below shows what `make install` does, just for interest.
 
-## Compile the documentation:
+    jobname = lbt
+    texmf = $(shell kpsewhich -var-value TEXMFHOME)
+    texmftex = $(texmf)/tex/luatex
+    installdir = $(texmftex)/$(jobname)
 
-    # I don't know about this yet. This is what CLOZE does.
-    #
-    # lualatex --shell-escape documentation.tex
-    # makeindex -s gglo.ist -o documentation.gls documentation.glo
-    # makeindex -s gind.ist -o documentation.ind documentation.idx
-    # lualatex --shell-escape documentation.tex
-    # mv documentation.pdf cloze.pdf
-    # mkdir -p $HOME/texmf/doc/luatex/cloze
-    # cp -f cloze.pdf $HOME/texmf/doc/luatex/cloze
+	rm -rf $(installdir)
+	mkdir -p $(installdir)
+	cp -f $(jobname).sty $(installdir)
+	cp -f *.lua $(installdir)
+	cp -fr vendor $(installdir)
+	texhash $(texmf)
 
-# Development -- placeholder text from CLOZE package
-
-First delete the stable version installed by TeX Live. Because the
-package `cloze` belongs to the collection `collection-latexextra`, the
-option  `--force` must be used to delete the package.
-
-    tlmgr remove --force cloze
-
-## Deploying a new version
-
-Update the version number in the file `cloze.dtx` on this locations:
-
-### In the markup for the file `cloze.sty` (approximately at the line number 30)
-
-    %<*package>
-      [2020/05/20 v1.4 Package to typeset cloze worksheets or cloze tests]
-    %<*package>
-
-Add a changes entry (approximately at the line 90):
-
-```latex
-\changes{v1.4}{2020/05/20}{...}
-```
-
-### In the package documentation `documentation.tex` (approximately at the line number 125)
-
-```latex
-\date{v1.6~from 2020/06/30}
-```
-
-### In the markup for the file `cloze.lua` (approximately at the line number 1900)
-
-```lua
-if not modules then modules = { } end modules ['cloze'] = {
-  version   = '1.4'
-}
-```
-
-### Update the copyright year:
-
-```
-sed -i 's/(C) 2015-2023/(C) 2015-2021/g' cloze.ins
-sed -i 's/(C) 2015-2023/(C) 2015-2021/g' cloze.dtx
-```
-
-### Command line tasks:
-
-```
-git tag v1.4
-make
-make ctan
-```
