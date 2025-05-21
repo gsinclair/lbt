@@ -7,6 +7,6 @@ tmp
 *.aux
 *.dbg
 _minted*
-dbg-tex/
+lbt-expansions/
 lbt.debuglog
 COMMIT
