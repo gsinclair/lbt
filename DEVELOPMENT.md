@@ -786,3 +786,29 @@ red. For the logo, I'm thinking of a small-caps LBT inside a rectangle.
 A recent commit introduced \lbtUnderTilde for vector formatting, and got rid of the
 'accents' package. I'd like to do the same with arrows above. Lose the esvect package and
 implement \lbtOverArrow.
+
+## Small improvement: \lbtGlobalOptions{...} watch out for newlines
+
+The following code leads to a subtle error:
+
+  \lbtGlobalOpargs{
+    vector.format = bold,
+    LBTEXAMPLE.shrinkmargin = 4em
+    LBTEXAMPLE.float = true,
+    LBTEXAMPLE.position = p,
+  }
+
+See the missing comma on the 'shrinkmargin' line?
+
+What ends up happening is the dictionary looks like this:
+
+    KEY                        VALUE
+    vector.format              bold
+    LBTEXAMPLE.shrinkmargin    4em \n LBTEXAMPLE.float = true
+    LBTEXAMPLE.position        p
+
+Lucky I implemented better debugging output recently or I'd struggle to diagnose that.
+
+Anyway, when parsing a dictionary, there should not be a newline in the middle of a value (1). That should lead to a parsing error with a clear error message.
+
+(1) That's my immediate thought and it rings true. Think carefully before proceeding, though.
