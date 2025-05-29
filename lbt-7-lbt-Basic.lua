@@ -44,11 +44,17 @@ end
 -- General Latex command, and some specific ones.
 
 -- CMD vfill        --> \vfill
--- CMD tabto 20pt   --> \tabto{20pt}     [can have more arguments]
+-- CMD tabto 20pt   --> \tabto{20pt}                               [can have an argument]
+-- CMD newlist :: shoppinglist :: itemize :: 1                     [or many arguments]
+-- CMD setlist :: [shoppinglist] :: label=\ding{168}, left=2em     [recognises square brackets]
 a.CMD = '1+'
 f.CMD = function(n, args)
   local command = F([[\%s]], args[1])
-  local arguments = args:slice(2,-1):map(lbt.util.wrap_braces):join()
+  lbt.debuglograw('CMD')
+  lbt.debuglograw(lbt.pp(args))
+  local arguments = args:slice(2,-1):map(lbt.util.wrap_braces_or_brackets):join()
+  lbt.debuglograw('CMD - arguments joined')
+  lbt.debuglograw(arguments)
   return command..arguments
 end
 

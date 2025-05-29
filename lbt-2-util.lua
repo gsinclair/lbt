@@ -188,6 +188,16 @@ function lbt.util.wrap_parens(x)
   return '(' .. x .. ')'
 end
 
+function lbt.util.wrap_braces_or_brackets(x)
+  lbt.debuglograw('wrap_braces_or_brackets')
+  lbt.debuglograw(lbt.pp(x))
+  if x:startswith('[') and x:endswith(']') then
+    return x
+  else
+    return '{' .. x .. '}'
+  end
+end
+
 -- Examples:
 --   Positional arguments
 --     wrap_environment { 'The rain in spain', 'center' }
