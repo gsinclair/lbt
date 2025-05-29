@@ -23,7 +23,11 @@ local op = {}
 local a = {}
 local m = {}
 
-op.WS0 = { title_color = 'BlueViolet', teacher_notes_color = 'blue' }
+op.WS0 = {
+  title_color = 'BlueViolet',
+  teacher_notes_color = 'blue',
+  teacher_notes_include = true,
+}
 
 local function init()
 end
@@ -35,6 +39,7 @@ local function expand(pc)
   local tnotes   = lbt.util.content_meta_or_nil(pc, 'TEACHERNOTES') or '(none specified)'
   local titlecol = lbt.util.resolve_oparg('WS0.title_color')
   local tncol    = lbt.util.resolve_oparg('WS0.teacher_notes_color')
+  local tnincl   = lbt.util.resolve_oparg('WS0.teacher_notes_include')
 
   -- 1. Preamble
   local a = [[
@@ -46,17 +51,22 @@ local function expand(pc)
   ]]
 
   -- 2. Teacher notes
-  local b = F([[
-    \newpage
-    \begingroup
-    \color{%s}
-    \fbox{Teacher's notes on \textbf{%s}}
-    \vspace{2.5em}
+  local b
+  if tnincl then
+    b = F([[
+      \newpage
+      \begingroup
+      \color{%s}
+      \fbox{Teacher's notes on \textbf{%s}}
+      \vspace{2.5em}
 
-    %s
+      %s
 
-    \endgroup
-  ]], tncol, title, tnotes)
+      \endgroup
+    ]], tncol, title, tnotes)
+  else
+    b = ''
+  end
 
   -- 3. New page and table-of-contents addition
   local c = F([[

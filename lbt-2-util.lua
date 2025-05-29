@@ -43,7 +43,7 @@ end
 -- This is designed for use in template functions `init` and `expand`.
 --   The key needs to be qualified (e.g. vector.format, not just format); an error will
 -- result otherwise.
-lbt.util.resolve_oparg = function (qkey, ctx)
+lbt.util.resolve_oparg = function (qkey)
   lbt.assert_string(1, qkey)
   local ctx = lbt.fn.get_current_expansion_context()
   local found, value = ctx:resolve_oparg(qkey)

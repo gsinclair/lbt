@@ -232,7 +232,7 @@ function DictionaryStack:lookup(key)
   for i = self.layers:len(), 1, -1 do
     local layer = self.layers[i]
     local value = layer[key]
-    if value then return value end
+    if value ~= nil then return value end
   end
   return nil
 end
