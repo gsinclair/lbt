@@ -812,3 +812,15 @@ Lucky I implemented better debugging output recently or I'd struggle to diagnose
 Anyway, when parsing a dictionary, there should not be a newline in the middle of a value (1). That should lead to a parsing error with a clear error message.
 
 (1) That's my immediate thought and it rings true. Think carefully before proceeding, though.
+
+## Random idea: font support
+
+I could write an LBT macro that I call with
+
+    \setfonts{main = Times, sans = Helvetica, mono = Fira Mono, math = Euler}
+
+and it would generate the necessary LuaLatex code to set those fonts. It would know that 'Times' really means 'Tex Gyre Termes', and so on. This would allow for easy experimentation with fonts. To allow for even more experimentation, there could be
+
+    \setfontsmap{Garamond = package fbb}
+
+or whatever. Those inscrutible package names for fonts are very annoying.
