@@ -12,6 +12,8 @@ local m = {}   -- macros
 local op = {}
 local kw = {}
 
+local impl = {}
+
 -- --------------------------------------------------------------------
 -- environment_name('align', true)  --> 'align*'
 -- environment_name('align', false) --> 'align'
@@ -731,7 +733,7 @@ f.TABLE = function(n, args, o, kw)
         template = t, instruction = line, data = data
       }
       if not ok then return { error = 'Invalid datarows spec: ' .. line } end
-    elseif pl.stringx.lfind(line, [[\hline]]) then
+    elseif impl.table_row_is_a_rule(line) then
       -- we do not put a \\ on this line
       t:append(line)
     else
@@ -754,6 +756,11 @@ f.TABLE = function(n, args, o, kw)
     result = lbt.util.wrap_environment { result, 'table', oparg = o.position }
   end
   return result
+end
+
+impl.table_row_is_a_rule = function(line)
+  local f = function(x) return pl.stringx.lfind(line, '\\'..x) end
+  return f('hline') or f('toprule') or f('midrule') or f('bottomrule') or f('cmidrule')
 end
 
 ----- /TABLE
