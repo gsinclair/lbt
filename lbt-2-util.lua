@@ -189,8 +189,6 @@ function lbt.util.wrap_parens(x)
 end
 
 function lbt.util.wrap_braces_or_brackets(x)
-  lbt.debuglograw('wrap_braces_or_brackets')
-  lbt.debuglograw(lbt.pp(x))
   if x:startswith('[') and x:endswith(']') then
     return x
   else

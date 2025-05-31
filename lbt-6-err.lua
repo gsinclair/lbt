@@ -82,6 +82,10 @@ lbt.err.E206_cant_form_list_of_sources = function (name)
     "      (Perhaps you haven't specified a template directory.)", name)
 end
 
+lbt.err.E208_nonexistent_template_dir = function (dir)
+  E('E208: Nonexistent directory given to \\lbtLoadTemplates:\n  (%s)', dir)
+end
+
 lbt.err.E213_failed_template_load = function(path, error_details)
   E("E213: Failed to load template:\n * path: %s\n * msg: %s", path, error_details)
 end

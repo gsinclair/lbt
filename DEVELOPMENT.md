@@ -824,3 +824,7 @@ and it would generate the necessary LuaLatex code to set those fonts. It would k
     \setfontsmap{Garamond = package fbb}
 
 or whatever. Those inscrutible package names for fonts are very annoying.
+
+## More INCLUDE commands
+
+I currently have PDFINCLUDE. I want to change that to INCLUDEPDF. And I want to introduce INCLUDELBT, so that you can have an .lbt file with only LBT commands in it -- no latex at all.
