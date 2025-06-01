@@ -43,6 +43,18 @@ f.TEXT = function (n, args, o)
   return paragraphs
 end
 
+-- LATEX passes things straight through to Latex. It's exactly the same as
+-- TEXT* (but only takes one argument) but it's useful to have a clearer name
+-- for the purpose.
+--   Generally use it with .v, as in
+--     LATEX .v <<
+--       ...
+--     >>
+a.LATEX = 1
+f.LATEX = function(_, args)
+  return args[1]
+end
+
 -- General Latex command, and some specific ones.
 
 -- CMD vfill        --> \vfill
