@@ -793,6 +793,16 @@ f.PDFINCLUDE = function(n, args, o)
   return F([[\includepdf[pages={%s}]{%s}]], pages, path)
 end
 
+a.INCLUDELBT = 1
+f.INCLUDELBT = function(_, args)
+  local path = args[1]
+  local content = pl.file.read(path)
+  if content == nil then
+    lbt.err.E002_general("Attempt to INCLUDELBT failed. Can't read the file: %s", path)
+  end
+  return lbt.util.lbt_commands_text_into_latex(content)
+end
+
 -- TWOPANEL .o ratio=2:3, align=bt :: \DiagramOne :: ◊DiagramOneText
 a.TWOPANEL = 2
 op.TWOPANEL = { ratio = '1:1', align = 'tt' }
