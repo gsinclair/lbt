@@ -828,3 +828,12 @@ or whatever. Those inscrutible package names for fonts are very annoying.
 ## More INCLUDE commands
 
 I currently have PDFINCLUDE. I want to change that to INCLUDEPDF. And I want to introduce INCLUDELBT, so that you can have an .lbt file with only LBT commands in it -- no latex at all.
+
+## Integrate 'simplemath' in MATH-based environments
+
+It would be cool to be able to use `MATH .o align` to typeset several lines of mathematics and have all the text automatically fed through 'simplmath'.
+
+    MATH .o align, sm
+    :: sin^2 x + cos^2 x & equiv 1
+    :: frac 1 3
+    
