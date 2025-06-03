@@ -210,8 +210,14 @@ end
 
 -- tcolorbox (simple use only; will have to add options)
 a.BOX = '1+'
+op.BOX = { lbt = false }  -- NOTE: experimental feature
 f.BOX = function(n, args, o)
-  local content = args:concat([[ \par \medskip ]])
+  local content
+  if o.lbt then
+    content = lbt.util.lbt_commands_text_into_latex(args[1])
+  else
+    content = args:concat([[ \par \medskip ]])
+  end
   local result = F([[
 \begin{tcolorbox}
   %s

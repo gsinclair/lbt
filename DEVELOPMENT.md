@@ -836,4 +836,15 @@ It would be cool to be able to use `MATH .o align` to typeset several lines of m
     MATH .o align, sm
     :: sin^2 x + cos^2 x & equiv 1
     :: frac 1 3
-    
+
+## Strengthen protocol for template init() function
+
+Currently we just call init() and that is it.
+
+The init() function, if it exists at all, typically does two things. (I'd need to look at all examples to see if I've forgotten anything.)
+* Initialise counters or data for later use by commands.
+* Create Latex commands for use by later commands.
+
+Creating Latex commands means calling lbt.util.print_tex_lines. There are two things wrong with this. The first (mild) problem is that the template author needs to be aware of this relatively low-level function. The second problem, and the reason I am writing this note, is that we can't track what is going into the Latex stream. I'd like to log the creation of those commands.
+
+Solution: init can return text to go into the Latex stream, just like a command does. It can also return nil; that's fine.
