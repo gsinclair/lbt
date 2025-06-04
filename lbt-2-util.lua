@@ -137,13 +137,25 @@ end
 -- Input: 'My name is !NAME! and I am !ADJ! to meet you',
 --        { NAME = 'Jon', ADJ = 'pleased', AGE = 37 }
 -- Output: 'My name is Jon and I am pleased to meet you'
+--
+-- Or...
+-- Input: { 'The earth is flat.', include = false }
+--        { NAME = 'Jon', ADJ = 'pleased', AGE = 37 }
+-- Output: nil   (because include == false)
+-- So we have to distinguish between a string template and a table template.
+--
 -- Note: valid substitution tokens use upper-case, numbers, and underscores.
 --       (But mostly just upper case.)
 lbt.util.string_template_expand1 = function (template, values)
   local substitute = function(s)
+    -- TODO: make a better error message
     return values[s] or error("Can't perform template substitution on string: " .. s)
   end
-  return template:gsub('!(%u[%u%d_]+)!', substitute)
+  if type(template) == 'string' then
+    return template:gsub('!(%u[%u%d_]+)!', substitute)
+  elseif type(template) == 'table' then
+    return template.include and template[1]:gsub('!(%u[%u%d_]+)!', substitute)
+  end
 end
 
 -- Like string_template_expand1 but you can provide as many 'templates' as you like.
@@ -151,6 +163,7 @@ end
 -- Example:
 --   string_template_expand {
 --     'My name is !NAME!.',
+--     { 'The earth is flat.', include = false },
 --     'I am !ADJ! to meet you,',
 --     'and we will leave work at !TIME!.'
 --     values = { NAME = 'Allie', ADJ = 'miffed', TIME = '17:30'}
@@ -163,7 +176,9 @@ lbt.util.string_template_expand = function (t)
   local lines = pl.List()
   for _, x in ipairs(t) do
     local transformed_line = lbt.util.string_template_expand1(x, t.values)
-    lines:append(transformed_line)
+    if transformed_line then
+      lines:append(transformed_line)
+    end
   end
   return lines:concat('\n')
 end

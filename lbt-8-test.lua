@@ -383,7 +383,8 @@ local function T_util()
   EQ(lbt.util.string_template_expand1(t, v), 'My name is Jon, age 37, and I am pleased to see you')
   local t = {
     'The rain in !COUNTRY!',
-    'falls mainly on the',
+    { 'this should not be included', include = false },
+    { 'falls mainly on the', include = true },
     '!OBJECT!, so I am told.',
     values = { COUNTRY = 'Spain', OBJECT = 'plain' }
   }
