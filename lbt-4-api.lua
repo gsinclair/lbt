@@ -299,6 +299,7 @@ end
 --
 -- The current_expansion_id is needed so that the relevant ExpansionContext can be
 -- retrieved when it is time to 'run' the macro.
+-- XXX: this function is on the way out, but move the comment above to lbt.fn
 lbt.api.macro_define = function (text)
   -- lm = latex macro   tn = template name   fn = function name
   local lm, tn, fn = lbt.fn.parse_macro_define_argument(text)
@@ -319,6 +320,17 @@ lbt.api.macro_define = function (text)
     tex.print(latex_cmd)
     lbt.log(3, [[Defined Latex macro \%s to %s.%s]], lm, tn, fn)
     lbt.log(3, ' ~> %s', latex_cmd)
+  end
+end
+
+-- XXX: document the function here
+lbt.api.define_latex_macros = function (text)
+  local d = lbt.parser.parse_dictionary(text)
+  if d == nil then
+    lbt.err.E002_general("Attempt to \\lbtDefineLatexMacros failed: couldn't parse dictionary")
+  end
+  for key, value in pl.Map(d):iter() do
+    lbt.fn.define_latex_macro(key, value)
   end
 end
 

@@ -507,6 +507,7 @@ end
 --         (latex macro, template name, function name)
 --             lm           tn             fn
 -- Error: if the text does not follow the correct format
+-- XXX: this function is on the way out
 lbt.fn.parse_macro_define_argument = function (text)
   local ERR = lbt.err.E109_invalid_macro_define_spec
   local lm, tn, fn = text:match('^(%a+*?)=([%w.]+):(%w+)')
@@ -517,6 +518,56 @@ lbt.fn.parse_macro_define_argument = function (text)
     ERR(text)
   end
   return lm, tn, fn
+end
+
+-- Input: Math:vector
+-- Output:  lbt.Math,      vector
+--         (template name, function name)
+--             tn             fn
+-- Error: if the text does not follow the correct format
+-- XXX: this function should be in an impl-style namespace
+lbt.fn.parse_macro_define_argument2 = function (text)
+  local ERR = lbt.err.E109_invalid_macro_define_spec
+  local tn, fn = text:match('^([%w.]+):(%w+)')
+  if not (tn and fn) then
+    ERR(text)
+  end
+  if not tn:match('^%a') then
+    ERR(text)
+  end
+  return tn, fn
+end
+
+lbt.fn.define_latex_macro = function (latexmacro, target)
+  -- lm = latex macro (name)    tn = template name    fn = function name
+  local lm = latexmacro
+  local tn, fn = lbt.fn.parse_macro_define_argument2(target)
+  lbt.fn.define_latex_macro_1(lm, tn, fn)
+end
+
+-- XXX: put in an impl-style namespace
+lbt.fn.define_latex_macro_1 = function (macroname, templatename, functionname)
+  local lm = macroname      -- Vijk
+  local tn = templatename   -- lbt.Math
+  local fn = functionname   -- vectorijk
+  local t = lbt.fn.Template.object_by_name_or_nil(tn)
+  if t == nil then
+    lbt.err.E158_macro_define_error("Template doesn't exist: %s", tn)
+  elseif t.macros == nil then
+    lbt.err.E158_macro_define_error("Template defines no macros: %s", tn)
+  elseif t.macros[fn] == nil then
+    lbt.err.E158_macro_define_error("Template %s has no macro function %s", tn, fn)
+  elseif type(t.macros[fn]) ~= 'function' then
+    lbt.err.E158_macro_define_error(
+      "Template %s has macro 'function' %s that's not actually a function", tn, fn)
+  else
+    local details = F([=[template = '%s', macro = '%s', eid = lbt.fn.current_expansion_id(), arg = [[\unexpanded{#1}]] ]=], tn, fn)
+    local latex_cmd = F([[\newcommand{\%s}[1]{\directlua{lbt.api.macro_run { %s } }} ]],
+                        lm, details)
+    tex.print(latex_cmd)
+    lbt.log(3, [[Defined Latex macro \%s to %s.%s]], lm, tn, fn)
+    lbt.log(3, ' ~> %s', latex_cmd)
+  end
 end
 
 -- }}}

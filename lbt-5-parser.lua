@@ -63,7 +63,7 @@ local space = (S' \t\n')^1
 local RestOfLine = (P(1) - nl)^1
 local Symbol = S'_.*'
 -- identifier can be like foo or foo_bar or foo.bar or TEXT*.vsp
-local identifier = Alpha * (Alpha + Digit + Symbol)^1
+local identifier = Alpha * (Alpha + Digit + Symbol)^0
 local integer = (P('-')^-1 * R'19' * (R'09')^0) / tonumber
 local integer_only = integer * -1
 local dquote = P('"')

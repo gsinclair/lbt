@@ -109,6 +109,7 @@
 \newcommand{\lbtLogChannels}[1]{\directlua{lbt.core.set_log_channels("#1")}}
 
 \newcommand{\lbtDefineLatexMacro}[1]{\directlua{lbt.api.macro_define("#1")}}
+\newcommand{\lbtDefineLatexMacros}[1]{\directlua{lbt.api.define_latex_macros("#1")}}
 
 \newcommand{\lbtPersistentCounterReset}[1]{\directlua{lbt.api.persistent_counter_reset('#1')}}
 \newcommand{\lbtPersistentDataSet}[1]{\directlua{lbt.api.persistent_data_set_keyval('#1')}}
