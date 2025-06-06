@@ -240,7 +240,9 @@ do
                          Kappa Lambda Mu Nu Xi Omicron Pi Rho Sigma Tau
                          Upsilon Phi Chi Psi Omega]]
   local abbrev = makemap[[al alpha be beta ga gamma de delta ep epsilon th theta la lambda
-                          Al Alpha Be Beta Ga Gamma De Delta Ep Epsilon Th Theta La Lambda]]
+                          Al Alpha Be Beta Ga Gamma De Delta Ep Epsilon Th Theta La Lambda
+                          imp Rightarrow
+                          ds displaystyle]]
 
   local process_trig = function (fn, power)
     return F([[\%s^{%s}]], fn, power)
@@ -248,6 +250,10 @@ do
 
   local mathit = function(letters)
     return F([[\mathit{%s}]], letters)
+  end
+
+  local bbX = function(letters)
+    return F([[\mathbb{%s}]], letters:sub(3,3))
   end
 
   local process_word = function (word)
@@ -273,10 +279,11 @@ do
                        'sinh' + 'cosh' + 'tanh',
     trig  = (C(V'trigf') * C(loc.digit^1)) / process_trig,
     upper = C(loc.upper^2) / mathit,
+    bbX   = C(P'bb' * loc.upper) / bbX,
     word  = C(loc.alpha^1) / process_word,
     space = C(loc.space^1) / tag('space'),
     other = C( (1-(loc.alpha+loc.space+backslash))^1 ) / tag('other'),
-    item  = V'command' + V'trig' + V'upper' + V'word' + V'space' + V'other',
+    item  = V'command' + V'trig' + V'upper' + V'bbX' + V'word' + V'space' + V'other',
     sm = Ct(V'item'^0) * -1
   }
 
@@ -400,7 +407,7 @@ end
 
 local mathseqdotsterms = function (text)
   local terms = mathseqterms(text)
-  terms:insert(#terms-1, '\\dots')
+  terms:insert(#terms, '\\dots')
   return terms
 end
 
