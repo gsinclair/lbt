@@ -261,6 +261,19 @@ function lbt.util.wrap_environment(kwargs)
   return lbt.util.string_template_expand(t)
 end
 
+-- Input: kwarg with (optionally) 'caption' and (extra optionally) 'shortcaption'.
+-- Output:
+--   \caption[A table of integrals]{A table of integrals bequeathed to ........}
+--   \caption{A seal on the rocks}
+--   nil
+lbt.util.latex_caption_command = function(kw)
+  if kw.caption and kw.shortcaption then
+    return F([[\caption[%s]{%s}]], kw.shortcaption, kw.caption)
+  elseif kw.caption then
+    return F([[\caption{%s}]], kw.caption)
+  end
+end
+
 -- x: latex content
 -- o: an options resolver; we are interested only in o.leftindent
 -- If leftindent is a value like '3em', wrap x in an adjustwidth environment

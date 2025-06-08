@@ -648,7 +648,7 @@ end
 a.VERBATIM = 1
 op.VERBATIM = { env = 'nil', breaklines = true }
 f.VERBATIM = function (n, args, o)
-  local lines = args[1]
+  local lines = args[1]:rstrip()
   local env = 'Verbatim'
   if o.env then env = o.env end
   local spec = ''

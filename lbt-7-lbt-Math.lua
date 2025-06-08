@@ -81,6 +81,9 @@ m.vector = function (text, ctx)
       args:remove(1)
       local contents = table.concat(args, [[ \\ ]])
       return F([[\ensuremath{\begin{pmatrix} %s \end{pmatrix}}]], contents)
+    elseif args[1] == 'ij' or args[1] == 'ijk' then
+      args:remove(1)
+      return m.vectorijk(args:concat(' '), ctx)
     else
       -- col is default
       local contents = table.concat(args, [[ \\ ]])
@@ -218,7 +221,7 @@ do
     end
     return map
   end
-  local trig = makeset'sin cos tan sec csc cot arcsin'
+  local trig = makeset'sin cos tan sec csc cot arcsin arccos arctan arcsec arccsc arccot'
   local other = makeset[[equiv forall exists nexists implies to in notin mid nmid
                          quad le ge ne iff sqrt frac tfrac dfrac not approx sim
                          neg wedge vee
