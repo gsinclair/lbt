@@ -508,8 +508,6 @@ local function T_simplemath()
   assert_math([[a^2 + b^2 = c^2]], [[a^2 + b^2 = c^2]])
   assert_math([[forall n in \nat, n+1 > n]], [[\forall n \in \nat, n+1 > n]])
   assert_math([[lim_{n to infty} 1/n = 0]], [[\lim_{n \to \infty} 1/n = 0]])
-  -- ^^^ Doesn't work because infty is not a whole space-separated word.
-  --     A stetch goal would be to parse out {...} first and make this work.
   assert_math([[x ge alpha]], [[x \ge \alpha]])
   assert_math([[alpha beta gamma]], [[\alpha \beta \gamma]])
   assert_math([[OABC PQR XY]], [[\mathit{OABC} \mathit{PQR} \mathit{XY}]])
@@ -517,6 +515,7 @@ local function T_simplemath()
     [[D = \set {w \in \bbC \mid \abs {w} \le 1}]])
   assert_math([[exists n in \bbN: n text{ is prime }]], [[\exists n \in \bbN: n \text{ is prime }]])
   assert_math([[exists n in \bbN: n \text{ is prime }]], [[\exists n \in \bbN: n \text{ is prime }]])
+  assert_math([[abc \text{reader to confirm} def]], [[abc \text{reader to confirm} def]])
   assert_math([[xxx]], [[xxx]])
 end
 

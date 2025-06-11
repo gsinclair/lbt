@@ -271,12 +271,29 @@ do
   end
 
   local lpeg = require('lpeg')
-  local P, C, Ct, V, loc = lpeg.P, lpeg.C, lpeg.Ct, lpeg.V, lpeg.locale()
+  local P, C, Ct, V, S, loc = lpeg.P, lpeg.C, lpeg.Ct, lpeg.V, lpeg.S, lpeg.locale()
   local backslash = P('\\')
+
+  -- Define a grammar for \text{...} with nested braces allowed
+  local function text_command_pattern()
+    local sp = loc.space^0
+    local lbrace = P("{")
+    local rbrace = P("}")
+
+    return P {
+      'TextCommand',
+      TextCommand = C(P('\\text') * sp * V('Braced')),
+      Braced = lbrace * V('Content')^0 * rbrace,
+      Content = V('Braced') + (1 - S('{}')),  -- recursively allow braces, or consume anything else
+    }
+  end
+
   local tag = function(label)
     return function(x) simplemathlog('simplmath tag ' .. label .. ': <' .. x .. '>'); return x end
   end
+
   local smparse = P{ 'sm',
+    textcmd = text_command_pattern() / tag('textcmd'),
     command = C(backslash * (loc.alpha^1 + '!' + ',')) / tag('command'),
     trigf = P(false) + 'sin' + 'cos' + 'tan' + 'sec' + 'csc' + 'cot' +
                        'sinh' + 'cosh' + 'tanh',
@@ -286,7 +303,7 @@ do
     word  = C(loc.alpha^1) / process_word,
     space = C(loc.space^1) / tag('space'),
     other = C( (1-(loc.alpha+loc.space+backslash))^1 ) / tag('other'),
-    item  = V'command' + V'trig' + V'upper' + V'bbX' + V'word' + V'space' + V'other',
+    item  = V'textcmd' + V'command' + V'trig' + V'upper' + V'bbX' + V'word' + V'space' + V'other',
     sm = Ct(V'item'^0) * -1
   }
 
@@ -494,4 +511,3 @@ return {
   opargs = op,
   macros    = m,
 }
-
