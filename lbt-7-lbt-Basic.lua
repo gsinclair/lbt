@@ -475,6 +475,7 @@ local math_environment = function(o)
     result = 'flalign'
   -- General case.
   elseif o.env       then result = o.env
+  elseif o.split     then return 'split'   -- there is no split*, so return right away
   elseif o.align     then result = 'align'
   elseif o.alignat   then result = 'alignat'
   elseif o.gather    then result = 'gather'
@@ -520,6 +521,13 @@ local math_impl = function (environment, args, o)
       return result
     end
   end
+  local simplemath = function(lines)
+    if o.sm then -- TODO: make this one line
+      return lines:map(function(x) return '\\sm{' .. x .. '}' end)
+    else
+      return lines
+    end
+  end
   local join_lines = function(lines)
     if environment == 'flalign' or environment == 'flalign*' then
       return lines:concat([[&& \\]] .. '\n')
@@ -531,8 +539,13 @@ local math_impl = function (environment, args, o)
   local lines = process_args_notag(args)
   -- 2. Build mathematical content wrapped in 'align' or 'gather' or whatever.
   local x = nil
-  x = join_lines(lines)
+  x = join_lines(simplemath(lines))
   x = lbt.util.wrap_environment { x, environment }
+  if environment == 'split' and o.eqnum then -- TODO: put 'split' handling in a support function
+    x = lbt.util.wrap_environment { x, 'equation' }
+  elseif environment == 'split' and not o.eqnum then
+    x = lbt.util.wrap_environment { x, 'equation*' }
+  end
   -- 3. Apply 'spreadlines' if chosen.
   x = lbt.util.general_formatting_wrap(x, o, 'spreadlines')
   -- 4. Apply alignleft if appropriate, including vspace correction.
@@ -545,11 +558,11 @@ local math_impl = function (environment, args, o)
 end
 
 op.MATH = { env = 'nil', align = false, alignat = false, flalign = false,
-            gather = false, multiline = false, gathered = false,
+            gather = false, multiline = false, gathered = false, split = false,
             aligned = false, alignedat = false,
             spreadlines = 'nil', alignleft = false,
             par = true, eqnum = false,
-            starred = false }
+            starred = false, sm = false }
 a.MATH = '1+'
 f.MATH = function(n, args, o)
   if o.starred then
