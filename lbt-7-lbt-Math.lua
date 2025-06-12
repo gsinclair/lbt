@@ -289,12 +289,16 @@ do
   end
 
   local tag = function(label)
-    return function(x) simplemathlog('simplmath tag ' .. label .. ': <' .. x .. '>'); return x end
+    return function(x)
+      simplemathlog('simplmath tag ' .. label .. ': <' .. x .. '>');
+      return x
+    end
   end
 
-  local smparse = P{ 'sm',
+  local sm_grammar = P{ 'sm',
     textcmd = text_command_pattern() / tag('textcmd'),
     command = C(backslash * (loc.alpha^1 + '!' + ',')) / tag('command'),
+    bracket = C(S'()[]') / tag('bracket'),
     trigf = P(false) + 'sin' + 'cos' + 'tan' + 'sec' + 'csc' + 'cot' +
                        'sinh' + 'cosh' + 'tanh',
     trig  = (C(V'trigf') * C(loc.digit^1)) / process_trig,
@@ -307,14 +311,32 @@ do
     sm = Ct(V'item'^0) * -1
   }
 
-  m.simplemath = function (text, _)
+  local join_sm_tokens = function (args)
+    local process_token = function(t)
+      if t == '(' or t == '[' then
+        return args.leftright and '\\left'..t or t
+      end
+      if t == ')' or t == ']' then
+        return args.leftright and '\\right'..t or t
+      end
+      return t
+    end
+    local tokens = pl.List(args[1])
+    return tokens:map(process_token):concat('')
+  end
+
+  op.simplemath = { leftright = true }
+  m.simplemath = function (text, ctx)
     simplemathlog('simplemath: ' .. text)
     local displaymode = text:startswith(' ') and text:endswith(' ')
-    local transformed = smparse:match(text)
-    if transformed and displaymode then
-      return F([[ \[ %s \] ]], table.concat(transformed, ''))
-    elseif transformed then
-      return F([[\ensuremath{%s}]], table.concat(transformed, ''))
+    local leftright = lbt.util.resolve_oparg_for_macro('simplemath.leftright', ctx)
+    local tokens = sm_grammar:match(text)
+    lbt.debuglog('simplemath tokens: %s', lbt.pp(tokens))
+    lbt.debuglog('simplemath tokens: %s', join_sm_tokens { tokens })
+    if tokens and displaymode then
+      return F([[ \[ %s \] ]], join_sm_tokens { tokens, leftright = leftright })
+    elseif tokens then
+      return F([[\ensuremath{%s}]], join_sm_tokens { tokens, leftright = leftright })
     else
       local errormsg = F('«Unable to parse simplemath text: \\Verb====%s====»', text)
       return F([[\textbf{\textcolor{red} %s }]], errormsg)

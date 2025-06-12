@@ -482,24 +482,20 @@ local function T_register_expansion()
 end
 
 local function T_simplemath()
+  -- We need an ExpansionContext to run the simplemath macro
+  local ctx = lbt.fn.ExpansionContext.test_ctx { 'lbt.Math', 'lbt.Basic' }
   lbt.core.set_log_channels('allbuttrace', 'space')
   -- Gain backdoor access to the simplemath macro
   local t = lbt.fn.Template.object_by_name('lbt.Math')
   local m = t.macros.simplemath
   local assert_math = function(input, expected)
-    local actual = m(input)
-    local expected = F([[\ensuremath{%s}]], expected)
-    EQ(actual, expected)
+    local actual = m(input, ctx)
+    EQ(actual, F([[\ensuremath{%s}]], expected), nil, 1)
   end
-  lbt.log(1, 'test 1')
   assert_math([[\alpha]], [[\alpha]])
-  lbt.log(1, 'test 2')
   assert_math([[\text]], [[\text]])
-  lbt.log(1, 'test 3')
   assert_math([[n \text]], [[n \text]])
-  lbt.log(1, 'test 4')
   assert_math([[n \text{ is odd} implies n^2 \text{ is odd}]], [[n \text{ is odd} \implies n^2 \text{ is odd}]])
-  lbt.log(1, 'test 5')
   assert_math([[\br{ sqrt n }^n le n! le \br{ frac {n+1} 2 }^n\,.]],
               [[\br{ \sqrt n }^n \le n! \le \br{ \frac {n+1} 2 }^n\,.]])
   assert_math([[sin2 th = 0.32]], [[\sin^{2} \theta = 0.32]])
@@ -515,7 +511,10 @@ local function T_simplemath()
     [[D = \set {w \in \bbC \mid \abs {w} \le 1}]])
   assert_math([[exists n in \bbN: n text{ is prime }]], [[\exists n \in \bbN: n \text{ is prime }]])
   assert_math([[exists n in \bbN: n \text{ is prime }]], [[\exists n \in \bbN: n \text{ is prime }]])
+  -- Test that \text{...} is picked up and passed through.
   assert_math([[abc \text{reader to confirm} def]], [[abc \text{reader to confirm} def]])
+  -- Test automatic \left and \right
+  assert_math([[(a + (b+c)^2)^2]], [[\left(a + \left(b+c\right)^2\right)^2]])
   assert_math([[xxx]], [[xxx]])
 end
 
@@ -628,4 +627,4 @@ end
 --   0: don't run tests (but continue the program)
 --   1: run tests and exit
 --   2: run tests and continue
-RUN_TESTS(0)
+RUN_TESTS(1)
