@@ -515,6 +515,8 @@ local function T_simplemath()
   assert_math([[abc \text{reader to confirm} def]], [[abc \text{reader to confirm} def]])
   -- Test automatic \left and \right
   assert_math([[(a + (b+c)^2)^2]], [[\left(a + \left(b+c\right)^2\right)^2]])
+  assert_math([[y = [frac x 7] \text{(where $[a]$ is the rounding function)}]],
+              [[y = \left[\frac x 7\right] \text{(where $[a]$ is the rounding function)}]])
   assert_math([[xxx]], [[xxx]])
 end
 
@@ -627,4 +629,4 @@ end
 --   0: don't run tests (but continue the program)
 --   1: run tests and exit
 --   2: run tests and continue
-RUN_TESTS(1)
+RUN_TESTS(0)

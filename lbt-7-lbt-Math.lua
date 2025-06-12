@@ -274,24 +274,30 @@ do
   local P, C, Ct, V, S, loc = lpeg.P, lpeg.C, lpeg.Ct, lpeg.V, lpeg.S, lpeg.locale()
   local backslash = P('\\')
 
-  -- Define a grammar for \text{...} with nested braces allowed
+  -- Define a grammar for \text{...} or text{...} with nested braces allowed.
+  -- Always return it with a backslash (\text) so it is ready for Latex consumption.
   local function text_command_pattern()
     local sp = loc.space^0
     local lbrace = P("{")
     local rbrace = P("}")
 
+    local ensure_backslash = function(x)
+      if x:startswith('\\') then return x else return '\\'..x end
+    end
+
     return P {
       'TextCommand',
-      TextCommand = C(P('\\text') * sp * V('Braced')),
-      Braced = lbrace * V('Content')^0 * rbrace,
-      Content = V('Braced') + (1 - S('{}')),  -- recursively allow braces, or consume anything else
+      TextCommand = C(V'TextCommandName' * sp * V'Braced') / ensure_backslash,
+      TextCommandName = P'\\text' + P'text',
+      Braced = lbrace * V'Content'^0 * rbrace,
+      Content = V'Braced' + (1 - S'{}'),  -- recursively allow braces, or consume anything else
     }
   end
 
   local tag = function(label)
     return function(x)
       simplemathlog('simplmath tag ' .. label .. ': <' .. x .. '>');
-      return x
+      return { label = label, value = x }
     end
   end
 
@@ -313,16 +319,25 @@ do
 
   local join_sm_tokens = function (args)
     local process_token = function(t)
-      if t == '(' or t == '[' then
-        return args.leftright and '\\left'..t or t
+      if type(t) == 'table' and t.label == 'textcmd' then return t.value end
+      local value
+      if type(t) == 'table'  then value = t.value end
+      if type(t) == 'string' then value = t end
+      if args.leftright then
+        value = value:gsub("([%(%)%[%]])", {
+          ['('] = '\\left(',
+          [')'] = '\\right)',
+          ['['] = '\\left[',
+          [']'] = '\\right]',
+        })
+        return value
+      else
+        return value
       end
-      if t == ')' or t == ']' then
-        return args.leftright and '\\right'..t or t
-      end
-      return t
     end
     local tokens = pl.List(args[1])
-    return tokens:map(process_token):concat('')
+    local result = tokens:map(process_token)
+    return result:concat('')
   end
 
   op.simplemath = { leftright = true }
@@ -331,8 +346,6 @@ do
     local displaymode = text:startswith(' ') and text:endswith(' ')
     local leftright = lbt.util.resolve_oparg_for_macro('simplemath.leftright', ctx)
     local tokens = sm_grammar:match(text)
-    lbt.debuglog('simplemath tokens: %s', lbt.pp(tokens))
-    lbt.debuglog('simplemath tokens: %s', join_sm_tokens { tokens })
     if tokens and displaymode then
       return F([[ \[ %s \] ]], join_sm_tokens { tokens, leftright = leftright })
     elseif tokens then
