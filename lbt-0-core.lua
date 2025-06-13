@@ -144,6 +144,7 @@ end
 --   LogChannels = 4 emit trace,
 -- }
 local DefaultSettings = {
+  SettingsFile = 'nil',
   DraftMode = false,
   WriteExpansionFiles = true,
   ClearExpansionFiles = true,
@@ -188,7 +189,9 @@ lbt.core.Settings = Settings
 
 -- Validate (and return error message if needed) and apply side effects.
 function impl.consider_setting_more_carefully(dict, key, value)
-  if key == 'LogChannels' then
+  if key == 'SettingsFile' then
+    impl.apply_settings_file(value)
+  elseif key == 'LogChannels' then
     lbt.core.set_log_channels(value, 'space')
   elseif key == 'DraftMode' then
     if value then
@@ -196,6 +199,16 @@ function impl.consider_setting_more_carefully(dict, key, value)
     else
       lbt.log(3, 'Draft mode is disabled (all content will be rendered)')
     end
+  end
+end
+
+function impl.apply_settings_file(filename)
+  local text = pl.file.read(filename)
+  if text then
+    -- TODO: write to log file
+    lbt.api.lbt_settings(text)
+  else
+    lbt.err.E002_general('Unable to read settings file: %s', filename)
   end
 end
 
