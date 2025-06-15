@@ -242,7 +242,8 @@ end
 -- sources defined in @META.SOURCES. The specific ones take precedence.
 --
 -- It is imperative that lbt.Basic appear somewhere, without having to be named
--- by the user. It might as well appear at the end, so we add it.
+-- by the user. It might as well appear at the end, so we add it. We include
+-- lbt.Math as well, because why not?
 --
 -- Return: a List of source template _names_ in the order they should be referenced.
 -- Client code will use `Template.object_by_name(name)` to access the actual template.
@@ -265,11 +266,15 @@ auth.consolidated_sources = function (pc, template)
       lbt.err.E206_cant_form_list_of_sources(name)  -- TODO: look to improve this error message
     end
   end
-  local basic_sources = result:filter(function(x) return x == 'lbt.Basic' end)
-  if basic_sources:len() == 0 then
-    local _ = lbt.fn.Template.object_by_name('lbt.Basic')
-    result:append('lbt.Basic')
+  local append_if_necessary = function(template_name)
+    local sources = result:filter(function(x) return x == template_name end)
+    if sources:len() == 0 then
+      local _ = lbt.fn.Template.object_by_name(template_name)
+      result:append(template_name)
+    end
   end
+  append_if_necessary('lbt.Basic')
+  append_if_necessary('lbt.Math')
   return result
 end
 
