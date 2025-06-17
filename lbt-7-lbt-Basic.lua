@@ -521,6 +521,11 @@ local math_impl = function (environment, args, o)
       return result
     end
   end
+  local insert_label = function(lines, label)
+    if label then
+      lines[1] = lines[1] .. F([[ \label{%s}]], label)
+    end
+  end
   local simplemath = function(lines)
     if o.sm then -- TODO: make this one line
       return lines:map(function(x) return '\\sm{' .. x .. '}' end)
@@ -537,6 +542,7 @@ local math_impl = function (environment, args, o)
   end
   -- 1. Pre-process the arguments to include \notag where necessary.
   local lines = process_args_notag(args)
+  insert_label(lines, o.label)
   -- 2. Build mathematical content wrapped in 'align' or 'gather' or whatever.
   local x = nil
   x = join_lines(simplemath(lines))
@@ -562,7 +568,7 @@ op.MATH = { env = 'nil', align = false, alignat = false, flalign = false,
             aligned = false, alignedat = false,
             spreadlines = 'nil', alignleft = false,
             par = true, eqnum = false,
-            starred = false, sm = false }
+            starred = false, sm = false, label = 'nil' }
 a.MATH = '1+'
 f.MATH = function(n, args, o)
   if o.starred then
