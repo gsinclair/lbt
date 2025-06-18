@@ -464,121 +464,6 @@ f.INDENT = function (n, args)
   ]], left, right, text)
 end
 
---------- MATH and supporting functions
--- Takes care of 'align', 'gather' and so on
--- Yet to be thoroughly tested, but it works nicely for align.
-
-local math_environment = function(o)
-  -- Deal with a special case first.
-  local result = nil
-  if (o.env == 'align' or o.align) and o.alignleft then
-    result = 'flalign'
-  -- General case.
-  elseif o.env       then result = o.env
-  elseif o.split     then return 'split'   -- there is no split*, so return right away
-  elseif o.align     then result = 'align'
-  elseif o.alignat   then result = 'alignat'
-  elseif o.gather    then result = 'gather'
-  elseif o.multiline then result = 'multiline'
-  elseif o.flalign   then result = 'flalign'
-  elseif o.gathered  then result = 'gathered'
-  elseif o.aligned   then result = 'aligned'   -- TODO: ftalignedat?
-  elseif o.alignedat then result = 'alignedat'
-  else                    result = 'equation'
-  end
-  -- Apply star if there is no numbering.
-  if not o.eqnum then
-    result = result .. '*'
-  end
-  return result
-end
-
-local math_impl = function (environment, args, o)
-  assert(environment)
-  local process_args_notag = function(args)
-    if o.eqnum == true or o.eqnum == false then
-      -- If we number all, we use (say) 'align' and that handles it.
-      -- If we number none, we use (say) 'align*' and that handles it.
-      -- If we number _some_, we use (say) 'align' and apply \notag where needed.
-      return args
-    else
-      -- o.eqnum could be an integer (.o eqnum 4) or string (.o eqnum 1 3 4).
-      local numbers
-      if type(o.eqnum) == 'number' then
-        numbers = { o.eqnum }
-      else
-        numbers = lbt.util.space_split(o.eqnum):map(tonumber)
-      end
-      numbers = pl.Set(numbers)
-      local result = pl.List()
-      for i=1,#args do
-        if numbers[i] then
-          result[i] = args[i]
-        else
-          result[i] = args[i] .. [[ \notag ]]
-        end
-      end
-      return result
-    end
-  end
-  local insert_label = function(lines, label)
-    if label then
-      lines[1] = lines[1] .. F([[ \label{%s}]], label)
-    end
-  end
-  local simplemath = function(lines)
-    if o.sm then -- TODO: make this one line
-      return lines:map(function(x) return '\\sm{' .. x .. '}' end)
-    else
-      return lines
-    end
-  end
-  local join_lines = function(lines)
-    if environment == 'flalign' or environment == 'flalign*' then
-      return lines:concat([[&& \\]] .. '\n')
-    else
-      return lines:concat([[ \\]] .. '\n')
-    end
-  end
-  -- 1. Pre-process the arguments to include \notag where necessary.
-  local lines = process_args_notag(args)
-  insert_label(lines, o.label)
-  -- 2. Build mathematical content wrapped in 'align' or 'gather' or whatever.
-  local x = nil
-  x = join_lines(simplemath(lines))
-  x = lbt.util.wrap_environment { x, environment }
-  if environment == 'split' and o.eqnum then -- TODO: put 'split' handling in a support function
-    x = lbt.util.wrap_environment { x, 'equation' }
-  elseif environment == 'split' and not o.eqnum then
-    x = lbt.util.wrap_environment { x, 'equation*' }
-  end
-  -- 3. Apply 'spreadlines' if chosen.
-  x = lbt.util.general_formatting_wrap(x, o, 'spreadlines')
-  -- 4. Apply alignleft if appropriate, including vspace correction.
-  if (environment == 'flalign' or environment == 'flalign*') and o.alignleft then
-    x = lbt.util.wrap_environment { x, 'adjustwidth', args = {o.alignleft, ''} }
-    x = '\\vspace{-\\partopsep}\\vspace{-\\topsep}\n' .. x
-  end
-  -- 5. Done!
-  return x
-end
-
-op.MATH = { env = 'nil', align = false, alignat = false, flalign = false,
-            gather = false, multiline = false, gathered = false, split = false,
-            aligned = false, alignedat = false,
-            spreadlines = 'nil', alignleft = false,
-            par = true, eqnum = false,
-            starred = false, sm = false, label = 'nil' }
-a.MATH = '1+'
-f.MATH = function(n, args, o)
-  if o.starred then
-    o:_set_local('par', false)
-  end
-  local env = math_environment(o)
-  return math_impl(env, args, o)
-end
-
------ /MATH
 
 -- FIGURE* for no caption
 
@@ -734,7 +619,7 @@ end
 
 a.TABLE = '1+'
 op.TABLE = { center = false, centre = false, leftindent = false, fontsize = 'nil',
-             float = false, position = 'htbp' }
+             float = false, position = 'htbp', par = true }
 f.TABLE = function(n, args, o, kw)
   -- t is our template list where we accumulate our result
   -- Note: we do not include a table environment. That is applied (if o.float) once
@@ -796,8 +681,8 @@ f.TABLE = function(n, args, o, kw)
 end
 
 impl.table_row_is_a_rule = function(line)
-  local f = function(x) return pl.stringx.lfind(line, '\\'..x) end
-  return f('hline') or f('toprule') or f('midrule') or f('bottomrule') or f('cmidrule')
+  local fn = function(x) return pl.stringx.lfind(line, '\\'..x) end
+  return fn('hline') or fn('toprule') or fn('midrule') or fn('bottomrule') or fn('cmidrule')
 end
 
 ----- /TABLE
