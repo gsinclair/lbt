@@ -213,6 +213,14 @@ local function T_DictionaryStack()
   EQ(d:lookup('C'), 9)
 end
 
+local function T_lbt_parser()
+  local d = lbt.parser.parse_dictionary('city = Paris, landmark = Eiffel Tower, visited = false')
+  assert(d)
+  EQ(d.city, 'Paris')
+  EQ(d.landmark, 'Eiffel Tower')
+  EQ(d.visited, false)
+end
+
 local function T_pragmas_and_other_lines()
   lbt.api.reset_global_data()
   local input = pl.List.new{"!DRAFT", "Line 1", "!IGNORE", "Line 2", "Line 3"}
@@ -597,6 +605,7 @@ local function RUN_TESTS(flag)
 
   print("\n\n======================= <TESTS>")
 
+  T_lbt_parser()
   T_pragmas_and_other_lines()
   T_DictionaryStack()
   T_parsed_content_from_content_lines_1()
@@ -629,4 +638,4 @@ end
 --   0: don't run tests (but continue the program)
 --   1: run tests and exit
 --   2: run tests and continue
-RUN_TESTS(0)
+RUN_TESTS(1)
