@@ -190,7 +190,7 @@ lbt.core.Settings = Settings
 -- Validate (and return error message if needed) and apply side effects.
 function impl.consider_setting_more_carefully(dict, key, value)
   if key == 'SettingsFile' then
-    impl.apply_settings_file(value)
+    impl.apply_settings_file(value, dict)
   elseif key == 'LogChannels' then
     lbt.core.set_log_channels(value, 'space')
   elseif key == 'DraftMode' then
@@ -202,13 +202,16 @@ function impl.consider_setting_more_carefully(dict, key, value)
   end
 end
 
-function impl.apply_settings_file(filename)
+function impl.apply_settings_file(filename, current_settings)
   local text = pl.file.read(filename)
   if text then
     -- TODO: write to log file
     lbt.api.lbt_settings(text)
-  else
+  elseif current_settings.HaltOnWarning then
+    lbt.log(1, 'Unable to read settings file: %s', filename)
     lbt.err.E002_general('Unable to read settings file: %s', filename)
+  else
+    lbt.log(2, 'Unable to read settings file: %s', filename)
   end
 end
 
