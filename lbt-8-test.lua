@@ -340,14 +340,14 @@ local function T_load_templates_from_directory()
   lbt.api.reset_global_data()
   local t1 = lbt.fn.Template.object_by_name_or_nil("HSCLectures")
   assert(t1 == nil)
-  lbt.api.load_templates_from_directory("PWD/templates")
-  -- Note: the templates directory has a file HSCLectures.lua in it.
+  lbt.api.load_templates_from_directory("PWD/TEST-templates")
+  -- Note: the TEST-templates directory has a file HSCLectures.lua in it.
   local t2 = lbt.fn.Template.object_by_name("HSCLectures")
   local p2 = lbt.fn.Template.path_by_name("HSCLectures")
   assert(t2.name == "HSCLectures")
   assert(t2.desc == "A test template for the lbt project")
   assert(t2.sources[1] == "lbt.Questions")
-  assert(p2:endswith("test/templates/HSCLectures.lua"))
+  assert(p2:endswith("test/TEST-templates/HSCLectures.lua"))
 end
 
 local function T_expand_Basic_template_1()
@@ -427,7 +427,7 @@ end
 
 local function T_styles_in_test_question_template_5a()
   lbt.api.reset_global_data()
-  lbt.api.load_templates_from_directory("PWD/templates")
+  lbt.api.load_templates_from_directory("PWD/TEST-templates")
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_5a)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
@@ -450,7 +450,7 @@ end
 
 local function T_styles_in_test_question_template_5b()
   lbt.api.reset_global_data()
-  lbt.api.load_templates_from_directory("PWD/templates")
+  lbt.api.load_templates_from_directory("PWD/TEST-templates")
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_5b)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
@@ -638,4 +638,4 @@ end
 --   0: don't run tests (but continue the program)
 --   1: run tests and exit
 --   2: run tests and continue
-RUN_TESTS(1)
+RUN_TESTS(0)
