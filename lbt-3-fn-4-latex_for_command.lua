@@ -129,9 +129,10 @@ function impl.post_process(result, cmd)
     if #specs ~= 2 then
       lbt.err.E002_general('Command %s gave oparg `adjustwidth` value `%s`; two values needed',
                            cmd.oparg, extras.adjustwidth)
-      result:insert(1, [[\begin{adjustwidth}]])
-      result:append([[\end{adjustwidth}]])
     end
+    -- TODO: use lbt.util.wrap_environment? (if it supports list input)
+    result:insert(1, F([[\begin{adjustwidth}{%s}{%s}]], specs[1], specs[2]))
+    result:append([[\end{adjustwidth}]])
   end
   if extras.pre then
     result:insert(1, F([[\vspace{%s}]], extras.pre))

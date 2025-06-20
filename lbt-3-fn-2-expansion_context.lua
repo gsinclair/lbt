@@ -8,10 +8,12 @@
 
 local F = string.format
 
+-- TODO: move to lbt.core or somewhere?
 local opargs_bedrock = {
   pre = 'nil',
   post = 'nil',
-  center = false, centre = false
+  center = false, centre = false,
+  adjustwidth = 'nil',
 }
 
 local ExpansionContext = {}
