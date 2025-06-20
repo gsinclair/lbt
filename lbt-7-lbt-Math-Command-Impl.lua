@@ -196,8 +196,8 @@ local Opargs = {
   eqsplit = false, eqgathered = false, eqaligned = false, eqalignedat = false,
   -- virtual environments
   leftsplit = false, leftalign = false, leftalignat = false,
-  -- numbering
-  eqnum = true, starred = false, noeqnum = false,
+  -- numbering and labeling
+  eqnum = true, starred = false, noeqnum = false, label = 'nil',
   -- simplemath
   sm = true,
   -- arguments to environments
@@ -289,7 +289,8 @@ end
 -- Composite environment does a simple inner and a possibly starred outer.
 function impl.composite_environment_expansion(spec, lines, o, kw)
   local body = impl.inner_environment_expansion(spec, lines, o, kw)
-  body = impl.apply_label_to_body(body, spec, kw)
+  -- if spec.name == 'eqsplit' then DEBUGGER() end
+  body = impl.apply_label_to_body(body, spec, o)
   body = impl.append_text_to_body(body, spec)
   local environment = impl.environment_plain_or_starred(spec, spec.outer_env, o, kw)
   return lbt.util.wrap_environment { body, environment }
@@ -373,9 +374,9 @@ function impl.join_lines(lines)
   return lines:concat(' \\\\ \n')
 end
 
-function impl.apply_label_to_body(body, spec, kw)
-  if spec.apply_label and kw.label then
-    return body .. F('\n \\label{%s}', kw.label)
+function impl.apply_label_to_body(body, spec, o)
+  if spec.apply_label and o.label then
+    return body .. F('\n \\label{%s}', o.label)
   else
     return body
   end
