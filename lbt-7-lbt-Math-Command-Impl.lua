@@ -197,18 +197,22 @@ local Opargs = {
   -- virtual environments
   leftsplit = false, leftalign = false, leftalignat = false,
   -- numbering
-  eqnum = false,
+  eqnum = true, starred = false, noeqnum = false,
   -- simplemath
   sm = true,
   -- arguments to environments
   cols = 'nil',
   -- appearance
-  spreadlines = 'nil', starred = false, par = true, leftmargin = '2em',
+  spreadlines = 'nil', par = true, leftmargin = '2em',
   -- debugging
   debugmath = false,
 }
 local MATH = function(_, args, o, kw)
-  if o.starred then o:_set_local('par', false) end
+  -- NOTE: Having 'noeqnum' as an oparg is undesirable. LBT should be detecting
+  -- opargs of the form noX, where X is a valid oparg, and setting X = false.
+  -- (In fact, LBT used to do this, but I lost that feature during the great
+  -- rewrite of 2025.)
+  if o.starred or o.noeqnum then o:_set_local('eqnum', false) end
   local spec = impl.math_spec(o)
   local result
   if spec then
