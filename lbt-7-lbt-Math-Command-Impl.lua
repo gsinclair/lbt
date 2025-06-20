@@ -203,9 +203,11 @@ local Opargs = {
   -- arguments to environments
   cols = 'nil',
   -- appearance
-  spreadlines = 'nil', starred = false, par = true, leftmargin = '2em'
+  spreadlines = 'nil', starred = false, par = true, leftmargin = '2em',
+  -- debugging
+  debugmath = false,
 }
-local MATH = function(n, args, o, kw)
+local MATH = function(_, args, o, kw)
   if o.starred then o:_set_local('par', false) end
   local spec = impl.math_spec(o)
   local result
@@ -215,9 +217,11 @@ local MATH = function(n, args, o, kw)
     result = [[\lbtWarning{MATH command -- couldn't determine environment}]]
   end
   --
-  lbt.debuglog('')
-  lbt.debuglog('MATH output')
-  lbt.debuglog(result)
+  if o.debugmath then
+    lbt.debuglog('')
+    lbt.debuglog('MATH output')
+    lbt.debuglog(result)
+  end
   --
   return result
 end
@@ -225,7 +229,7 @@ end
 ------------- Implementation ------------------------------------
 
 function impl.math_spec(o)
-  local chosen_environment
+  local chosen_environment = 'equation'  -- default
   if o.env then
     chosen_environment = o.env
   else
