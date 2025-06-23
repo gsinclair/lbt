@@ -50,7 +50,7 @@ local MATH_SPECS = pl.Map {
     env = 'alignat',
     apply_label = false,
     selective_numbering = true,
-    environment_argument = 'cols'
+    environment_argument = 'ncols'
   },
 
   flalign = {
@@ -91,7 +91,8 @@ local MATH_SPECS = pl.Map {
     env = 'alignedat',
     outer_env = 'equation',
     apply_label = true,
-    selective_numbering = false
+    selective_numbering = false,
+    environment_argument = 'ncols'
   },
 
   eqgathered = {
@@ -172,7 +173,7 @@ local MATH_SPECS = pl.Map {
     name = 'leftalignat',
     env = 'alignedat',
     outer_env = 'flalign',
-    environment_argument = 'cols',
+    environment_argument = 'ncols',
     apply_label = false,
     selective_numbering = true,
     append_after_inner_env = '&&',
@@ -201,7 +202,7 @@ local Opargs = {
   -- simplemath
   sm = true,
   -- arguments to environments
-  cols = 'nil',
+  ncols = 'nil',
   -- appearance
   spreadlines = 'nil', par = true, leftmargin = '2em',
   -- debugging
@@ -289,7 +290,6 @@ end
 -- Composite environment does a simple inner and a possibly starred outer.
 function impl.composite_environment_expansion(spec, lines, o, kw)
   local body = impl.inner_environment_expansion(spec, lines, o, kw)
-  -- if spec.name == 'eqsplit' then DEBUGGER() end
   body = impl.apply_label_to_body(body, spec, o)
   body = impl.append_text_to_body(body, spec)
   local environment = impl.environment_plain_or_starred(spec, spec.outer_env, o, kw)
