@@ -319,7 +319,7 @@ do
 
   local sm_grammar = P{ 'sm',
     textcmd = text_command_pattern() / tag('textcmd'),
-    command = C(backslash * (loc.alpha^1 + '!' + ',')) / tag('command'),
+    command = C(backslash * (loc.alpha^1 + S'!,:;> ~')) / tag('command'),
     bracket = C(S'()[]') / tag('bracket'),
     trigf = P(false) + 'sin' + 'cos' + 'tan' + 'sec' + 'csc' + 'cot' +
                        'sinh' + 'cosh' + 'tanh',
@@ -370,6 +370,12 @@ do
       local errormsg = F('«Unable to parse simplemath text: \\Verb====%s====»', text)
       return F([[\textbf{\textcolor{red} %s }]], errormsg)
     end
+  end
+
+  -- For testing, to see whether certain strings parse.
+  -- If a string can't parse, the return value will be nil.
+  m.simplemathtokens = function (text, _)
+    return sm_grammar:match(text)
   end
 
 end

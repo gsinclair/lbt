@@ -274,6 +274,23 @@ lbt.util.latex_caption_command = function(kw)
   end
 end
 
+-- This is a bit convoluted, but necessary unless I have missed an easier way...
+-- Imagine you have some text like "sin(al)" that you want to run through simplemath.
+-- But you want to do it programmatically; in a template that you're writing, say.
+-- So you need access to the simplemath function. But that is a macro in lbt.Math.
+-- So you need to look up the template register, and retrieve the macros, and ...
+-- And then you need to provide the simplemath function with the current expansion context.
+-- We might as well have a util function to do all that for you.
+--   This returns a function that you can call like: simplemath("sin(al)")
+-- and get '\sin\left(\alpha\right)'
+lbt.util.simplemath_with_current_context = function()
+  local ctx = lbt.fn.get_current_expansion_context()
+  local sm  = lbt.fn.Template.object_by_name('lbt.Math').macros.simplemath
+  return function(text)
+    return sm(text, ctx)
+  end
+end
+
 -- x: latex content
 -- o: an options resolver; we are interested only in o.leftindent
 -- If leftindent is a value like '3em', wrap x in an adjustwidth environment

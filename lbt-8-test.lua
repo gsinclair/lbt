@@ -500,6 +500,10 @@ local function T_simplemath()
     local actual = m(input, ctx)
     EQ(actual, F([[\ensuremath{%s}]], expected), nil, 1)
   end
+  local assert_math_parses = function(input)
+    local tokens = t.macros.simplemathtokens(input)
+    assert(tokens)
+  end
   assert_math([[\alpha]], [[\alpha]])
   assert_math([[\text]], [[\text]])
   assert_math([[n \text]], [[n \text]])
@@ -525,6 +529,8 @@ local function T_simplemath()
   assert_math([[(a + (b+c)^2)^2]], [[\left(a + \left(b+c\right)^2\right)^2]])
   assert_math([[y = [frac x 7] \text{(where $[a]$ is the rounding function)}]],
               [[y = \left[\frac x 7\right] \text{(where $[a]$ is the rounding function)}]])
+  assert_math([[f(x) &= x^3 - 7x^2 + 4x + 1]], [[f\left(x\right) &= x^3 - 7x^2 + 4x + 1]])
+  assert_math([[h'(x) &= 3^x\:ln 3]], [[h'\left(x\right) &= 3^x\:\ln 3]])
   assert_math([[xxx]], [[xxx]])
 end
 

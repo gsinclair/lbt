@@ -314,7 +314,8 @@ end
 
 function impl.apply_simplemath(lines, o)
   if o.sm then
-    return lines:map(function(x) return F([[\sm{%s}]], x) end)
+    local simplemathfunction = lbt.util.simplemath_with_current_context()
+    return lines:map(function (x) return simplemathfunction(x) end)
   else
     return lines
   end
