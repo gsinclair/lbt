@@ -107,6 +107,9 @@ lbt.init.init_system = function ()
   -- can still be used afterwards. This is necessary for LBT macros to work,
   -- as they are evaluated long after the Latex code is created.
   lbt.system.expansion_contexts = pl.Map()
+  -- For development use. Enables conditional debugging driven by the LBT document
+  -- itself. "CTRL microdebug :: on/off".
+  lbt.system.microdebug = false
 end
 
 -- Reset the lbt.system table to a clean but workable state.

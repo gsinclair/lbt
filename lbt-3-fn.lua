@@ -398,6 +398,11 @@ function lfc.handle_CTRL_command(posargs)
     I('eid', lbt.fn.current_expansion_id())
     lbt.debuglog('Current expansion ID: %d', lbt.fn.current_expansion_id())
     return 'noop'
+  elseif posargs[1] == 'microdebug' then
+    if posargs[2] == 'on' or posargs[2] == 'off' then
+      lbt.fn.microdebug(posargs[2])
+    end
+    return 'noop'
   else
     lbt.err.E938_unknown_CTRL_directive(posargs)
   end
@@ -500,6 +505,17 @@ lbt.fn.write_expansion_file = function (eid, latex)
       content = latex:concat('\n')
     end
     pl.file.write(filename, content)
+  end
+end
+
+-- read (x is nil) or write (x is 'on' or 'off) lbt.system.microdebug.
+lbt.fn.microdebug = function(x)
+  if x == nil then
+    return lbt.system.microdebug
+  elseif x == 'on' then
+    lbt.system.microdebug = true
+  elseif x == 'off' then
+    lbt.system.microdebug = false
   end
 end
 
