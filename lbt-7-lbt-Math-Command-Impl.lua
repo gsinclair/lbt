@@ -204,7 +204,7 @@ local Opargs = {
   -- arguments to environments
   ncols = 'nil',
   -- appearance
-  spreadlines = 'nil', par = true, leftmargin = '2em',
+  linespace = 'nil', par = true, leftmargin = '2em',
   -- debugging
   debugmath = false,
 }
@@ -266,9 +266,8 @@ function impl.math_impl(spec, args, o, kw)
   else
     return F([[\lbtWarning{not implemented yet: %s}]], spec.name or spec.env)
   end
-  -- Apply final formatting touches. The user might wants the lines spread out.
-  -- And if it's a left-aligned equation, we probably want to adjust the margin.
-  result = impl.apply_spreadlines(result, o)
+  -- Apply final formatting touches.
+  -- If it's a left-aligned equation, we probably want to adjust the margin.
   result = impl.apply_margin_adjustment(result, spec, o)
   -- And we're done.
   return result
@@ -276,13 +275,13 @@ end
 
 -- Inner environment has a very simple Implementation.
 function impl.inner_environment_expansion(spec, lines, o, kw)
-  local body = impl.join_lines(lines)
+  local body = impl.join_lines(lines, o)
   return impl.wrap_environment(body, spec.env, spec, o)
 end
 
 -- Outer environment needs to determine whether to use starred environment.
 function impl.outer_environment_expansion(spec, lines, o, kw)
-  local body = impl.join_lines(lines)
+  local body = impl.join_lines(lines, o)
   local environment = impl.environment_plain_or_starred(spec, spec.env, o, kw)
   return impl.wrap_environment(body, environment, spec, o)
 end
@@ -371,8 +370,12 @@ end
 
 --------------------------------------------------------------------------------
 
-function impl.join_lines(lines)
-  return lines:concat(' \\\\ \n')
+function impl.join_lines(lines, o)
+  if o.linespace then
+    return lines:concat(F([[\\[%s]%s]], o.linespace, '\n'))
+  else
+    return lines:concat(' \\\\ \n')
+  end
 end
 
 function impl.apply_label_to_body(body, spec, o)
@@ -392,14 +395,6 @@ function impl.append_text_to_body(body, spec)
 end
 
 --------------------------------------------------------------------------------
-
-function impl.apply_spreadlines(block, o)
-  if o.spreadlines then
-    return lbt.util.general_formatting_wrap(block, o, 'spreadlines')
-  else
-    return block
-  end
-end
 
 function impl.apply_margin_adjustment(block, spec, o)
   if spec.leftalign then
