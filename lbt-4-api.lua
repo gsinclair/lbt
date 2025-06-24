@@ -86,6 +86,7 @@ end
 -- This is called at the end of an lbt environment. See above and lby.sty.
 -- TODO: Tidy this code up. Move all logging statements elsewhere (new file lbt-0-log.lua?)
 lbt.api.author_content_emit_latex = function()
+  lbt.fn.expansion_in_progress(true)
   local c  = lbt.const.author_content
   local eid = lbt.fn.current_expansion_id()
   lbt.log(4, "lbt.api.author_content_emit_latex()")
@@ -121,6 +122,7 @@ lbt.api.author_content_emit_latex = function()
   lbt.fn.clear_expansion_files()
   lbt.fn.write_expansion_file(eid, output)
   lbt.fn.reset_log_channels_if_necessary()
+  lbt.fn.expansion_in_progress(false)
 end
 
 --------------------------------------------------------------------------------
@@ -340,6 +342,9 @@ end
 --  * lbt.api.macro_run { template = 'Math', macro = 'myvec', eid = 113, arg = '4 6 -1'}
 --    is called
 --  * Latex code is generated and emitted
+-- Note:
+--  * the eid is nil if the macro occurs outside an LBT expansion, in which case
+--    lbt.gn.get_expansion_context_by_eid(nil) returns a skeleton context
 lbt.api.macro_run = function (t)
   local tn = t.template   -- tn is 'template name' (e.g. Math)
   local fn = t.macro      -- fn is 'function name' (e.g. myvec)

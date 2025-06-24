@@ -103,6 +103,10 @@ lbt.init.init_system = function ()
   -- objects can be recovered (see below). We start at 100 so it is a
   -- three-digit number.
   lbt.system.expansion_id = 100
+  -- We need to know whether an expansion is in progress or not because macros
+  -- like \V{4 -1} can be run outside of any expansion, in which case the expansion_id
+  -- is misleading.
+  lbt.system.expansion_in_progress = false
   -- Store the ExpansionContext object for each expansion ID so that they
   -- can still be used afterwards. This is necessary for LBT macros to work,
   -- as they are evaluated long after the Latex code is created.

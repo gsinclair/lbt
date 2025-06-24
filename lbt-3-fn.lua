@@ -32,8 +32,19 @@ end
 
 -- {{{ (lbt.fn) expansion ID, expansion content, command count -----------------
 
+lbt.fn.expansion_in_progress = function (x)
+  if x then
+    lbt.system.expansion_in_progress = x
+  end
+  return lbt.system.expansion_in_progress
+end
+
 lbt.fn.current_expansion_id = function ()
-  return lbt.system.expansion_id
+  if lbt.fn.expansion_in_progress() then
+    return lbt.system.expansion_id
+  else
+    return nil
+  end
 end
 
 lbt.fn.next_expansion_id = function ()
@@ -44,8 +55,12 @@ end
 lbt.fn.set_current_expansion_context = function(ctx)
   assert(ctx.type == 'ExpansionContext')
   local eid = lbt.fn.current_expansion_id()
-  lbt.system.expansion_contexts[eid] = ctx
-  lbt.const.expansion_context = ctx
+  if eid == nil then
+    lbt.err.E001_internal_logic_error('eid is nil and that should not happen')
+  else
+    lbt.system.expansion_contexts[eid] = ctx
+    lbt.const.expansion_context = ctx
+  end
 end
 
 lbt.fn.unset_current_expansion_context = function()
@@ -62,7 +77,7 @@ end
 
 lbt.fn.get_expansion_context_by_eid = function(eid)
   if eid == nil then
-    lbt.err.E002_general('Unable to get expansion context: nil expansionID provided')
+    return lbt.fn.ExpansionContext.skeleton_expansion_context()
   end
   local ctx = lbt.system.expansion_contexts[eid]
   if ctx == nil then

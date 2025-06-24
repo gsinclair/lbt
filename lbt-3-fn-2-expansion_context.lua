@@ -39,6 +39,28 @@ function ExpansionContext.new(args)
   return o
 end
 
+-- Create an ExpansionContext that can be accessed outside of an expansion: it only has
+-- access to the built-in sources (Basic and Math) and global opargs.
+--   This is designed so that macros like \V{3 -1} can run in general Latex code, not only
+-- in an LBT context.
+function ExpansionContext.skeleton_expansion_context()
+  local sources = pl.List { 'lbt.Basic', 'lbt.Math' }
+  local o = {
+    type           = 'ExpansionContext',
+    template       = nil,
+    sources        = sources,
+    pragmas        = nil,
+    command_lookup = impl.comprehensive_command_lookup_map(sources),
+    opargs_local   = lbt.core.DictionaryStack.new(),
+    opargs_global  = lbt.system.opargs_global,
+    opargs_default = impl.comprehensive_oparg_default_map(sources),
+    opargs_bedrock = opargs_bedrock,
+    opargs_cache   = {},
+  }
+  setmetatable(o, ExpansionContext.mt)
+  return o
+end
+
 -- Create an ExpansionContext only for testing. There is no parsed content, just sources
 -- that can be used for lookup.
 function ExpansionContext.test_ctx(sources)
