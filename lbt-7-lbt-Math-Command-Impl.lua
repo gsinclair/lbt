@@ -104,6 +104,24 @@ local MATH_SPECS = pl.Map {
     selective_numbering = false
   },
 
+  eqlgathered = {
+    name = 'eqlgathered',
+    type = 'composite',
+    env = 'lgathered',
+    outer_env = 'equation',
+    apply_label = true,
+    selective_numbering = false
+  },
+
+  eqrgathered = {
+    name = 'eqrgathered',
+    type = 'composite',
+    env = 'rgathered',
+    outer_env = 'equation',
+    apply_label = true,
+    selective_numbering = false
+  },
+
   split = {
     type = 'inner',
     env = 'split',
@@ -195,6 +213,7 @@ local Opargs = {
   multilined = false, lgathered = false, rgathered = false,
   -- composite environments
   eqsplit = false, eqgathered = false, eqaligned = false, eqalignedat = false,
+  eqlgathered = false, eqrgathered = false,
   -- virtual environments
   leftsplit = false, leftalign = false, leftalignat = false,
   -- numbering and labeling
