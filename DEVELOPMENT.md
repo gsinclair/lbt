@@ -848,3 +848,10 @@ The init() function, if it exists at all, typically does two things. (I'd need t
 Creating Latex commands means calling lbt.util.print_tex_lines. There are two things wrong with this. The first (mild) problem is that the template author needs to be aware of this relatively low-level function. The second problem, and the reason I am writing this note, is that we can't track what is going into the Latex stream. I'd like to log the creation of those commands.
 
 Solution: init can return text to go into the Latex stream, just like a command does. It can also return nil; that's fine.
+
+## Idea: use 'inspect' library and a better debugger
+
+https://github.com/kikito/inspect.lua
+ * better pretty printing
+
+Debugger? The one I use doesn't support readline, which is persistently annoying. But maybe I can add that in with the help of ChatGPT.
