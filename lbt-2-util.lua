@@ -331,15 +331,7 @@ function lbt.util.apply_style_formatting(x, o)
   end
 end
 
--- TODO: make it do we don't have to check o.spreadlines etc here; do it earlier
 local formatting_handlers = {
-  spreadlines = function(x, o)
-    if o.spreadlines then
-      return lbt.util.wrap_environment { x, 'spreadlines', arg = o.spreadlines }
-    else
-      return x
-    end
-  end,
 
   par = function(x, o)
     if o.par then
@@ -347,16 +339,36 @@ local formatting_handlers = {
     else
       return x
     end
-  end
-}
+  end,
 
--- XXX: remove me
---
--- function lbt.util.handle_nopar(x, o)
---   if o.nopar then return x
---   else return x .. [[ \par ]]
---   end
--- end
+  raggedright = function(x, o)
+    if o.raggedright then
+      return lbt.util.wrap_environment { x, 'raggedright' }
+    else
+      return x
+    end
+  end,
+
+  columns = function(x, o)
+    if o.ncols == 1 then
+      return x
+    else
+      return lbt.util.string_template_expand {
+        [[\begingroup]],
+        [[\setlength{\columnsep}{!COLSEP!}]],
+        [[\begin{multicols}{!NCOLS!}]],
+        [[!CONTENT!]],
+        [[\end{multicols}]],
+        [[\endgroup]],
+        values = {
+          COLSEP = o.colsep,
+          NCOLS = o.ncols,
+          CONTENT = x
+        }
+      }
+    end
+  end,
+}
 
 -- general_formatting_wrap(x, o, 'leftalign center par')
 --   x: latex content to be processed
@@ -379,11 +391,9 @@ function lbt.util.general_formatting_wrap(x, o, keys)
       -- TODO: more specific error code
       lbt.err.E001_internal_logic_error('Invalid formatting key: ' .. option)
     end
-    if o[option] then
-      x = handler(x,o)
-    else
-      -- no need to do anything
-    end
+    -- We run the handler unconditionally. The handler needs to check whether prereqs
+    -- are met, and possibly return x unchanged.
+    x = handler(x,o)
   end
   return x
 end

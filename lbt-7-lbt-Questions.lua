@@ -267,7 +267,8 @@ f.ANSWER = function(n, args, o)
 end
 
 a.SHOWHINTS = 0
-f.SHOWHINTS = function(n, args, o)
+op.SHOWHINTS = { ncols = 2, colsep = '15pt', raggedright = false }
+f.SHOWHINTS = function(_, _, o)
   local text = pl.List()
   local hints = lbt.api.data_get("hints", pl.OrderedMap())
   text:append([[\begin{small}]])
@@ -276,11 +277,14 @@ f.SHOWHINTS = function(n, args, o)
     text:append(x)
   end
   text:append([[\end{small} \par]])
-  return text:concat('\n')
+  text = text:concat('\n')
+  text = lbt.util.general_formatting_wrap(text, o, 'columns raggedright')
+  return text
 end
 
 a.SHOWANSWERS = 0
-f.SHOWANSWERS = function(n, args, o)
+op.SHOWANSWERS = { ncols = 2, colsep = '15pt', raggedright = false }
+f.SHOWANSWERS = function(_, _, o)
   local text = pl.List()
   local answers = lbt.api.data_get("answers", pl.OrderedMap())
   text:append([[\begin{small}]])
@@ -289,7 +293,9 @@ f.SHOWANSWERS = function(n, args, o)
     text:append(x)
   end
   text:append([[\end{small} \par]])
-  return text:concat('\n')
+  text = text:concat('\n')
+  text = lbt.util.general_formatting_wrap(text, o, 'columns raggedright')
+  return text
 end
 
 a.HINTRESET = 0
