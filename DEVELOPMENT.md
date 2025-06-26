@@ -855,3 +855,11 @@ https://github.com/kikito/inspect.lua
  * better pretty printing
 
 Debugger? The one I use doesn't support readline, which is persistently annoying. But maybe I can add that in with the help of ChatGPT.
+
+## Idea: change the way tests are run
+
+At the moment, the test.lua file contains functions for testing, and ultimately calls `RUN_TESTS(n)` where n is 0, 1 or 2. I keep forgetting to change it back to 0 after I am done testing.
+
+An alternative option would be to define `\lbtRunTests` which calls `lbt.test.run()` or whatever, and pop that command in a test document. The function `run()` could emit Latex code, so when I compile that document (lbt-test.tex) it produces a PDF with the test result.
+
+In this way, `lbt-8-test.lua` would contain only function code, not "live" code, and I would not need to worry about setting that damn 0 or 1 or 2.

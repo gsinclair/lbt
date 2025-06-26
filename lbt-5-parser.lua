@@ -424,7 +424,7 @@ lbt.parser.parse_align = function(n, text)
   elseif #a == -1 or #a == n then
     return a
   else
-    lbt.err.E002_general('Align spec <<%s>> is supposed to have %d parts', text, n)
+    lbt.err.E002_general('Align spec <<%s>> is supposed to have %d parts, each being one of "tmb"', text, n)
   end
 end
 
