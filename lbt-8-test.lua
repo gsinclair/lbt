@@ -532,6 +532,7 @@ local function T_simplemath()
   assert_math([[f(x) &= x^3 - 7x^2 + 4x + 1]], [[f\left(x\right) &= x^3 - 7x^2 + 4x + 1]])
   assert_math([[h'(x) &= 3^x\:ln 3]], [[h'\left(x\right) &= 3^x\:\ln 3]])
   assert_math([[xxx]], [[xxx]])
+  assert_math_parses([[\intertext{Divide both sides by $r$}]])
 end
 
 local function T_Basic_various()

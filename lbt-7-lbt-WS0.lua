@@ -179,8 +179,8 @@ return {
   init      = init,
   expand    = expand,
   functions = f,
-  opargs = op,
-  posargs = a,
+  opargs    = op,
+  posargs   = a,
   macros    = m,
 }
 
