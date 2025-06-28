@@ -146,7 +146,7 @@ end
 local DefaultSettings = {
   SettingsFile = 'nil',
   DraftMode = false,
-  ExpandOnly = 'nil',
+  ExpandOnly = false,
   WriteExpansionFiles = true,
   ClearExpansionFiles = true,
   DebugAllExpansions = false,
