@@ -146,6 +146,7 @@ end
 local DefaultSettings = {
   SettingsFile = 'nil',
   DraftMode = false,
+  ExpandOnly = 'nil',
   WriteExpansionFiles = true,
   ClearExpansionFiles = true,
   DebugAllExpansions = false,
@@ -199,6 +200,8 @@ function impl.consider_setting_more_carefully(dict, key, value)
     else
       lbt.log(3, 'Draft mode is disabled (all content will be rendered)')
     end
+  elseif key == 'ExpandOnly' then
+    impl.apply_expand_only(dict, tostring(value))
   end
 end
 
@@ -213,6 +216,16 @@ function impl.apply_settings_file(filename, current_settings)
   else
     lbt.log(2, 'Unable to read settings file: %s', filename)
   end
+end
+
+function impl.apply_expand_only(dict, value)
+  local eids = lbt.util.space_split(value):map(tonumber)
+  for x in eids:iter() do
+    if x < 100 or x > 999 then
+      lbt.err.E002_general("Invalid value provided to setting 'ExpandOnly': %s", value)
+    end
+  end
+  dict.ExpandOnly = pl.Set(eids)
 end
 
 -- }}}

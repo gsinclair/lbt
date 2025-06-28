@@ -89,10 +89,14 @@ lbt.init.init_system = function ()
   -- Set via (for example)
   --    \lbtGlobalOptions{Q.color = purple, vector.format = arrow}
   lbt.system.opargs_global = lbt.core.DictionaryStack.new()
-  -- If we have a system-wide draft mode, then only content labeled !DRAFT
-  -- will be expanded.
-  -- Set via \lbtDraftMode{true}
-  lbt.system.draft_mode       = false
+  ------- -- If we have a system-wide draft mode, then only content labeled !DRAFT
+  ------- -- will be expanded.
+  ------- -- Set via \lbtSettings{DraftMode = true}
+  ------- lbt.system.draft_mode = false
+  ------- -- If the author declares \lbtSettings{ExpandOnly = 103 106}, then those are
+  ------- -- the only two expansions that will occur. It's like centrally-controlled
+  ------- -- Draft mode.
+  ------- lbt.system.expand_only = nil
   -- Persistent counters and data.
   lbt.system.persistent_counters = {}
   lbt.system.persistent_data = {}

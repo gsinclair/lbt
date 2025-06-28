@@ -105,6 +105,11 @@ lbt.api.author_content_emit_latex = function()
     local skipmsg = F([[{\noindent\color{lbtError}\bfseries Explicitly instructed to skip content (eID=%d). Title is `%s`. }]], eid, pc:title())
     tex.print(skipmsg)
     return
+  elseif lbt.setting('ExpandOnly') and not lbt.setting('ExpandOnly')[eid] then
+    local skipmsg = F([[{\noindent\color{lbtError}\bfseries Skipping content (eID=%d) because of ExpandOnly setting. Title is `%s' }]], eid, pc:title())
+    tex.print(skipmsg)
+    lbt.log(3, '  * ExpandOnly does not include this eID - no further action for eID %d', eid)
+    return
   elseif pc.pragmas.DRAFT == false and lbt.setting('DraftMode') == true then
     local draftskipmsg = F([[{\noindent\color{lbtError}\bfseries Skipping non-draft content (eID=%d). Title is `%s' }]], eid, pc:title())
     tex.print(draftskipmsg)
