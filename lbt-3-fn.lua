@@ -30,6 +30,30 @@ end
 
 -- }}}
 
+-- {{{ (lbt.fn) options --------------------------------------------------------
+
+-- Return true if operation succeeded; false otherwise.
+lbt.fn.options_push = function (text)
+  local dict = lbt.parser.parse_dictionary(text)
+  if dict then
+    local ctx = lbt.fn.get_current_expansion_context()
+    ctx:opargs_local_push_dictionary(dict)
+    return true
+  end
+  return false
+end
+
+-- Return true if operation succeeded; false otherwise.
+-- Currently there is no situation that causes a return value of false.
+lbt.fn.options_pop = function (text)
+  local keys = lbt.util.comma_split(text)
+  local ctx = lbt.fn.get_current_expansion_context()
+  ctx:opargs_local_pop_keys(keys)
+  return true
+end
+
+-- }}}
+
 -- {{{ (lbt.fn) expansion ID, expansion content, command count -----------------
 
 lbt.fn.expansion_in_progress = function (x)
@@ -409,6 +433,16 @@ end
 function lfc.handle_CTRL_command(posargs)
   if posargs[1] == 'stop' then
     return 'stop-processing'
+  elseif posargs[1] == 'options' then
+    if lbt.fn.options_push(posargs[2]) == false then
+      lbt.err.E002_general("(CTRL options) failed with input '%s'", posargs[2])
+    end
+    return 'noop'
+  elseif posargs[1] == 'options-pop' or posargs[1] == 'options pop' then
+    if lbt.fn.options_pop(posargs[2]) == false then
+      lbt.err.E002_general("(CTRL options-pop) failed with input '%s'", posargs[2])
+    end
+    return 'noop'
   elseif posargs[1] == 'eid' then
     I('eid', lbt.fn.current_expansion_id())
     lbt.debuglog('Current expansion ID: %d', lbt.fn.current_expansion_id())
@@ -416,6 +450,8 @@ function lfc.handle_CTRL_command(posargs)
   elseif posargs[1] == 'microdebug' then
     if posargs[2] == 'on' or posargs[2] == 'off' then
       lbt.fn.microdebug(posargs[2])
+    else
+      lbt.err.E002_general("Invalid argument for CTRL microdebug: '%s'", posargs[2])
     end
     return 'noop'
   else

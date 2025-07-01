@@ -171,11 +171,27 @@ function ExpansionContext:opargs_cache_store(qkey, value)
   return nil
 end
 
--- If an oparg_local gets updated mid-document, the cache needs to be invalidated.
+-- If a local oparg gets updated mid-document, the cache needs to be invalidated.
 -- We could clear just the relevant key, but for now let's just clear the whole
 -- thing. Mid-document updates will be rare anyway.
 function ExpansionContext:clear_oparg_cache()
   self.opargs_cache = {}
+end
+
+-- }}}
+
+-- {{{ updating opargs_local mid-document
+
+function ExpansionContext:opargs_local_push_dictionary(dict)
+  self.opargs_local:push(dict)
+  self:clear_oparg_cache()
+end
+
+function ExpansionContext:opargs_local_pop_keys(keys)
+  for k in keys:iter() do
+    self.opargs_local:remove_outer_key(k)
+  end
+  self:clear_oparg_cache()
 end
 
 -- }}}

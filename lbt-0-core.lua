@@ -250,11 +250,26 @@ function DictionaryStack:empty()
 end
 
 function DictionaryStack:push(map)
-  self.layers:append(map)
+  self.layers:append(pl.Map(map))
 end
 
 function DictionaryStack:pop()
   self.layers:pop()
+end
+
+-- A key K might exist multiple times in the DictionaryStack.
+-- This function removes the outermost one.
+-- If this removal leaves a layer empty, it is removed.
+function DictionaryStack:remove_outer_key(key)
+  for i = self.layers:len(), 1, -1 do
+    local layer = self.layers[i]
+    local value = layer[key]
+    if value ~= nil then
+      layer[key] = nil
+    end
+  end
+  self.layers = self.layers:filter(function (x) return x:len() > 0 end)
+  return nil
 end
 
 function DictionaryStack:lookup(key)
