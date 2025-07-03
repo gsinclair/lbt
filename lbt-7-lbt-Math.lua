@@ -304,7 +304,7 @@ do
     return P {
       'TextCommand',
       TextCommand = C(V'TextCommandName' * sp * V'Braced') / ensure_backslash,
-      TextCommandName = P'\\text' + P'text',
+      TextCommandName = P'\\text' + P'text' + P'\\intertext' + P'\\shortintertext',
       Braced = lbrace * V'Content'^0 * rbrace,
       Content = V'Braced' + (1 - S'{}'),  -- recursively allow braces, or consume anything else
     }
@@ -319,7 +319,7 @@ do
 
   local sm_grammar = P{ 'sm',
     textcmd = text_command_pattern() / tag('textcmd'),
-    command = C(backslash * (loc.alpha^1 + S'!,:;> ~')) / tag('command'),
+    command = C(backslash * (loc.alpha^1 + S'!,:;> ~()[]#$%&_{}~^\\|@')) / tag('command'),
     bracket = C(S'()[]') / tag('bracket'),
     trigf = P(false) + 'sin' + 'cos' + 'tan' + 'sec' + 'csc' + 'cot' +
                        'sinh' + 'cosh' + 'tanh',
