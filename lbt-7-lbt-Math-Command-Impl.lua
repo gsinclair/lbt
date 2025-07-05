@@ -269,19 +269,22 @@ end
 --------------------------------------------------------------------------------
 
 function impl.math_impl(spec, args, o, kw)
-  local lines, result
-  -- The args are lines of mathematics. Apply simplemath to them, and
-  -- whatever 'notag' commands are required to get the numbering right.
-  lines = impl.apply_simplemath(args, o)
+  local lines, body, result
+  -- The args are lines of mathematics. (Some might be \intertext{...}.)
+  -- Apply simplemath to them, and whatever 'notag' commands are required to
+  -- get the numbering right.
+  lines = impl.apply_simplemath_or_intertext(args, o)
   lines = impl.apply_notag(lines, spec, o)
+  lines = impl.apply_line_endings(lines, o)
+  body = lines:concat('\n')
   -- The main work is done here, based on whether the chosen environment is
   -- inner, outer, or composite.
   if spec.type == 'inner' then
-    result = impl.inner_environment_expansion(spec, lines, o, kw)
+    result = impl.inner_environment_expansion(spec, body, o, kw)
   elseif spec.type == 'outer' then
-    result = impl.outer_environment_expansion(spec, lines, o, kw)
+    result = impl.outer_environment_expansion(spec, body, o, kw)
   elseif spec.type == 'composite' then
-    result = impl.composite_environment_expansion(spec, lines, o, kw)
+    result = impl.composite_environment_expansion(spec, body, o, kw)
   else
     return F([[\lbtWarning{not implemented yet: %s}]], spec.name or spec.env)
   end
@@ -293,21 +296,19 @@ function impl.math_impl(spec, args, o, kw)
 end
 
 -- Inner environment has a very simple Implementation.
-function impl.inner_environment_expansion(spec, lines, o, kw)
-  local body = impl.join_lines(lines, o)
+function impl.inner_environment_expansion(spec, body, o, _)
   return impl.wrap_environment(body, spec.env, spec, o)
 end
 
 -- Outer environment needs to determine whether to use starred environment.
-function impl.outer_environment_expansion(spec, lines, o, kw)
-  local body = impl.join_lines(lines, o)
+function impl.outer_environment_expansion(spec, body, o, kw)
   local environment = impl.environment_plain_or_starred(spec, spec.env, o, kw)
   return impl.wrap_environment(body, environment, spec, o)
 end
 
 -- Composite environment does a simple inner and a possibly starred outer.
-function impl.composite_environment_expansion(spec, lines, o, kw)
-  local body = impl.inner_environment_expansion(spec, lines, o, kw)
+function impl.composite_environment_expansion(spec, body, o, kw)
+  body = impl.inner_environment_expansion(spec, body, o, kw)
   body = impl.apply_label_to_body(body, spec, o)
   body = impl.append_text_to_body(body, spec)
   local environment = impl.environment_plain_or_starred(spec, spec.outer_env, o, kw)
@@ -330,12 +331,31 @@ function impl.wrap_environment(body, environment, spec, o)
 end
 --------------------------------------------------------------------------------
 
-function impl.apply_simplemath(lines, o)
-  if o.sm then
-    local simplemathfunction = lbt.util.simplemath_with_current_context()
-    return lines:map(function (x) return simplemathfunction(x) end)
+function impl.apply_simplemath_or_intertext(lines, o)
+  local simplemathfunction = lbt.util.simplemath_with_current_context()
+  local result = pl.List()
+  for x in lines:iter() do
+    local y = impl.process_text_line(x)
+    if y then
+      result:append(y)
+    elseif o.sm then
+      result:append(simplemathfunction(x))
+    else
+      result:append(x)
+    end
+  end
+  return result
+end
+
+function impl.process_text_line(line)
+  if impl.is_text_line(line) then
+    return line
+  elseif line:startswith('TEXT') or line:startswith('INTERTEXT') then
+    return F('\\intertext{%s}', line:gsub('^[^%s]+%s*', ''))
+  elseif line:startswith('STEXT') or line:startswith('SHORTTEXT') or line:startswith('SHORTINTERTEXT') then
+    return F('\\shortintertext{%s}', line:gsub('^[^%s]+%s*', ''))
   else
-    return lines
+    return nil
   end
 end
 
@@ -357,15 +377,26 @@ function impl.apply_notag(lines, spec, o)
     end
     numbers = pl.Set(numbers)
     local result = pl.List()
-    for i=1,#lines do
-      if numbers[i] then
+    local count = 0  -- number of actual math lines we've seen (not \intertext)
+    for i = 1, #lines do
+      if impl.is_text_line(lines[i]) then
+        -- this does not 'count' as an equation line
         result[i] = lines[i]
       else
-        result[i] = lines[i] .. [[ \notag ]]
+        count = count + 1
+        if numbers[count] then
+          result[i] = lines[i]
+        else
+          result[i] = lines[i] .. [[ \notag ]]
+        end
       end
     end
     return result
   end
+end
+
+function impl.is_text_line(line)
+  return line:startswith('\\intertext') or line:startswith('\\shortintertext')
 end
 
 function impl.environment_plain_or_starred(spec, envname, o, kw)
@@ -385,6 +416,25 @@ function impl.environment_plain_or_starred(spec, envname, o, kw)
   else
     return 'UNKNOWN'
   end
+end
+
+function impl.apply_line_endings(lines, o)
+  local g = function(x, i)
+    if impl.is_text_line(x) then    -- no \\ on a text line
+      return x
+    elseif i == lines:len() then    -- no \\ on the last line
+      return x
+    elseif o.linespace then
+      return x .. F([[\\[%s] ]], o.linespace)
+    else
+      return x .. [[\\]]
+    end
+  end
+  local result = pl.List()
+  for i = 1, #lines do
+    result:append(g(lines[i], i))
+  end
+  return result
 end
 
 --------------------------------------------------------------------------------
