@@ -30,6 +30,20 @@ end
 
 -- }}}
 
+-- {{{ (lbt.fn) test mode
+
+lbt.fn.lbt_test_mode = function(x)
+  if x == nil then
+    return lbt.system.test_mode
+  elseif x == true or x == false then
+    lbt.system.test_mode = x
+  else
+    lbt.err.E002_general("Invalid value for lbt.fn.lbt_test_mode(): '%s'", x)
+  end
+end
+
+-- }}}
+
 -- {{{ (lbt.fn) options --------------------------------------------------------
 
 -- Return true if operation succeeded; false otherwise.

@@ -856,10 +856,16 @@ https://github.com/kikito/inspect.lua
 
 Debugger? The one I use doesn't support readline, which is persistently annoying. But maybe I can add that in with the help of ChatGPT.
 
-## Idea: change the way tests are run
+## Idea: change the way tests are run -- ✅ 7 July 2025
 
 At the moment, the test.lua file contains functions for testing, and ultimately calls `RUN_TESTS(n)` where n is 0, 1 or 2. I keep forgetting to change it back to 0 after I am done testing.
 
 An alternative option would be to define `\lbtRunTests` which calls `lbt.test.run()` or whatever, and pop that command in a test document. The function `run()` could emit Latex code, so when I compile that document (lbt-test.tex) it produces a PDF with the test result.
 
 In this way, `lbt-8-test.lua` would contain only function code, not "live" code, and I would not need to worry about setting that damn 0 or 1 or 2.
+
+## Problems with running tests
+
+There are several tests that call `lbt.fn.latex_expansion_of_parsed_content(pc)` and have problems because `get_current_expansion_context` or `set_current_expansion_context` fails, perhaps because the current expansion id is nil. (Because we're in a test, and the expansion id doesn't get set during a test.)
+
+What to do about it? Set the expansion ID during a test? I think it might be better to have a concept of 'test mode' built in to the software, which allows for not having an eid set, or a ctx set. Need to think on it.

@@ -5,7 +5,8 @@ edit:
 
 test:
   make install
-  (cd test && ../etc/build.sh general-test-document)
+  # (cd test && ../etc/build.sh general-test-document)
+  etc/build.sh lbt-test
 
 code-pdf:
   lualatex --shell-escape lbt-code && open lbt-code.pdf

@@ -71,6 +71,9 @@ end
 lbt.init.init_system = function ()
   -- Draft mode, log channels, halt on error, ...
   lbt.system.settings = lbt.core.Settings.new()
+  -- Flag that we are performing unit tests. This changes the way some things work,
+  -- like expansion ID and expansion context.
+  lbt.system.test_mode = false
   -- Collection of templates that are loaded and ready to use.
   -- Type: pl.Map { string -> Template }
   --

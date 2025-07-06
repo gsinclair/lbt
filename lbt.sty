@@ -125,6 +125,8 @@
 
 \newcommand{\lbtDebugLog}[1]{\directlua{lbt.debuglog('#1')}}
 
+\newcommand{\lbtRunUnitTests}{\directlua{lbt.test.run_tests()}}
+
 % We provide our own definition of undertilde to avoid loading a package just for this.
 % I had the 'accents' package working for ages, then a problem occurred that I couldn't
 % easily solve. So here we are.

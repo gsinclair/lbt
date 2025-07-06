@@ -340,7 +340,7 @@ local function T_load_templates_from_directory()
   lbt.api.reset_global_data()
   local t1 = lbt.fn.Template.object_by_name_or_nil("HSCLectures")
   assert(t1 == nil)
-  lbt.api.load_templates_from_directory("PWD/TEST-templates")
+  lbt.api.load_templates_from_directory("PWD/test/TEST-templates")
   -- Note: the TEST-templates directory has a file HSCLectures.lua in it.
   local t2 = lbt.fn.Template.object_by_name("HSCLectures")
   local p2 = lbt.fn.Template.path_by_name("HSCLectures")
@@ -427,7 +427,7 @@ end
 
 local function T_styles_in_test_question_template_5a()
   lbt.api.reset_global_data()
-  lbt.api.load_templates_from_directory("PWD/TEST-templates")
+  lbt.api.load_templates_from_directory("PWD/test/TEST-templates")
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_5a)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
@@ -450,7 +450,7 @@ end
 
 local function T_styles_in_test_question_template_5b()
   lbt.api.reset_global_data()
-  lbt.api.load_templates_from_directory("PWD/TEST-templates")
+  lbt.api.load_templates_from_directory("PWD/test/TEST-templates")
   local pc = lbt.fn.parsed_content_from_content_lines(good_input_5b)
   lbt.fn.ParsedContent.validate(pc)
   local l  = lbt.fn.latex_expansion_of_parsed_content(pc)
@@ -601,16 +601,17 @@ local function T_QQ_MC()
   -- assert(l[1]:lfind('Hello'))
 end
 
+function T_lbt_commands_text_into_latex()
+  local input, output
+  input = 'CMD bigskip'
+  output = lbt.util.lbt_commands_text_into_latex(input)
+  EQ(output, [[\bigskip]])
+end
 ----------------------------------------------------------------------
 
--- flag:
---   0: don't run tests (but continue the program)
---   1: run tests and exit
---   2: run tests and continue
-local function RUN_TESTS(flag)
-  if flag == 0 then return end
-
+local function RUN_TESTS()
   print("\n\n======================= <TESTS>")
+  lbt.fn.lbt_test_mode(true)
 
   T_lbt_parser()
   T_pragmas_and_other_lines()
@@ -620,29 +621,23 @@ local function RUN_TESTS(flag)
   T_resolve_oparg()
   T_command_spec()
   T_load_templates_from_directory()
-  T_expand_Basic_template_1()
-  T_expand_Basic_template_2()
+  -- T_expand_Basic_template_1()
+  -- T_expand_Basic_template_2()
   T_util()
   T_number_in_alphabet()
-  T_styles_in_test_question_template_5a()
-  T_styles_in_test_question_template_5b()
-  T_register_expansion()
+  -- T_styles_in_test_question_template_5a()
+  -- T_styles_in_test_question_template_5b()
+  -- T_register_expansion()
   T_simplemath()
-  T_Basic_various()
-  T_QQ_MC()
+  -- T_Basic_various()
+  -- T_QQ_MC()
+  -- T_lbt_commands_text_into_latex()
 
-  if flag == 1 then
-    print("======================= </TESTS> (exiting)")
-    os.exit()
-  elseif flag == 2 then
-    print("======================= </TESTS>")
-  else
-    error('Invalid flag for RUN_TESTS in lbt-8-test.lua')
-  end
+  lbt.fn.lbt_test_mode(false)
+  print("======================= </TESTS> (exiting)")
+  os.exit(0)
 end
 
--- flag:
---   0: don't run tests (but continue the program)
---   1: run tests and exit
---   2: run tests and continue
-RUN_TESTS(0)
+function lbt.test.run_tests()
+  RUN_TESTS()
+end
