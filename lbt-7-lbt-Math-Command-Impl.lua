@@ -198,6 +198,11 @@ local MATH_SPECS = pl.Map {
     leftalign = true
   },
 
+  continuation = {
+    type = 'special',    -- my addition, not related to amstools or mathtools
+    name = 'continuation'
+  },
+
 }
 
 
@@ -216,6 +221,8 @@ local Opargs = {
   eqlgathered = false, eqrgathered = false,
   -- virtual environments
   leftsplit = false, leftalign = false, leftalignat = false,
+  -- additional pseudo-environments
+  continuation = false,
   -- numbering and labeling
   eqnum = true, starred = false, noeqnum = false, label = 'nil',
   -- simplemath
@@ -235,7 +242,9 @@ local MATH = function(_, args, o, kw)
   if o.starred or o.noeqnum then o:_set_local('eqnum', false) end
   local spec = impl.math_spec(o)
   local result
-  if spec then
+  if spec and spec.type == 'special' then
+    result = impl.math_impl_special(spec, args, o, kw)
+  elseif spec then
     result = impl.math_impl(spec, args, o, kw)
   else
     result = [[\lbtWarning{MATH command -- couldn't determine environment}]]
@@ -471,6 +480,39 @@ function impl.apply_margin_adjustment(block, spec, o)
   else
     return block
   end
+end
+
+--------------------------------------------------------------------------------
+
+local SpecialFunctions = {
+  continuation = function(lines, o, _)
+    local moveleft = function(line) return F([[ :: \MoveEqLeft %s]], line) end
+    local quad     = function(line) return F([[ :: \quad &%s]], line:strip()) end
+    local phantom  = function(line) return F([[ :: &\phantom{=\ } %s]], line) end
+    local lbt_code = T {
+      [[!MATH! .o alignat, ncols = 1, eqnum = !EQNUM!]],
+      moveleft(lines[1]),
+      quad(lines[2]),
+      lines:slice(3,-1):map(phantom):concat('\n'),
+      values = {
+        MATH = o.eqnum and 'MATH' or 'MATH*',
+        EQNUM = o.eqnum and #lines or 'false'
+      }
+    }
+    local latex_code = lbt.util.lbt_commands_text_into_latex(lbt_code)
+    return latex_code
+  end
+}
+
+function impl.math_impl_special(spec, args, o, kw)
+  local result
+  local func = SpecialFunctions[spec.name]
+  if func then
+    result = func(args, o, kw)
+  else
+    result = [[\lbtWarning{MATH command -- couldn't determine environment}]]
+  end
+  return result
 end
 
 ------------- Module --------------------------------------------
