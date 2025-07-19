@@ -203,6 +203,11 @@ local MATH_SPECS = pl.Map {
     name = 'continuation'
   },
 
+  commentary = {
+    type = 'special',    -- my addition, not related to amstools or mathtools
+    name = 'commentary'
+  },
+
 }
 
 
@@ -222,7 +227,7 @@ local Opargs = {
   -- virtual environments
   leftsplit = false, leftalign = false, leftalignat = false,
   -- additional pseudo-environments
-  continuation = false,
+  continuation = false, commentary = false,
   -- numbering and labeling
   eqnum = true, starred = false, noeqnum = false, label = 'nil',
   -- simplemath
@@ -494,6 +499,36 @@ local SpecialFunctions = {
       moveleft(lines[1]),
       quad(lines[2]),
       lines:slice(3,-1):map(phantom):concat('\n'),
+      values = {
+        MATH = o.eqnum and 'MATH' or 'MATH*',
+        EQNUM = o.eqnum and #lines or 'false'
+      }
+    }
+    local latex_code = lbt.util.lbt_commands_text_into_latex(lbt_code)
+    return latex_code
+  end,
+
+  commentary = function(lines, o, _)
+    local process = function(line)
+      local x = lbt.parser.parse_math_commentary_line(line) or {}
+      if not x.expr then
+        lbt.err.E002_general('MATH commentary: no expression in line "%s"', line)
+      end
+      local result = ':: ' .. x.expr:strip()
+      -- We unconditionally add \text to each line, even if the text is empty, because
+      -- it means the text is aligned sympathetically with the longest expression.
+      result = result .. F([[   \qquad && \text{%s}]], x.comment:strip())
+      if x.tag ~= '' then
+        result = result .. F([[   \tag{%s}]], x.tag)
+      end
+      lbt.debuglog('MATH commentary input and output')
+      lbt.debuglog('in>  ' .. line)
+      lbt.debuglog('out> ' .. result)
+      return result
+    end
+    local lbt_code = T {
+      [[!MATH! .o alignat, ncols = 2, eqnum = !EQNUM!]],
+      lines:map(process):concat('\n'),
       values = {
         MATH = o.eqnum and 'MATH' or 'MATH*',
         EQNUM = o.eqnum and #lines or 'false'

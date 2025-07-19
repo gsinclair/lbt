@@ -36,6 +36,7 @@ local Cp = lpeg.Cp -- position capture
 local Ct = lpeg.Ct -- table capture
 local Cs = lpeg.Cs -- string capture [read more about this]
 local Cc = lpeg.Cs -- constant capture [read more about this]
+local Cg = lpeg.Cg -- capture group (store match against given key)
 local V = lpeg.V
 
 -- }}}
@@ -60,6 +61,7 @@ local hsp = (S' \t')^0
 local hspace = (S' \t')^1
 local sp = (S' \t\n')^0
 local space = (S' \t\n')^1
+local eos = -1
 local RestOfLine = (P(1) - nl)^1
 local Symbol = S'_.*'
 -- identifier can be like foo or foo_bar or foo.bar or TEXT*.vsp
@@ -464,14 +466,45 @@ local listitem = P { 'item',
 }
 
 lbt.parser.parse_list_item = function(text)
-  -- local f = function(x) return listitem:match(x) end
-  -- DEBUGGER()
   local stars, rest = listitem:match(text)
   if stars == nil then
     return nil
   else
     return { #stars, rest }
   end
+end
+
+local CommentaryLine = P {
+  "Line",  -- top-level rule
+
+  Line = Ct(
+    Cg(V("Expr"), "expr") *
+    Cg(V("Comment")^-1, "comment") *
+    Cg(V("Tag")^-1, "tag")
+  ),
+
+  SeparatorPrefix = P("  ") + P("\t"),
+
+  Expr = C(
+    (1 - V("ValidCommentStart") - V("ValidTagStart") - eos)^0 /
+    function(s) return s:match("^(.-)%s*$") end
+  ),
+
+  ValidCommentStart = V("SeparatorPrefix") * P("|"),
+  ValidTagStart = P("\\tag{"),
+
+  Comment = V("SeparatorPrefix") * P("|") * hsp *
+    C((1 - V("ValidTagStart") - eos)^0 /
+      function(s) return s:match("^%s*(.-)%s*$") end),
+
+  Tag = hsp * P("\\tag{") *
+    C((1 - P("}"))^0 / function(s) return s:match("^%s*(.-)%s*$") end) *
+    P("}") * hsp^-1,
+}
+
+lbt.parser.parse_math_commentary_line = function(line)
+  local x = CommentaryLine:match(line)
+  return x or lbt.err.E002_general('Unable to parse MATH commentary line: "%s"', line)
 end
 
 -- }}}
