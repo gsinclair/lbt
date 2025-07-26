@@ -252,6 +252,12 @@ do
                          triangle
                          text
                          dot ddot
+                         bigoplus bigotimes bigodot 
+                         inf dim
+                         mathbb mathcal mathbf 
+                         partial nabla hbar
+                         varnothing ell 
+                         propto simeq
                          ]]
   local alpha = makeset[[alpha beta gamma delta epsilon zeta eta theta iota
                          kappa lambda mu nu xi omicron pi rho sigma tau
