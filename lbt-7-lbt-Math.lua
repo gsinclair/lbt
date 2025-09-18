@@ -620,6 +620,88 @@ f.MATH = MathCommandImpl.MATH
 
 -- ]]]
 
+function lbt.util.semi_colon_split(text)
+	local results = pl.utils.split(text, "%s*;%s*")
+	return pl.List(results)
+end
+
+local delimiters = {
+	b = { "[", "]" },
+	p = { "(", ")" },
+	B = { "{", "}" },
+	v = { "|", "|" },
+	V = { "||", "||" },
+}
+
+local function matrixgenerator(text, delim, aug)
+	local rows = lbt.util.semi_colon_split(text)
+	local matrix = ""
+	local displaystyle = false
+	local elems
+	local lenrows = #lbt.util.comma_split(rows[1])
+	for i = 1, #rows do
+		if i == 1 then
+			local first_elems = lbt.util.comma_split(rows[1])
+			if first_elems[1] == "inline" then
+				displaystyle = true
+				lenrows = lenrows - 1
+				first_elems:remove(1)
+			end
+			elems = first_elems
+		else
+			elems = lbt.util.comma_split(rows[i])
+		end
+		if #elems ~= lenrows then
+			local emsg = "Math:matrix has rows of differing lengths"
+			lbt.log(1, emsg)
+			return lbt.util.latex_macro_error(emsg)
+		end
+		matrix = matrix .. table.concat(elems, " & ")
+		matrix = matrix .. [[ \\ ]]
+	end
+	if displaystyle then
+		if delim == "" then
+			return F([[\ensuremath{\begin{smallmatrix} %s \end{smallmatrix}}]], matrix)
+		else
+			local l, r = delimiters[delim][1], delimiters[delim][2]
+			return F([[\ensuremath{\left%s\begin{smallmatrix} %s \end{smallmatrix}\right%s}]], l, matrix, r)
+		end
+	elseif aug then
+		local aligns = string.rep("c", lenrows - 1) .. "|c"
+		return F([[\ensuremath{\left[\begin{array}{%s} %s \end{array}\right]}]], aligns, matrix)
+	else
+		return F([[\ensuremath{\begin{%smatrix} %s \end{%smatrix}}]], delim, matrix, delim)
+	end
+end
+
+m.matrix = function(text)
+	return matrixgenerator(text, "", false)
+end
+
+m.pmatrix = function(text)
+	return matrixgenerator(text, "p", false)
+end
+
+m.bmatrix = function(text)
+	return matrixgenerator(text, "b", false)
+end
+
+m.Bmatrix = function(text)
+	return matrixgenerator(text, "B", false)
+end
+
+m.vmatrix = function(text)
+	return matrixgenerator(text, "v", false)
+end
+
+m.Vmatrix = function(text)
+	return matrixgenerator(text, "V", false)
+end
+
+m.augmatrix = function(text)
+	return matrixgenerator(text, "", true)
+end
+
 --------------------------------------------------------------------------------
 
 return {
